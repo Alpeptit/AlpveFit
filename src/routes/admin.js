@@ -12,6 +12,8 @@ import { isNonEmptyString } from "../utils/validate.js";
 import { logAudit } from "../utils/auditLog.js";
 import { sendMail } from "../utils/mailer.js";
 import { planPublishedMail } from "../utils/emailTemplates.js";
+import { markOrderPaid } from "../services/orderFulfilment.js";
+import { PROFILE_COLS } from "./profile.js";
 
 export const adminRouter = withAsyncErrors(express.Router());
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -68,11 +70,13 @@ adminRouter.get("/clients", async (req, res) => {
     admin
       ? `SELECT u.id, u.full_name, u.user_code, u.email_verified_at IS NOT NULL AS verified,
                 (SELECT coalesce(json_agg(kind ORDER BY kind), '[]') FROM member_access a WHERE a.member_id = u.id) AS access,
+                (SELECT row_to_json(o) FROM (SELECT package_key, weeks, pharmacology, paid_at, plans_due_at FROM orders WHERE user_id = u.id AND status = 'paid' ORDER BY paid_at DESC LIMIT 1) o) AS package,
                 (SELECT coalesce(json_agg(json_build_object('coachId', c.coach_id, 'coachName', cu.full_name, 'delivery', c.delivery)), '[]')
                    FROM coach_clients c JOIN users cu ON cu.id = c.coach_id WHERE c.member_id = u.id) AS coaches
            FROM users u WHERE u.role = 'user' ORDER BY u.created_at DESC LIMIT 500`
       : `SELECT u.id, u.full_name, u.user_code, u.email_verified_at IS NOT NULL AS verified, c.delivery,
-                (SELECT coalesce(json_agg(kind ORDER BY kind), '[]') FROM member_access a WHERE a.member_id = u.id) AS access
+                (SELECT coalesce(json_agg(kind ORDER BY kind), '[]') FROM member_access a WHERE a.member_id = u.id) AS access,
+                (SELECT row_to_json(o) FROM (SELECT package_key, weeks, pharmacology, paid_at, plans_due_at FROM orders WHERE user_id = u.id AND status = 'paid' ORDER BY paid_at DESC LIMIT 1) o) AS package
            FROM coach_clients c JOIN users u ON u.id = c.member_id WHERE c.coach_id = $1 AND u.role = 'user' ORDER BY u.full_name LIMIT 500`,
     admin ? [] : [req.user.sub]
   );
@@ -143,8 +147,8 @@ adminRouter.post("/plans/:id/publish", async (req, res) => {
     `UPDATE plans SET status = 'published', published_at = now(), published_by = $2, published_by_name = $3, updated_at = now() WHERE id = $1`,
     [plan.id, req.user.sub, req.panelName]
   );
-  await pool.query(`INSERT INTO notifications (user_id, type, text, plan_id) VALUES ($1, 'plan_published', $2, $3)`,
-    [plan.member_id, `Yeni plan yayınlandı: ${KIND_LABELS[plan.kind]} — ${plan.title}`, plan.id]);
+  await pool.query(`INSERT INTO notifications (user_id, type, text, plan_id, data) VALUES ($1, 'plan_published', $2, $3, $4)`,
+    [plan.member_id, `Yeni plan yayınlandı: ${KIND_LABELS[plan.kind]} — ${plan.title}`, plan.id, JSON.stringify({ kind: plan.kind, title: plan.title })]);
   await logAudit(req.user.sub, "plan_publish", "plan", plan.id, { kind: plan.kind, memberId: plan.member_id }, ip(req));
   const { rows } = await pool.query(`SELECT email, preferred_lang FROM users WHERE id = $1`, [plan.member_id]);
   if (rows[0]) sendMail(rows[0].email, planPublishedMail(rows[0].preferred_lang, { kindLabel: KIND_LABELS[plan.kind], authorName: plan.author_name })).catch(() => {});
@@ -258,4 +262,42 @@ adminRouter.get("/audit", requireAdmin, async (req, res) => {
        FROM audit_log a LEFT JOIN users u ON u.id = a.actor_id ORDER BY a.created_at DESC, a.id DESC LIMIT 200`
   );
   res.json(rows);
+});
+
+// ---------- üye profili (üyenin kendi girdiği koçluk bilgileri) ----------
+// Yalnız yönetici veya üyeye ATANMIŞ uzman görür. Rıza verilmemişse/boşsa null döner.
+adminRouter.get("/clients/:id/profile", async (req, res) => {
+  if (!ID_RE.test(req.params.id) || !(await canAccessMember(req, req.params.id))) return res.status(404).json({ error: "Üye bulunamadı." });
+  const { rows } = await pool.query(`SELECT ${PROFILE_COLS} FROM member_profiles WHERE user_id = $1`, [req.params.id]);
+  res.setHeader("Cache-Control", "no-store");
+  res.json(rows[0] || null);
+});
+
+// ---------- siparişler (yalnız yönetici) ----------
+adminRouter.get("/orders", requireAdmin, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT o.id, o.order_number, o.buyer_name, o.buyer_email, o.user_id, o.package_key, o.weeks, o.pharmacology, o.subtotal, o.expected_amount, o.status,
+            o.tx_hash, o.confirmations, o.paid_at, o.plans_due_at, o.created_at, o.payment_expires_at,
+            (SELECT count(*)::int FROM plans p WHERE p.member_id = o.user_id AND p.status = 'published' AND p.published_at >= o.paid_at) AS plans_published
+       FROM orders o ORDER BY o.created_at DESC LIMIT 200`);
+  res.json(rows);
+});
+adminRouter.get("/unmatched", requireAdmin, async (req, res) => {
+  const { rows } = await pool.query(`SELECT id, tx_hash, amount, from_address, possible_order_id, reason, created_at FROM unmatched_transactions WHERE resolved = false ORDER BY created_at DESC LIMIT 100`);
+  res.json(rows);
+});
+// Elle ödeme onayı: gerekçe ZORUNLU, işlem hash'i önerilir; denetim kaydına yazılır. (Normalde zincir izleyici otomatik onaylar.)
+adminRouter.post("/orders/:id/approve", requireAdmin, async (req, res) => {
+  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Sipariş bulunamadı." });
+  const reason = cleanText((req.body && req.body.reason) ?? "").slice(0, 300);
+  if (!reason || reason.length < 10) return bad(res, "Gerekçe en az 10 karakter olmalıdır.");
+  const tx = req.body && req.body.txHash ? String(req.body.txHash).trim() : null;
+  if (tx && !/^[0-9a-fA-F]{64}$/.test(tx)) return bad(res, "İşlem kimliği (hash) geçersiz.");
+  const ex = await pool.query(`SELECT status FROM orders WHERE id = $1`, [req.params.id]);
+  if (!ex.rows[0]) return res.status(404).json({ error: "Sipariş bulunamadı." });
+  const ok = await markOrderPaid(req.params.id, { txHash: tx, actorId: req.user.sub, note: reason, source: "admin_manual" }).catch((e) => {
+    if (e.code === "23505") return "dup"; throw e; });
+  if (ok === "dup") return res.status(409).json({ error: "Bu işlem kimliği başka bir siparişte kayıtlı." });
+  if (!ok) return res.status(409).json({ error: "Bu sipariş onaylanabilir durumda değil.", code: "not_approvable" });
+  res.json({ ok: true });
 });

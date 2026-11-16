@@ -9,10 +9,10 @@ export const notificationsRouter = withAsyncErrors(express.Router());
 // Türler: plan_published (yeni plan yayınlandı), plan_updated, security (güvenlik uyarıları).
 notificationsRouter.get("/notifications", requireAuth, async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT id, type, text, plan_id, read_at, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+    `SELECT id, type, text, plan_id, order_id, data, read_at, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
     [req.user.sub]
   );
-  res.json(rows.map((r) => ({ id: r.id, type: r.type, plan_id: r.plan_id, text: r.text, read_at: r.read_at, created_at: r.created_at })));
+  res.json(rows.map((r) => ({ id: r.id, type: r.type, plan_id: r.plan_id, text: r.text, order_id: r.order_id, data: r.data, read_at: r.read_at, created_at: r.created_at })));
 });
 
 notificationsRouter.post("/notifications/read-all", requireAuth, async (req, res) => {

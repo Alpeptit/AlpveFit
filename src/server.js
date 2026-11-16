@@ -16,6 +16,10 @@ import { plansRouter } from "./routes/plans.js";
 import { privacyRouter } from "./routes/privacy.js";
 import { accountRouter } from "./routes/account.js";
 import { notificationsRouter } from "./routes/notifications.js";
+import { ordersRouter } from "./routes/orders.js";
+import { profileRouter } from "./routes/profile.js";
+import { startPaymentWatcher } from "./services/paymentWatcher.js";
+import { startDataRetentionJob } from "./services/dataRetention.js";
 import { normalizeOrigin } from "./utils/originCheck.js";
 import { clientIpMiddleware, originGuardMiddleware, cloudflareOnlyMiddleware, isCloudflareIp, viaCloudflare, edgePeerIp } from "./utils/clientIp.js";
 import { mountSite } from "./site.js";
@@ -207,6 +211,8 @@ app.use("/api", plansRouter);         // /api/plans/* — üyenin kendi yayınla
 app.use("/api", privacyRouter);       // /api/me/request-delete, /api/me/confirm-delete
 app.use("/api", accountRouter);       // /api/account/* (ad/e-posta/şifre değişikliği)
 app.use("/api", notificationsRouter); // /api/notifications
+app.use("/api", ordersRouter);        // /api/packages, /api/orders/* — paket siparişi (USDT TRC20)
+app.use("/api", profileRouter);       // /api/profile — üyenin koçluk bilgileri
 
 app.get("/api/health", (req, res) => res.json({ ok: true, ...(dbMigrations.state === "ok" ? {} : { db: dbMigrations.state }) }));
 
@@ -269,19 +275,26 @@ process.on("uncaughtException", (err) => {
 //   • RUN_BACKGROUND_JOBS=false olan api süreci de uygular; worker ile aynı anda çalışsa bile
 //     advisory lock sırayı korur, ikincisi bekler.
 //   • Hata hâlinde süreç ÇÖKMEZ: site ve herkese açık uçlar ayakta kalır, durum /api/health'te görünür.
+let jobsStarted = false;
+function startBackgroundJobs() {   // ödeme izleyici + 180 gün veri saklama — migration bittikten sonra, bir kez
+  if (jobsStarted || process.env.RUN_BACKGROUND_JOBS === "false") return;
+  jobsStarted = true; startPaymentWatcher(); startDataRetentionJob();
+}
 export const dbMigrations = { state: "pending", detail: "açılışta uygulanacak" };
 async function applyMigrationsOnBoot() {
   if (process.env.DB_AUTO_MIGRATE === "false") {
     dbMigrations.state = "ok"; dbMigrations.detail = "DB_AUTO_MIGRATE=false — elle yönetiliyor";
     console.log("[server] DB_AUTO_MIGRATE=false — açılışta migration çalıştırılmıyor.");
+    startBackgroundJobs();
     return;
   }
   try {
     const r = await runMigrations();
-    if (r.lockBusy) { dbMigrations.state = "ok"; dbMigrations.detail = "başka bir süreç uyguluyor"; return; }
+    if (r.lockBusy) { dbMigrations.state = "ok"; dbMigrations.detail = "başka bir süreç uyguluyor"; startBackgroundJobs(); return; }
     dbMigrations.state = "ok";
     dbMigrations.detail = r.applied.length ? `${r.applied.length} migration uygulandı` : "güncel";
     if (r.applied.length) console.log(`[server] Veritabanı güncellendi: ${r.applied.join(", ")}`);
+    startBackgroundJobs();
   } catch (err) {
     dbMigrations.state = "migration_failed";
     dbMigrations.detail = err.message;

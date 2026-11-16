@@ -262,3 +262,17 @@ export function planPublishedMail(lang, o) {
   const { html, text } = layout(lg, { preheader: t, eyebrow: en ? "New plan" : "Yeni plan", title: t, blocks });
   return { subject: subj(en ? "New Plan Published" : "Yeni Plan Yayınlandı"), html, text };
 }
+
+/** Ödeme onaylandı. o: { orderNumber, dueAt } — planlar ödemeden itibaren 7 gün içinde hazırlanır. */
+export function orderPaidMail(lang, o) {
+  const lg = L(lang), en = lg === "en", base = siteBase();
+  const t = en ? "Your payment is confirmed" : "Ödemeniz onaylandı";
+  const blocks = [
+    p(esc(en ? "Thank you. Your payment was received and confirmed. Your nutrition, training and supplement programs are prepared by our experts within 7 days; you will be notified when each plan is published."
+             : "Teşekkür ederiz. Ödemeniz alındı ve onaylandı. Beslenme, antrenman ve takviye programlarınız uzmanlarımız tarafından 7 gün içinde hazırlanır; her plan yayınlandığında bildirim alırsınız.")),
+    rows([[en ? "Order" : "Sipariş", o.orderNumber], [en ? "Plans ready by" : "Planların hazır olacağı tarih", o.dueAt ? fmtDate(o.dueAt, lg) : ""]]),
+    button(en ? "Go to my panel" : "Panelime git", base ? `${base}/panel` : ""),
+  ];
+  const { html, text } = layout(lg, { preheader: t, eyebrow: en ? "Order" : "Sipariş", title: t, blocks });
+  return { subject: subj(en ? "Payment Confirmed" : "Ödeme Onaylandı"), html, text };
+}
