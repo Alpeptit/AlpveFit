@@ -80,9 +80,6 @@
   }
 
   // ---------- ana sayfa ----------
-  function pic(name, alt, cls) {
-    return h("picture", null, h("source", { type: "image/webp", srcset: "/assets/img/" + name + ".webp" }), h("img", { class: cls || "", src: "/assets/img/" + name + ".jpg", alt: alt, loading: "lazy", decoding: "async" }));
-  }
   function homePage() {
     var u = AVF.session.user;
     AVF.mount(view,
@@ -93,7 +90,8 @@
           h("p", { text: "Beslenme, antrenman ve takviye programlarınız uzman koçlar tarafından size özel hazırlanır; tek bir yerde, yalnızca sizin hesabınızda yayınlanır." }),
           h("div", { class: "cta" }, link("/paketler", "Paketleri incele", { class: "btn" }), u ? link("/panel", "Panelime git", { class: "btn ghost" }) : h("button", { class: "btn ghost", type: "button", onclick: function () { AVF.auth.open("register"); } }, "Kayıt ol")),
           h("ul", { class: "heroTicks" }, h("li", {}, "Ödemeden sonra 7 gün içinde programınız hazır"), h("li", {}, "Kredi / banka kartı ile güvenli ödeme"), h("li", {}, "Planlarınızı yalnızca siz görürsünüz"))),
-        h("div", { class: "hero-photo" }, pic("coach-1", "Alpvefit koçu", "")))),
+        heroVisual())),
+      h("div", { class: "strip", "aria-hidden": "true" }, h("div", { class: "mq" }, ticker().concat(ticker()))),
       h("section", { class: "section" }, h("div", { class: "wrap" }, h("h2", { class: "sec" }, "Nasıl çalışır?"),
         h("div", { class: "grid3" },
           step("1", "card", "Paketini seç ve öde", "Size uygun paketi ve süreyi seçin. Kredi / banka kartı ile sanal POS üzerinden ödeyin; ödeme otomatik onaylanır."),
@@ -104,7 +102,7 @@
         feat("pin", "Yüz yüze eğitim", "Yüz yüze eğitim paketi için bizimle iletişime geçin: destek@alpvefit.com", "Yüz yüze", false),
         feat("list", "Kişiye özel planlar", "Planlarınız yetkili uzman tarafından hazırlanır; kimin hazırladığı ve ne zaman yayınlandığı her planda görünür.", "Planlarım", false))),
       h("section", { class: "section" }, h("div", { class: "wrap about" },
-        h("div", { class: "about-photo" }, pic("coach-2", "Alpvefit koçu", "")),
+        aboutVisual(),
         h("div", {}, h("h2", { class: "sec" }, "Programınız size özel"),
           h("p", { class: "lead" }, "Her program kişinin hedefine, yaşam düzenine ve sağlık durumuna göre uzmanlar tarafından elle hazırlanır. Otomatik üretilmiş şablon kullanılmaz."),
           h("ul", { class: "ticks" }, h("li", {}, "Programı hazırlayan uzmanın adı ve yayın tarihi her planda yer alır"), h("li", {}, "Farmakoloji içeriği isteğe bağlıdır; yalnızca yetkili uzmanlarca ve ilgili paketlerde eklenir"), h("li", {}, "Alpvefit herhangi bir ürün veya madde satmaz")),
@@ -116,6 +114,25 @@
           faq("Kişisel bilgilerimi vermek zorunda mıyım?", "Hayır, isteğe bağlıdır. Boy, kilo, meslek gibi bilgiler programın size uygun hazırlanmasına yardımcı olur; açık rızanızla kaydedilir ve istediğiniz zaman silebilirsiniz."),
           faq("Farmakoloji desteği zorunlu mu?", "Hayır. İleri Seviye ve Yarışmacı paketlerinde yer alır ancak tamamen isteğe bağlıdır; hiçbir üyeye zorunlu kılınmaz. Karar ve sorumluluk üyeye aittir."))))
     );
+  }
+  function ticker() {
+    return ["Beslenme", "Antrenman", "Takviye", "Kişiye özel", "Uzaktan koçluk", "Uzman onaylı"].map(function (t) { return h("span", { text: t }); });
+  }
+  function heroVisual() {
+    var NS = "http://www.w3.org/2000/svg";
+    var ring = document.createElementNS(NS, "svg"); ring.setAttribute("viewBox", "0 0 84 84"); ring.setAttribute("class", "ring"); ring.setAttribute("aria-hidden", "true");
+    ["bg", "fg"].forEach(function (c) { var k = document.createElementNS(NS, "circle"); k.setAttribute("class", c); k.setAttribute("cx", "42"); k.setAttribute("cy", "42"); k.setAttribute("r", "36"); ring.appendChild(k); });
+    function bar(v) { var i = h("i"); i.style.setProperty("--h", v + "%"); i.style.animationDelay = (v / 100) + "s"; return i; }
+    return h("div", { class: "hv", "aria-hidden": "true" },
+      h("div", { class: "orb" }),
+      h("div", { class: "hc a" }, h("small", { text: "Haftalık program" }), h("b", { text: "Antrenman" }), ring),
+      h("div", { class: "hc b" }, h("small", { text: "Beslenme planı" }), h("b", { text: "Hazırlandı" }), h("div", { class: "bars" }, [45, 70, 55, 90, 65, 100].map(bar))),
+      h("div", { class: "hc c" }, h("div", { class: "mini" }, h("span", { class: "tile teal" }, AVF.icon("shield")), h("span", {}, h("small", { text: "Hazırlayan" }), h("b", {}, h("i", { class: "pulse" }), "Uzman koç")))));
+  }
+  function aboutVisual() {
+    return h("div", { class: "about-vis", "aria-hidden": "true" }, h("div", { class: "r r1" }), h("div", { class: "r r2" }),
+      h("div", { class: "core" }, AVF.icon("dumb")),
+      h("span", { class: "sat s1" }, AVF.icon("apple")), h("span", { class: "sat s2" }, AVF.icon("pill")), h("span", { class: "sat s3" }, AVF.icon("list")));
   }
   function step(n, icon, title, text) {
     return h("div", { class: "card feat" }, h("div", { class: "stepn" }, h("span", { class: "tile" }, AVF.icon(icon)), h("i", { "data-notr": "", text: n })), h("h3", { text: title }), h("p", { text: text }));

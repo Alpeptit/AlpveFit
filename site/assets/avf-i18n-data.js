@@ -4,6 +4,17 @@
   var AVF = (window.AVF = window.AVF || {});
   AVF.DICT = AVF.DICT || {}; AVF.PATTERNS = AVF.PATTERNS || [];
   var D = {
+"Haftalık program": "Weekly program",
+"Antrenman": "Training",
+"Beslenme planı": "Nutrition plan",
+"Hazırlandı": "Ready",
+"Hazırlayan": "Prepared by",
+"Uzman koç": "Expert coach",
+"Beslenme": "Nutrition",
+"Takviye": "Supplements",
+"Kişiye özel": "Personalised",
+"Uzaktan koçluk": "Remote coaching",
+"Uzman onaylı": "Expert approved",
 "Lütfen 6 haneli kodu girin.": "Please enter the 6-digit code.",
 "Onaylanıyor…": "Confirming…",
 "Hesabınıza kayıtlı e-posta adresine 6 haneli bir kod gönderdik.": "We sent a 6-digit code to the email address on your account.",
