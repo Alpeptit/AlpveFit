@@ -49,7 +49,7 @@ function findRoute(method, full) {
   }
   return null;
 }
-const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml" };
+const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webp": "image/webp", ".jpg": "image/jpeg" };
 function sendFile(res, file, status = 200) { res.writeHead(status, { "content-type": MIME[extname(file)] || "application/octet-stream", "cache-control": "no-store" }); res.end(readFileSync(file)); }
 const body = (req) => new Promise((ok) => { const c = []; req.on("data", (d) => c.push(d)); req.on("end", () => { try { ok(JSON.parse(Buffer.concat(c).toString() || "{}")); } catch { ok({}); } }); });
 
@@ -89,7 +89,7 @@ http.createServer(async (rq, rs) => {
     if (path === "/uzman" || path.startsWith("/uzman/")) { const u = await panelUser({ headers: rq.headers }); if (!u) return sendFile(rs, join(root, "site/404.html"), 404); return sendFile(rs, join(root, "site-uzman/index.html")); }
     if (path.startsWith("/assets/uzman/")) { const u = await panelUser({ headers: rq.headers }); const f = join(root, "site-uzman/assets", path.slice(14)); if (!u || !existsSync(f)) { rs.writeHead(404); return rs.end("Not found"); } return sendFile(rs, f); }
     if (path.startsWith("/assets/")) { const f = join(root, "site", path); if (!f.startsWith(join(root, "site/assets")) || !existsSync(f) || !statSync(f).isFile()) { rs.writeHead(404); return rs.end("Not found"); } return sendFile(rs, f); }
-    if (["/", "/giris", "/kayit", "/sifremi-unuttum", "/panel"].includes(path) || path.startsWith("/panel/")) return sendFile(rs, join(root, "site/index.html"));
+    if (["/", "/giris", "/kayit", "/sifremi-unuttum", "/panel", "/paketler"].includes(path) || path.startsWith("/panel/") || path.startsWith("/yasal/")) return sendFile(rs, join(root, "site/index.html"));
     return sendFile(rs, join(root, "site/404.html"), 404);
   } catch (e) { console.error("[sunucu]", e); rs.writeHead(500); rs.end("hata"); }
 }).listen(PORT, "127.0.0.1", () => origLog("devserver http://127.0.0.1:" + PORT));

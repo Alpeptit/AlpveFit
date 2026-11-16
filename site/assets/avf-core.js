@@ -14,7 +14,7 @@
     pin: "M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11zM12 12a2 2 0 100-4 2 2 0 000 4z", globe: "M12 21a9 9 0 100-18 9 9 0 000 18zM3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18",
     list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01", cog: "M12 15a3 3 0 100-6 3 3 0 000 6zM19 12l2-1-1.5-3-2.2.6a7 7 0 00-1.3-.8L15.5 5h-3l-.5 2.8-1.3.8L8.5 8 7 11l2 1v1l-2 1 1.5 3 2.2-.6c.4.3.8.6 1.3.8l.5 2.8h3l.5-2.8c.5-.2.9-.5 1.3-.8l2.2.6 1.5-3-2-1z",
     alert: "M12 8v5M12 17h.01M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z", users: "M16 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 20v-1a4 4 0 00-3-3.9M16 4.1a3.5 3.5 0 010 6.8",
-    cookie: "M12 3a9 9 0 109 9 4 4 0 01-4-4 4 4 0 01-5-5zM8.5 11h.01M12 16h.01M15.5 13h.01", out: "M9 21H5V3h4M16 17l5-5-5-5M21 12H9", refresh: "M20 11a8 8 0 00-14-4L4 9M4 4v5h5M4 13a8 8 0 0014 4l2-2M20 20v-5h-5", plus: "M12 5v14M5 12h14", trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
+    cookie: "M12 3a9 9 0 109 9 4 4 0 01-4-4 4 4 0 01-5-5zM8.5 11h.01M12 16h.01M15.5 13h.01", out: "M9 21H5V3h4M16 17l5-5-5-5M21 12H9", refresh: "M20 11a8 8 0 00-14-4L4 9M4 4v5h5M4 13a8 8 0 0014 4l2-2M20 20v-5h-5", plus: "M12 5v14M5 12h14", card: "M2 6h20v12H2zM2 10h20M6 15h4", coin: "M12 21a9 9 0 100-18 9 9 0 000 18zM9 9h5a1.8 1.8 0 010 3.6H9m0 0h5.4a1.8 1.8 0 010 3.6H9M12 7v2M12 16v2", copy: "M8 8h12v12H8zM4 16V4h12", clock: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2", clipboard: "M9 4h6v3H9zM7 5H5v16h14V5h-2M9 12h6M9 16h4", tag: "M3 12V4h8l10 10-8 8zM7.5 8.5h.01", trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
   };
   AVF.icon = function (n, cls) {
     var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -58,7 +58,7 @@
     var opt = { method: method, credentials: "same-origin", headers: headers };
     if (body !== undefined) { headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
     if (method !== "GET") { var c = AVF.cookie("avf_csrf"); if (c) headers["x-csrf-token"] = c; }
-    headers["x-avf-lang"] = "tr";
+    headers["x-avf-lang"] = AVF.lang || "tr";
     return fetch("/api" + path, opt).then(function (r) {
       return r.text().then(function (t) {
         var d = null; try { d = t ? JSON.parse(t) : null; } catch (e) { d = null; }
@@ -84,13 +84,14 @@
   };
   AVF.until = function (iso) {
     var s = Math.max(1, Math.round((new Date(iso).getTime() - Date.now()) / 1000));
-    return s >= 3600 ? Math.round(s / 3600) + " saat" : s >= 60 ? Math.ceil(s / 60) + " dakika" : s + " saniye";
+    var en = AVF.lang === "en";
+    return s >= 3600 ? Math.round(s / 3600) + (en ? " hours" : " saat") : s >= 60 ? Math.ceil(s / 60) + (en ? " minutes" : " dakika") : s + (en ? " seconds" : " saniye");
   };
 
   // ---------- biçim ----------
-  AVF.fmtDate = function (iso) { try { return new Date(iso).toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric" }); } catch (e) { return ""; } };
-  AVF.fmtDateTime = function (iso) { try { return new Date(iso).toLocaleString("tr-TR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
-  AVF.fmtTime = function (iso) { try { return new Date(iso).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
+  AVF.fmtDate = function (iso) { try { return new Date(iso).toLocaleDateString(AVF.locale ? AVF.locale() : "tr-TR", { day: "2-digit", month: "long", year: "numeric" }); } catch (e) { return ""; } };
+  AVF.fmtDateTime = function (iso) { try { return new Date(iso).toLocaleString(AVF.locale ? AVF.locale() : "tr-TR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
+  AVF.fmtTime = function (iso) { try { return new Date(iso).toLocaleTimeString(AVF.locale ? AVF.locale() : "tr-TR", { hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
   AVF.maskName = function (n) {
     var p = String(n || "").trim().split(/\s+/).filter(Boolean); if (!p.length) return "";
     return [p[0]].concat(p.slice(1).map(function (x) { return x.charAt(0).toLocaleUpperCase("tr-TR") + "*****"; })).join(" ");

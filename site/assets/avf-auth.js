@@ -104,8 +104,8 @@
     } },
       AVF.field("Ad Soyad", name, { icon: "id" }), AVF.field("Kullanıcı Adı", user, { icon: "user" }), AVF.field("E-posta", mail, { icon: "mail" }),
       AVF.field("Şifre", pw, { icon: "lock", hint: "En az 8 karakter; en az 1 harf ve 1 noktalama işareti; boşluk ve ardışık sayı (123) olmaz." }),
-      h("label", { class: "check" }, k1, "KVKK aydınlatma metnini okudum ve kabul ediyorum."),
-      h("label", { class: "check" }, k2, "Alpvefit hakkındaki bilgilendirmeyi okudum ve kabul ediyorum."),
+      h("label", { class: "check" }, k1, h("span", null, h("a", { href: "/yasal/kvkk", target: "_blank", rel: "noopener" }, "KVKK Aydınlatma Metni"), " ve ", h("a", { href: "/yasal/gizlilik-cerez", target: "_blank", rel: "noopener" }, "Gizlilik ve Çerez Politikası"), "’nı okudum.")),
+      h("label", { class: "check" }, k2, h("span", null, h("a", { href: "/yasal/kullanim-kosullari", target: "_blank", rel: "noopener" }, "Hizmet Şartları"), " ile ", h("a", { href: "/yasal/sorumluluk-reddi", target: "_blank", rel: "noopener" }, "Sağlık ve Farmakoloji Sorumluluk Beyanı"), "’nı okudum ve kabul ediyorum.")),
       captchaNote(), box, btn,
       h("p", { class: "center", style: "margin:14px 0 0" }, "Zaten hesabın var mı? ", h("button", { type: "button", class: "lnk", onclick: function () { login(); } }, "Giriş Yap")), ssl());
     v.insertBefore(seg("register"), v.children[2] || null); v.appendChild(form); name.focus();
