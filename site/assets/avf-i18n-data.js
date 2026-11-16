@@ -4,6 +4,16 @@
   var AVF = (window.AVF = window.AVF || {});
   AVF.DICT = AVF.DICT || {}; AVF.PATTERNS = AVF.PATTERNS || [];
   var D = {
+"3 aktif": "3 active",
+"Keşfet": "Explore",
+"Yüz yüze eğitim: e-posta ile": "In-person training: by email",
+"Kredi / banka kartı ile ödeme": "Payment by credit / debit card",
+"Uzaktan eğitim ve koçluk platformu. Programlar yalnızca yetkili uzmanlarca, size özel hazırlanır.": "Remote education and coaching platform. Programs are prepared for you only by authorised experts.",
+"Neden Alpvefit": "Why Alpvefit",
+"Eğitim sürecinin tamamı tek hesapta": "Your entire training journey in one account",
+"Şeffaf, size özel ve yalnızca sizin görebileceğiniz planlar.": "Transparent, personal plans that only you can see.",
+"Yukarı çık": "Back to top",
+"Menüyü kapat": "Close menu",
 "Hakkımızda": "About",
 "Araçlar": "Tools",
 "Yakında": "Soon",

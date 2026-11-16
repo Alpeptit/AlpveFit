@@ -4,13 +4,12 @@
   "use strict";
   var AVF = window.AVF, h = AVF.h;
 
-  function head(title, sub) {
-    return h("div", { class: "phead" }, h("h1", { text: title }), sub ? h("p", { text: sub }) : null);
-  }
   function link(href, children, attrs) { attrs = attrs || {}; attrs.href = href; attrs["data-link"] = ""; return h("a", attrs, children); }
   function page(view, title, doc, sub, body) {
     document.title = doc + " — Alpvefit";
-    AVF.mount(view, h("div", { class: "wrap section pagebox" }, head(title, sub), body));
+    AVF.mount(view,
+      h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("h1", { text: title }), sub ? h("p", { text: sub }) : null)),
+      h("div", { class: "wrap section" }, body));
   }
 
   // ---------- SSS ----------

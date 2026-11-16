@@ -24,28 +24,56 @@
       h("a", { class: "sr", href: "#main" }, "İçeriğe geç"),
       h("header", { class: "top" }, h("div", { class: "wrap" },
         h("button", { class: "ibtn burger", type: "button", "aria-label": "Menüyü aç", onclick: function () { drawer.classList.add("open"); } }, AVF.icon("menu")),
-        link("/", [h("i"), "ALPVEFIT"], { class: "logo", "aria-label": "Alpvefit ana sayfa" }), nav, tools)),
+        link("/", AVF.logo(false), { class: "logolink", "aria-label": "Alpvefit ana sayfa" }), nav, tools)),
       drawer, view,
-      h("footer", { class: "foot" }, h("div", { class: "wrap" }, h("span", null, "© " + new Date().getFullYear() + " Alpvefit"),
-        h("nav", { class: "flinks", "aria-label": "Yasal" }, AVF.LEGAL_LINKS.map(function (l) { return link("/yasal/" + l[0], l[1]); })), h("span", null, "Eğitim ve koçluk platformu"))));
+      footer(),
+      h("button", { class: "totop", id: "totop", type: "button", "aria-label": "Yukarı çık", title: "Yukarı çık", onclick: function () { window.scrollTo({ top: 0, behavior: "smooth" }); } }, AVF.icon("up")));
+    var topEl = document.querySelector(".top"), tt = document.getElementById("totop");
+    function onScroll() { var y = window.scrollY || 0; topEl.classList.toggle("scrolled", y > 8); tt.classList.toggle("show", y > 600); }
+    window.addEventListener("scroll", onScroll, { passive: true }); onScroll();
     document.addEventListener("click", function (e) {
       var a = e.target.closest && e.target.closest("a[data-link]"); if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
       e.preventDefault(); drawer.classList.remove("open"); go(a.getAttribute("href"));
     });
     window.addEventListener("popstate", route);
   }
+  var LEGAL_ICONS = { kvkk: "shield", "kullanim-kosullari": "file", "sorumluluk-reddi": "pulse", gizlilik: "lock" };
+  function footer() {
+    function col(title, rows) {
+      return h("div", { class: "fcol" }, h("h4", { text: title }), h("ul", {}, rows.map(function (r) { return h("li", {}, r); })));
+    }
+    function fl(href, icon, text) { return link(href, [AVF.icon(icon), text]); }
+    function fi(icon, text) { return h("span", { class: "fi" }, AVF.icon(icon), text); }
+    return h("footer", { class: "foot" }, h("div", { class: "wrap" },
+      h("div", { class: "fgrid" },
+        h("div", { class: "fbrand" }, AVF.logo(false), h("p", { text: "Uzaktan eğitim ve koçluk platformu. Programlar yalnızca yetkili uzmanlarca, size özel hazırlanır." })),
+        col("Keşfet", [fl("/", "home", "Ana Sayfa"), fl("/hakkimizda", "users", "Hakkımızda"), fl("/sss", "help", "SSS"), fl("/paketler", "tag", "Paketler"), fl("/blog", "book", "Blog"), fl("/forum", "msg", "Forum"), fl("/araclar", "calc", "Araçlar")]),
+        col("Yasal", AVF.LEGAL_LINKS.map(function (l) { return fl("/yasal/" + l[0], LEGAL_ICONS[l[0]] || "file", l[1]); })),
+        col("İletişim", [h("a", { href: "mailto:destek@alpvefit.com" }, AVF.icon("mail"), "destek@alpvefit.com"), fi("pin", "Yüz yüze eğitim: e-posta ile"), fi("card", "Kredi / banka kartı ile ödeme")])),
+      h("div", { class: "fbottom" }, h("span", null, "© " + new Date().getFullYear() + " Alpvefit"), h("span", null, "Eğitim ve koçluk platformu"))));
+  }
   function renderChrome() {
     var u = AVF.session.user, path = location.pathname;
-    var items = [["/paketler", "tag", "Paketler"], ["/sss", "list", "SSS"], ["/hakkimizda", "users", "Hakkımızda"], ["/blog", "book", "Blog"], ["/araclar", "calc", "Araçlar"], ["/forum", "msg", "Forum"]]; if (u) items.push(["/panel", "user", "Panelim"]);
-    if (u && (u.role === "coach" || u.role === "admin")) items.push(["/uzman", "users", "Uzman Paneli"]);
-    AVF.mount(nav, items.map(function (i) { var a = i[0] === "/uzman" ? h("a", { href: i[0] }, AVF.icon(i[1]), i[2]) : link(i[0], i[0] === "/forum" ? [AVF.icon(i[1]), i[2], h("em", { class: "soon", text: "Yakında" })] : [AVF.icon(i[1]), i[2]]); if (i[0] === "/" ? path === "/" : path.indexOf(i[0]) === 0) a.setAttribute("aria-current", "page"); return a; }));
-    AVF.mount(drawer, h("nav", null, h("span", { class: "logo", style: "margin-bottom:12px" }, h("i"), "ALPVEFIT"), items.map(function (i) { return i[0] === "/uzman" ? h("a", { href: i[0] }, i[2]) : link(i[0], i[2]); }),
-      u ? h("a", { href: "#", onclick: function (e) { e.preventDefault(); logout(); } }, "Çıkış yap") : h("a", { href: "#", onclick: function (e) { e.preventDefault(); drawer.classList.remove("open"); AVF.auth.open("login"); } }, "Giriş yap / Kayıt ol")));
+    var items = [["/", "home", "Ana Sayfa"], ["/hakkimizda", "users", "Hakkımızda"], ["/sss", "help", "SSS"], ["/paketler", "tag", "Paketler"], ["/blog", "book", "Blog"], ["/forum", "msg", "Forum"]];
+    function active(href) { return href === "/" ? path === "/" : path === href || path.indexOf(href + "/") === 0; }
+    function item(i) {
+      var a = link(i[0], [AVF.icon(i[1]), h("span", { text: i[2] }), i[0] === "/forum" ? h("em", { class: "soon", text: "Yakında" }) : null]);
+      if (active(i[0])) a.setAttribute("aria-current", "page"); return a;
+    }
+    AVF.mount(nav, items.map(item));
+    AVF.mount(drawer, h("nav", null, h("div", { class: "dhead" }, AVF.logo(false), h("button", { class: "ibtn", type: "button", "aria-label": "Menüyü kapat", onclick: function () { drawer.classList.remove("open"); } }, AVF.icon("x"))),
+      items.map(item),
+      h("div", { class: "dsep" }),
+      link("/araclar", [AVF.icon("calc"), h("span", { text: "Araçlar" })]),
+      u ? link("/panel", [AVF.icon("user"), h("span", { text: "Panelim" })]) : null,
+      u && (u.role === "coach" || u.role === "admin") ? h("a", { href: "/uzman" }, AVF.icon("users"), h("span", { text: "Uzman Paneli" })) : null,
+      u ? h("a", { href: "#", onclick: function (e) { e.preventDefault(); logout(); } }, AVF.icon("out"), h("span", { text: "Çıkış yap" })) : h("a", { href: "#", onclick: function (e) { e.preventDefault(); drawer.classList.remove("open"); AVF.auth.open("login"); } }, AVF.icon("user"), h("span", { text: "Giriş yap / Kayıt ol" }))));
     AVF.mount(tools,
       h("button", { class: "ibtn lang", type: "button", "aria-label": AVF.lang === "en" ? "Türkçe’ye geç" : "Switch to English", title: AVF.lang === "en" ? "Türkçe" : "English", onclick: function () { AVF.setLang(AVF.lang === "en" ? "tr" : "en"); } }, h("span", { "data-notr": "" }, AVF.lang === "en" ? "TR" : "EN")),
-      u ? link("/panel/bildirimler", [AVF.icon("bell"), unread ? h("span", { class: "badge", "aria-label": unread + " okunmamış bildirim", text: String(unread > 99 ? "99+" : unread) }) : null], { class: "ibtn", "aria-label": "Bildirimler" }) : null,
-      h("button", { class: "ibtn", type: "button", "aria-label": u ? "Panelim" : "Giriş yap veya kayıt ol", onclick: function () { if (u) go("/panel"); else AVF.auth.open("login"); } }, AVF.icon("user"), u ? h("i", { class: "dot" }) : null),
-      u ? h("button", { class: "ibtn", type: "button", "aria-label": "Çıkış yap", onclick: logout }, AVF.icon("out")) : null);
+      u ? link("/panel/bildirimler", [AVF.icon("bell"), unread ? h("span", { class: "badge", "aria-label": unread + " okunmamış bildirim", text: String(unread > 99 ? "99+" : unread) }) : null], { class: "ibtn", "aria-label": "Bildirimler", title: "Bildirimler" }) : null,
+      u && (u.role === "coach" || u.role === "admin") ? h("a", { class: "ibtn", href: "/uzman", "aria-label": "Uzman paneli", title: "Uzman paneli" }, AVF.icon("users")) : null,
+      u ? link("/panel", [AVF.icon("user"), h("span", { text: "Panelim" })], { class: "ubtn" }) : h("button", { class: "ubtn", type: "button", onclick: function () { AVF.auth.open("login"); } }, AVF.icon("user"), h("span", { text: "Giriş yap" })),
+      u ? h("button", { class: "ibtn", type: "button", "aria-label": "Çıkış yap", title: "Çıkış yap", onclick: logout }, AVF.icon("out")) : null);
   }
   function refreshUnread() {
     if (!AVF.session.user) { unread = 0; return renderChrome(); }
@@ -106,8 +134,8 @@
           planRow("dumb", "Dört günlük antrenman", "Hazırlayan: Uzman koç"),
           planRow("pill", "Vitamin / mineral planı", "Hazırlayan: Uzman koç")))),
       h("section", { class: "section alt" }, h("div", { class: "wrap" },
-        h("h2", { class: "sec" }, "Neden Alpvefit?"),
-        h("div", { class: "grid3", style: "margin-top:22px" },
+        h("div", { class: "shead" }, h("span", { class: "kicker" }, AVF.icon("shield"), "Neden Alpvefit"), h("h2", { class: "sec" }, "Eğitim sürecinin tamamı tek hesapta"), h("p", { text: "Şeffaf, size özel ve yalnızca sizin görebileceğiniz planlar." })),
+        h("div", { class: "grid3" },
           feat("globe", "Uzaktan eğitim", "Nerede olursanız olun uzmanınızla çalışın. Başlangıç, İleri Seviye ve Yarışmacı paketleri.", "Online", true),
           feat("pin", "Yüz yüze eğitim", "Yüz yüze eğitim paketi için bizimle iletişime geçin: destek@alpvefit.com", "Yüz yüze", false),
           feat("list", "Kişiye özel planlar", "Planlarınız yetkili uzman tarafından hazırlanır; kimin hazırladığı ve ne zaman yayınlandığı her planda görünür.", "Planlarım", false)))),
@@ -123,7 +151,7 @@
 
   // ---------- panel ----------
   function panelHero(title, sub) {
-    return h("section", { class: "hero panelhero", style: "padding:48px 0 52px" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow", text: "Hesabım" }), h("h1", { text: title }), h("p", { text: sub })));
+    return h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow", text: "Hesabım" }), h("h1", { text: title }), h("p", { text: sub })));
   }
   function panelPage(sub) {
     var u = AVF.session.user;

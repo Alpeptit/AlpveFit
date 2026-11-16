@@ -231,7 +231,7 @@
     if (!d) return false;
     document.title = d.title + " — Alpvefit";
     AVF.mount(view,
-      h("section", { class: "hero", style: "padding:48px 0 52px" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow" }, "Yasal"), h("h1", { text: d.title, "data-notr": "" }))),
+      h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow" }, "Yasal"), h("h1", { text: d.title, "data-notr": "" }))),
       h("div", { class: "wrap section" }, h("article", { class: "card legal", "data-notr": "" }, d.sections.map(function (s) {
         return h("section", null, h("h2", { text: s[0] }), s[1].map(function (t) { return h("p", { text: t }); }));
       })), h("div", { class: "legal-links" }, AVF.LEGAL_LINKS.map(function (l) { return h("a", { href: "/yasal/" + l[0], "data-link": "", class: slug === l[0] ? "on" : "" }, l[1]); }))));

@@ -5,6 +5,7 @@
 
   // ---------- simgeler (yalnız sabit, güvenilir SVG yolları) ----------
   var P = {
+    help: "M9.5 9a2.5 2.5 0 115 .5c0 1.5-2.5 2-2.5 3.5M12 17h.01M3 12a9 9 0 1018 0 9 9 0 10-18 0", file: "M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6", pulse: "M3 12h4l2-6 4 12 2-6h6", up: "M12 19V5M6 11l6-6 6 6",
     arrow: "M5 12h14M13 6l6 6-6 6", back: "M19 12H5M11 6l-6 6 6 6", send: "M22 2L11 13M22 2l-7 20-4-9-9-4z", book: "M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19V5M9 7h6", calc: "M6 3h12v18H6zM9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01", msg: "M4 5h16v11H9l-5 4z", save: "M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7",
     home: "M3 11l9-8 9 8M5 10v10h14V10", user: "M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0", bell: "M6 16V11a6 6 0 1112 0v5l2 2H4zM10 20a2 2 0 004 0",
     lock: "M6 11h12v10H6zM8 11V8a4 4 0 118 0v3", shield: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z", check: "M5 12l5 5 9-10", x: "M6 6l12 12M18 6L6 18",
@@ -21,6 +22,17 @@
     var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("class", "ico" + (cls ? " " + cls : "")); s.setAttribute("aria-hidden", "true");
     var p = document.createElementNS("http://www.w3.org/2000/svg", "path"); p.setAttribute("d", P[n] || P.alert); s.appendChild(p); return s;
+  };
+
+
+  // Marka: tek kaynak. "A" harfi aynı zamanda bir zirve (Alp) ve çubuk (fit). Koyu zeminde beyaz, açık zeminde siyah kare.
+  AVF.logo = function (light) {
+    var NS = "http://www.w3.org/2000/svg", s = document.createElementNS(NS, "svg");
+    s.setAttribute("viewBox", "0 0 32 32"); s.setAttribute("class", "lmk-g"); s.setAttribute("aria-hidden", "true");
+    [["path", { d: "M5 26L16 6l11 20", fill: "none", stroke: "currentColor", "stroke-width": "3.4", "stroke-linecap": "round", "stroke-linejoin": "round" }],
+     ["path", { d: "M11 20h10", fill: "none", stroke: "currentColor", "stroke-width": "3.4", "stroke-linecap": "round" }],
+     ["circle", { cx: "16", cy: "6", r: "2.2", fill: "currentColor" }]].forEach(function (e) { var n = document.createElementNS(NS, e[0]); Object.keys(e[1]).forEach(function (k) { n.setAttribute(k, e[1][k]); }); s.appendChild(n); });
+    return AVF.h("span", { class: "logo" + (light ? " lt" : "") }, AVF.h("span", { class: "lmk" }, s), AVF.h("span", { class: "wm", "data-notr": "" }, "ALPVE", AVF.h("em", {}, "FIT")));
   };
 
   // ---------- DOM ----------

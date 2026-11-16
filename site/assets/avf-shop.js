@@ -23,7 +23,7 @@
     document.title = "Paketler — Alpvefit";
     var box = h("div", { class: "wrap section" }, AVF.skeleton(3));
     AVF.mount(view,
-      h("section", { class: "hero", style: "padding:56px 0 60px" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow" }, "Uzaktan Eğitim Sistemi"), h("h1", {}, "Paketler"),
+      h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow" }, "Uzaktan Eğitim Sistemi"), h("h1", {}, "Paketler"),
         h("p", {}, "Ödemeden sonra programlarınız 7 gün içinde uzmanlarımızca hazırlanır ve panelinizde yayınlanır."))), box);
     catalog().then(function (c) {
       var cards = c.packages.map(function (p) { return pkgCard(p, c); });

@@ -394,3 +394,119 @@ footer.foot a{color:#D4D4D8}
 }
 .btn.ghost.danger-t{color:var(--err);border-color:#FECACA}.btn.ghost.danger-t:hover{background:var(--err-soft);border-color:var(--err)}
 .wrap.section{padding-left:20px;padding-right:20px}@media (max-width:900px){.wrap.section{padding-left:16px;padding-right:16px}}
+
+/* ================= v5 — koyu/açık ritim, cam üst çubuk, gelişmiş arayüz ================= */
+html{scroll-behavior:smooth}
+body{font-size:16px;line-height:1.6}
+/* marka */
+.logolink{text-decoration:none;display:inline-flex}
+.logo{display:inline-flex;align-items:center;gap:11px;color:#fff;font-weight:800;letter-spacing:0;text-decoration:none}
+.lmk{width:38px;height:38px;border-radius:11px;background:#fff;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 6px 18px rgba(0,0,0,.25);transition:transform .35s var(--ease)}
+.lmk-g{width:22px;height:22px}
+.logo:hover .lmk{transform:rotate(-6deg) scale(1.05)}
+.wm{font-size:18px;font-weight:800;letter-spacing:.16em}.wm em{font-style:normal;font-weight:500;opacity:.65}
+.logo.lt{color:var(--ink)}.logo.lt .lmk{background:var(--ink);color:#fff;box-shadow:none}
+/* üst çubuk: koyu cam */
+.top{background:rgba(9,9,11,.82);-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);color:#fff;border-bottom:1px solid rgba(255,255,255,.08);transition:background .25s,box-shadow .25s}
+.top.scrolled{background:rgba(9,9,11,.94);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.top .wrap{height:76px}
+.nav{margin:0 auto;gap:2px;padding:5px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08)}
+.nav a{color:rgba(255,255,255,.72);padding:9px 15px 9px 13px;border-radius:999px;gap:8px;font-weight:600;font-size:14px;white-space:nowrap;transition:background .2s,color .2s}
+.nav a:hover{color:#fff;background:rgba(255,255,255,.1)}
+.nav a[aria-current]{background:#fff;color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.nav a .ico{width:17px;height:17px;opacity:1}
+.nav .soon{background:rgba(255,255,255,.14);border-color:transparent;color:rgba(255,255,255,.85)}
+.nav a[aria-current] .soon{background:var(--pri-soft);color:var(--muted)}
+.tools{gap:10px}
+.ibtn{width:42px;height:42px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,.2);color:#fff}
+.ibtn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4)}
+.ibtn.lang{width:auto;padding:0 13px}
+.badge{background:#fff;color:var(--ink)}.dot{display:none}
+.ubtn{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 16px 0 13px;border-radius:12px;background:#fff;color:var(--ink);border:0;font-weight:700;font-size:14px;text-decoration:none;cursor:pointer;transition:transform .15s var(--ease),box-shadow .2s}
+.ubtn:hover{box-shadow:0 8px 22px rgba(255,255,255,.18);transform:translateY(-1px)}.ubtn:active{transform:scale(.97)}
+.ubtn .ico{width:18px;height:18px}
+/* koyu kahraman (ana sayfa ve iç sayfa başlıkları) */
+.hero{background:var(--ink);color:#fff;position:relative;overflow:hidden;isolation:isolate}
+.hero:before{display:block;content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(900px 420px at 85% -10%,rgba(255,255,255,.14),transparent 60%),radial-gradient(600px 300px at 0% 110%,rgba(255,255,255,.07),transparent 65%);animation:none;border-radius:0;width:auto;height:auto;right:auto;top:auto}
+.hero:after{display:block;content:"";position:absolute;inset:0;z-index:-1;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 70% 30%,#000 0,transparent 70%);mask-image:radial-gradient(ellipse at 70% 30%,#000 0,transparent 70%);animation:none;border-radius:0;width:auto;height:auto;left:auto;bottom:auto;background-color:transparent}
+.hero h1,.hero-split h1{color:#fff}
+.hero p{color:rgba(255,255,255,.7)}
+.hero .eyebrow{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.14)}
+.hero .btn{background:#fff;color:var(--ink);border-color:#fff}
+.hero .btn:hover{background:#F4F4F5;border-color:#F4F4F5;box-shadow:0 10px 26px rgba(255,255,255,.16)}
+.hero .btn.ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.3)}
+.hero .btn.ghost:hover{background:rgba(255,255,255,.1);border-color:#fff;box-shadow:none}
+.hero .rip{background:rgba(9,9,11,.12)}
+.heroTicks{color:#fff}.heroTicks li{color:rgba(255,255,255,.9)}.heroTicks .ico{color:#fff}
+.hero-split .wrap{padding-top:88px;padding-bottom:96px}
+.pagehero{padding:0}
+.pagehero .wrap{padding-top:52px;padding-bottom:54px}
+.pagehero h1{font-size:clamp(32px,4.4vw,48px);font-weight:800;letter-spacing:-.03em}
+.pagehero p{margin:12px 0 0;max-width:680px;font-size:17px}
+.pagehero .eyebrow{margin-bottom:14px}
+.plancard{background:#fff;border:0;box-shadow:0 30px 70px rgba(0,0,0,.45)}
+.plancard h2{color:var(--ink)}
+.plancard{color:var(--ink)}
+.plancard .prow b,.plancard .prow strong,.plancard .prow span{color:var(--ink)}
+.plancard .prow small,.plancard .prow em{color:var(--muted)}
+.plancard .chip.dk{color:#fff}
+.plancard .prow small{color:var(--muted)}
+.plancard .tile.dk{color:#fff}
+/* bölüm başlıkları (alt konu başlığı + açıklama) */
+.shead{margin-bottom:30px;max-width:720px}
+.shead .sec{margin:12px 0 10px}
+.shead p{margin:0;color:var(--muted);font-size:17px}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.kicker .ico{width:16px;height:16px;color:var(--ink)}
+.section{padding:72px 0}
+.section.alt{background:#fff}
+/* spot ışığı: imleci izleyen yumuşak parıltı */
+.feat,.prow,a.postcard{position:relative}
+.feat:after,a.postcard:after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),rgba(9,9,11,.06),transparent 70%)}
+.feat:hover:after,a.postcard:hover:after{opacity:1}
+.feat h3{font-size:20px}
+.tile{width:46px;height:46px;border-radius:13px;box-shadow:0 6px 14px rgba(9,9,11,.18)}
+/* koyu bant */
+.band{background:var(--ink);position:relative;overflow:hidden}
+.band:before{content:"";position:absolute;inset:0;background:radial-gradient(700px 300px at 90% 0,rgba(255,255,255,.12),transparent 60%);pointer-events:none}
+.band .btn.light{white-space:nowrap}
+/* alt bilgi: sütunlar, alt başlıklar, ikonlar */
+footer.foot{background:#000;color:rgba(255,255,255,.7);padding:0;font-size:14px;border-top:1px solid rgba(255,255,255,.08)}
+footer.foot .wrap{display:block;padding-top:64px;padding-bottom:28px}
+.fgrid{display:grid;grid-template-columns:1.5fr 1fr 1.25fr 1.25fr;gap:44px}
+.fbrand p{margin:18px 0 0;max-width:340px;line-height:1.7;color:rgba(255,255,255,.6)}
+.fcol h4{margin:0 0 18px;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45)}
+.fcol ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.fcol a,.fi{display:flex;align-items:center;gap:11px;color:rgba(255,255,255,.78);text-decoration:none;padding:6px 0;font-weight:600;line-height:1.35;transition:color .2s,transform .2s var(--ease)}
+.fcol a:hover{color:#fff;transform:translateX(3px)}
+.fcol .ico{width:17px;height:17px;opacity:.7;flex:none}
+.fbottom{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:44px;padding-top:22px;border-top:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.45);font-size:13px}
+/* yukarı çık */
+.totop{position:fixed;right:20px;bottom:20px;z-index:60;width:46px;height:46px;border-radius:14px;border:0;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px rgba(9,9,11,.35);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s,transform .25s var(--ease)}
+.totop.show{opacity:1;transform:none;pointer-events:auto}.totop:hover{background:#27272A}.totop:active{transform:scale(.94)}
+/* çekmece (mobil menü) */
+.drawer nav{background:var(--ink);color:#fff;gap:4px;padding:18px;width:min(340px,88vw)}
+.dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.dsep{height:1px;background:rgba(255,255,255,.12);margin:10px 0}
+.drawer nav a{display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.82);padding:13px 14px;border-radius:12px;font-weight:600;text-decoration:none}
+.drawer nav a .ico{width:19px;height:19px}
+.drawer nav a:hover{background:rgba(255,255,255,.08);color:#fff}
+.drawer nav a[aria-current]{background:#fff;color:var(--ink)}
+.drawer nav .soon{background:rgba(255,255,255,.14);color:#fff;border-color:transparent}
+.drawer nav a[aria-current] .soon{background:var(--pri-soft);color:var(--muted)}
+.drawer .logo{color:#fff}.drawer .logo .lmk{background:#fff;color:var(--ink)}
+.drawer .ibtn{color:#fff;border-color:rgba(255,255,255,.2)}
+/* mobil */
+@media (max-width:1100px){.nav a span:not(.soon){display:none}.nav a{padding:9px 11px}.nav a[aria-current] span{display:inline}.nav .soon{display:none}}
+@media (max-width:900px){
+  .nav{display:none}
+  .top .wrap{height:64px}
+  .ubtn span{display:none}.ubtn{padding:0;width:42px;justify-content:center}
+  .wm{font-size:16px}.lmk{width:34px;height:34px}
+  .fgrid{grid-template-columns:1fr 1fr;gap:32px}.fbrand{grid-column:1/-1}
+  .hero-split .wrap{padding-top:44px;padding-bottom:52px}
+  .pagehero .wrap{padding-top:36px;padding-bottom:38px}
+  .section{padding:48px 0}
+  .totop{right:14px;bottom:14px}
+}
+@media (max-width:520px){.fgrid{grid-template-columns:1fr}}

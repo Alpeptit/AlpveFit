@@ -16,6 +16,13 @@
     t.appendChild(s); setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 600);
   }, { passive: true });
 
+  // Spot ışığı: kartların üzerinde imleci izleyen parıltı (yalnız fare/kalem; dokunmatikte kapalı)
+  document.addEventListener("pointermove", function (e) {
+    if (reduce || e.pointerType === "touch") return;
+    var c = e.target.closest ? e.target.closest(".feat,a.postcard") : null; if (!c) return;
+    var r = c.getBoundingClientRect(); c.style.setProperty("--mx", (e.clientX - r.left) + "px"); c.style.setProperty("--my", (e.clientY - r.top) + "px");
+  }, { passive: true });
+
   // Kaydırınca beliren kartlar
   var io = null;
   if (!reduce && "IntersectionObserver" in window) {

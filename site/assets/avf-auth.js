@@ -26,7 +26,7 @@
     lastFocus = document.activeElement;
     body = h("div");
     dlg = h("div", { class: "dlg", role: "dialog", "aria-modal": "true", "aria-labelledby": "auth-title" },
-      h("span", { class: "logo", style: "color:var(--ink)" }, h("i"), "ALPVEFIT"),
+      AVF.logo(true),
       h("button", { class: "x", type: "button", "aria-label": "Kapat", onclick: close }, AVF.icon("x")), body);
     ov = h("div", { class: "ov", onmousedown: function (e) { if (e.target === ov) close(); } }, dlg);
     document.body.appendChild(ov); document.body.style.overflow = "hidden";

@@ -27,7 +27,7 @@
     var menu = h("nav", { class: "card menu", "aria-label": "Uzman menüsü" }, tabs.map(function (t) {
       var b = h("a", { href: "#", onclick: function (e) { e.preventDefault(); tab = t[0]; sel = null; render(); } }, AVF.icon(t[1]), t[2]); if (t[0] === tab) b.setAttribute("aria-current", "page"); return b;
     }));
-    AVF.mount(view, h("section", { class: "hero panelhero", style: "padding:48px 0 52px" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow", text: "Çalışma alanı" }), h("h1", { text: me.role === "admin" ? "Yönetici Paneli" : "Uzman Paneli" }),
+    AVF.mount(view, h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow", text: "Çalışma alanı" }), h("h1", { text: me.role === "admin" ? "Yönetici Paneli" : "Uzman Paneli" }),
       h("p", { text: me.name + " · " + (me.role === "admin" ? "Tam yetki" : "Yetkili olduğunuz türler: " + (me.kinds.length ? me.kinds.map(function (k) { return AVF.KIND[k].label; }).join(", ") : "henüz tanımlı değil")) }))),
       h("div", { class: "wrap pbody" }, h("aside", { class: "side" }, menu), content));
   }
