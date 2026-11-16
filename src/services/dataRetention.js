@@ -1,7 +1,7 @@
 import { pool } from "../db/pool.js";
 
 // Veri saklama: 180 gün. Bu süreyi aşan kayıtlar günlük olarak silinir (gizlilik politikasındaki süre ile aynıdır).
-// KAPSAM: giriş geçmişi, bildirimler, denetim kaydı, süresi dolmuş/iptal siparişler, arşivlenmiş planlar, eşleşmemiş zincir kayıtları (çözülmüş).
+// KAPSAM: giriş geçmişi, bildirimler, denetim kaydı, süresi dolmuş/iptal siparişler, arşivlenmiş planlar.
 // KAPSAM DIŞI (yasal saklama yükümlülüğü): ödenmiş sipariş ve ödeme kayıtları (mali mevzuat) — kişisel bilgileri anonimleşmeden korunur ve hukuki süre sonunda silinir.
 export const RETENTION_DAYS = 180;
 const LOCK = "593817264060";
@@ -21,7 +21,6 @@ export async function cleanup() {
     r.audit = (await pool.query(`DELETE FROM audit_log WHERE created_at < ${d}`)).rowCount;
     r.orders = (await pool.query(`DELETE FROM orders WHERE status IN ('expired','cancelled') AND created_at < ${d}`)).rowCount;
     r.plans = (await pool.query(`DELETE FROM plans WHERE status = 'archived' AND updated_at < ${d}`)).rowCount;
-    r.unmatched = (await pool.query(`DELETE FROM unmatched_transactions WHERE resolved = true AND created_at < ${d}`)).rowCount;
     return r;
   } finally { await client.query(`SELECT pg_advisory_unlock($1)`, [LOCK]).catch(() => {}); client.release(); }
 }

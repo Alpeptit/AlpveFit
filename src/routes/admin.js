@@ -276,28 +276,23 @@ adminRouter.get("/clients/:id/profile", async (req, res) => {
 // ---------- siparişler (yalnız yönetici) ----------
 adminRouter.get("/orders", requireAdmin, async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT o.id, o.order_number, o.buyer_name, o.buyer_email, o.user_id, o.package_key, o.weeks, o.pharmacology, o.subtotal, o.expected_amount, o.status,
-            o.tx_hash, o.confirmations, o.paid_at, o.plans_due_at, o.created_at, o.payment_expires_at,
+    `SELECT o.id, o.order_number, o.buyer_name, o.buyer_email, o.user_id, o.package_key, o.weeks, o.pharmacology, o.subtotal, o.currency, o.status,
+            o.payment_provider, o.payment_ref, o.payment_attempts, o.paid_at, o.plans_due_at, o.created_at, o.payment_expires_at,
             (SELECT count(*)::int FROM plans p WHERE p.member_id = o.user_id AND p.status = 'published' AND p.published_at >= o.paid_at) AS plans_published
        FROM orders o ORDER BY o.created_at DESC LIMIT 200`);
   res.json(rows);
 });
-adminRouter.get("/unmatched", requireAdmin, async (req, res) => {
-  const { rows } = await pool.query(`SELECT id, tx_hash, amount, from_address, possible_order_id, reason, created_at FROM unmatched_transactions WHERE resolved = false ORDER BY created_at DESC LIMIT 100`);
-  res.json(rows);
-});
-// Elle ödeme onayı: gerekçe ZORUNLU, işlem hash'i önerilir; denetim kaydına yazılır. (Normalde zincir izleyici otomatik onaylar.)
+// Elle ödeme onayı: gerekçe ZORUNLU; denetim kaydına yazılır. (Normalde sanal POS ödemeyi otomatik onaylar; elle onay istisnadır, ör. havale ile ödeme doğrulandığında.)
 adminRouter.post("/orders/:id/approve", requireAdmin, async (req, res) => {
   if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Sipariş bulunamadı." });
   const reason = cleanText((req.body && req.body.reason) ?? "").slice(0, 300);
   if (!reason || reason.length < 10) return bad(res, "Gerekçe en az 10 karakter olmalıdır.");
-  const tx = req.body && req.body.txHash ? String(req.body.txHash).trim() : null;
-  if (tx && !/^[0-9a-fA-F]{64}$/.test(tx)) return bad(res, "İşlem kimliği (hash) geçersiz.");
+  const ref = req.body && req.body.paymentRef ? cleanText(req.body.paymentRef).slice(0, 80) : null;
   const ex = await pool.query(`SELECT status FROM orders WHERE id = $1`, [req.params.id]);
   if (!ex.rows[0]) return res.status(404).json({ error: "Sipariş bulunamadı." });
-  const ok = await markOrderPaid(req.params.id, { txHash: tx, actorId: req.user.sub, note: reason, source: "admin_manual" }).catch((e) => {
+  const ok = await markOrderPaid(req.params.id, { paymentRef: ref, actorId: req.user.sub, note: reason, source: "admin_manual" }).catch((e) => {
     if (e.code === "23505") return "dup"; throw e; });
-  if (ok === "dup") return res.status(409).json({ error: "Bu işlem kimliği başka bir siparişte kayıtlı." });
+  if (ok === "dup") return res.status(409).json({ error: "Bu ödeme referansı başka bir siparişte kayıtlı." });
   if (!ok) return res.status(409).json({ error: "Bu sipariş onaylanabilir durumda değil.", code: "not_approvable" });
   res.json({ ok: true });
 });

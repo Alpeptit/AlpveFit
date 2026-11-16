@@ -9,7 +9,7 @@ process.env.DATABASE_URL ||= "postgres://local/avfsim";
 const PORT = Number(process.env.PORT || 8902);
 process.env.FRONTEND_URL = `http://127.0.0.1:${PORT}`;
 process.env.SIM_DB ||= "avfsim";
-process.env.TRON_WALLET_ADDRESS ||= "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";   // geçerli biçimli test adresi (gerçek değil)
+process.env.PAYMENT_PROVIDER ||= "mock";   // sahte sanal POS (yalnız test)
 import http from "node:http";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { join, extname, dirname } from "node:path";
@@ -27,8 +27,6 @@ console.warn = () => {};
 
 const { ROUTES } = await import("express");
 const prefixes = [];
-const watcher = await import(join(root, "src/services/paymentWatcher.js"));
-let fakeConf = 25; watcher._setConfirmationProvider(async () => fakeConf);
 async function load(file, prefix) {
   const s = ROUTES.length; await import(join(root, "src/routes", file)); const e = ROUTES.length;
   // router.use(fn, fn2) → bu aralıktaki TÜM yollara önden uygulanır (Express router katmanı davranışı)
@@ -57,11 +55,6 @@ http.createServer(async (rq, rs) => {
   const url = new URL(rq.url, "http://x"); const path = url.pathname.replace(/\/+$/, "") || "/";
   try {
     if (path === "/__mails") { const to = url.searchParams.get("to"); const m = [...mails].reverse().find((x) => !to || x.to === to); rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify(m || null)); }
-    // YALNIZ test: sahte zincir işlemi → gerçek processTransaction. /__chain?hash=<64hex>&amount=<usdt>&conf=<n>
-    if (path === "/__chain") { fakeConf = Number(url.searchParams.get("conf") || 25); const amount = Number(url.searchParams.get("amount"));
-      await watcher.processTransaction({ transaction_id: url.searchParams.get("hash"), value: String(Math.round(amount * 1e6)), to: process.env.TRON_WALLET_ADDRESS, from: "TFromTestAddr", block_timestamp: Date.now() });
-      if (url.searchParams.get("recheck")) await watcher.recheckReviewOrders();
-      rs.writeHead(200, { "content-type": "application/json" }); return rs.end("{}"); }
     if (path === "/api/health") { rs.writeHead(200, { "content-type": "application/json" }); return rs.end('{"ok":true}'); }
     if (path === "/api/config") { rs.writeHead(200, { "content-type": "application/json" }); return rs.end('{"recaptchaSiteKey":""}'); }
     if (path.startsWith("/api/")) {

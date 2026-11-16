@@ -5,26 +5,25 @@ import { sendMail } from "../utils/mailer.js";
 import { orderPaidMail } from "../utils/emailTemplates.js";
 
 /**
- * Siparişi 'ödendi' yapar (zincir izleyicisi VEYA yönetici onayı). TEK transaction'da:
- *  - kilitli satır yalnız pending/payment_review/flagged ise güncellenir (çift onay yok)
+ * Siparişi 'ödendi' yapar (sanal POS başarılı ödemesi VEYA yönetici onayı). TEK transaction'da:
+ *  - kilitli satır yalnız pending ise güncellenir (çift onay yok)
  *  - paketin plan türleri üyeye açılır (farmakoloji yalnız farmakolojili paketlerde) — var olan izin silinmez
  *  - plans_due_at = ödeme + 7 gün; bildirim + denetim kaydı aynı işlemde
  * Dönüş: true = bu çağrı onayladı.
  */
-export async function markOrderPaid(orderId, { txHash = null, confirmations = null, fromAddress = null, actorId = null, note = null, source }) {
+export async function markOrderPaid(orderId, { paymentRef = null, actorId = null, note = null, source }) {
   const client = await pool.connect();
   let done = null;
   try {
     await client.query("BEGIN");
     const { rows } = await client.query(`SELECT * FROM orders WHERE id = $1 FOR UPDATE`, [orderId]);
     const o = rows[0];
-    if (o && ["pending", "payment_review", "flagged"].includes(o.status)) {
+    if (o && o.status === "pending") {
       await client.query(
         `UPDATE orders SET status = 'paid', paid_at = now(), plans_due_at = now() + make_interval(days => $2),
-                tx_hash = COALESCE($3, tx_hash), confirmations = COALESCE($4, confirmations), from_address = COALESCE($5, from_address),
-                approved_by = $6, approval_note = $7, updated_at = now()
+                payment_ref = COALESCE($3, payment_ref), approved_by = $4, approval_note = $5, updated_at = now()
          WHERE id = $1`,
-        [o.id, PLAN_DELIVERY_DAYS, txHash, confirmations, fromAddress, actorId, note]
+        [o.id, PLAN_DELIVERY_DAYS, paymentRef, actorId, note]
       );
       if (o.user_id) {
         for (const kind of kindsForPackage(o.package_key)) {
@@ -36,7 +35,7 @@ export async function markOrderPaid(orderId, { txHash = null, confirmations = nu
           [o.user_id, `${o.order_number} numaralı siparişinizin ödemesi onaylandı.`, o.id, JSON.stringify({ orderNumber: o.order_number })]
         );
       }
-      await logAuditTx(client, actorId, "order_paid", "order", o.id, { orderNumber: o.order_number, source, txHash, previous: o.status });
+      await logAuditTx(client, actorId, "order_paid", "order", o.id, { orderNumber: o.order_number, source, paymentRef, previous: o.status });
       done = o;
     }
     await client.query("COMMIT");

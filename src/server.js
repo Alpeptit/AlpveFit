@@ -18,7 +18,6 @@ import { accountRouter } from "./routes/account.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { ordersRouter } from "./routes/orders.js";
 import { profileRouter } from "./routes/profile.js";
-import { startPaymentWatcher } from "./services/paymentWatcher.js";
 import { startDataRetentionJob } from "./services/dataRetention.js";
 import { normalizeOrigin } from "./utils/originCheck.js";
 import { clientIpMiddleware, originGuardMiddleware, cloudflareOnlyMiddleware, isCloudflareIp, viaCloudflare, edgePeerIp } from "./utils/clientIp.js";
@@ -276,9 +275,9 @@ process.on("uncaughtException", (err) => {
 //     advisory lock sırayı korur, ikincisi bekler.
 //   • Hata hâlinde süreç ÇÖKMEZ: site ve herkese açık uçlar ayakta kalır, durum /api/health'te görünür.
 let jobsStarted = false;
-function startBackgroundJobs() {   // ödeme izleyici + 180 gün veri saklama — migration bittikten sonra, bir kez
+function startBackgroundJobs() {   // 180 gün veri saklama — migration bittikten sonra, bir kez
   if (jobsStarted || process.env.RUN_BACKGROUND_JOBS === "false") return;
-  jobsStarted = true; startPaymentWatcher(); startDataRetentionJob();
+  jobsStarted = true; startDataRetentionJob();
 }
 export const dbMigrations = { state: "pending", detail: "açılışta uygulanacak" };
 async function applyMigrationsOnBoot() {

@@ -19,3 +19,11 @@ Uzman ve yönetici hesapları Authenticator (TOTP) olmadan panel API'sine erişe
 
 ## Test
 `npm test` (birim). Uçtan uca API testi: `tests/e2e/avfsim.mjs` (gerçek PostgreSQL üzerinde, bkz. dosya başı).
+
+## Ödeme (sanal POS)
+
+Alpvefit yalnız **sanal POS (kart)** ile ödeme alır; kart numarası/CVC bu sunucuya hiç gelmez ve saklanmaz. Fiyat ve ödeme sonucu yalnız sunucuda belirlenir.
+
+- **Test aşaması:** `PAYMENT_PROVIDER=mock` — sahte (deneme) sanal POS. Gerçek tahsilat yapmaz; ödeme sayfasında yalnız "başarılı" veya "reddedilen" test sonucu seçilir. Üretimde yalnız `ALLOW_MOCK_PAYMENTS=true` ile açılır; **yayına geçmeden kaldırın**.
+- **Gerçek sağlayıcı:** `src/services/payments.js` arayüzü genişletilir (sağlayıcının barındırdığı ödeme sayfasına yönlendirme + imzalı sunucu bildirimi → `markOrderPaid`). Sağlayıcı seçilene kadar sipariş uç noktası "ödeme altyapısı hazır değil" döner.
+- Ödenen sipariş: paketin plan türleri üyeye açılır, planlar için 7 gün teslim tarihi yazılır, üyeye bildirim/e-posta gider. Elle onay yalnız yönetici, zorunlu gerekçe ve denetim kaydıyla yapılır.

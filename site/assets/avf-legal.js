@@ -20,13 +20,13 @@
           "Üye, 18 yaşını doldurduğunu, doğru ve güncel bilgi verdiğini beyan eder. Hesap bilgilerinin ve iki aşamalı doğrulama (Authenticator) kodlarının gizliliğinden Üye sorumludur. Hesabın üçüncü kişilere devredilmesi veya paylaşılması yasaktır.",
           "Alpvefit, hesabın kötüye kullanıldığına dair makul şüphe halinde hesabı geçici olarak kısıtlayabilir veya askıya alabilir."]],
         ["4. Fiyat ve ödeme", [
-          "Fiyatlar ABD doları cinsinden liste fiyatıdır ve USDT (TRON/TRC20 ağı) ile birebir ödenir (1 USD = 1 USDT). Kripto ile ödemede liste fiyatı üzerinden %5 indirim otomatik uygulanır. Kredi kartı ile ödeme şu anda aktif değildir.",
-          "Ödeme, sipariş sayfasında gösterilen cüzdan adresine ve gösterilen TAM tutarda (sipariş numarasına özgü küsuratıyla birlikte) yapılmalıdır. Ödeme penceresi sipariş oluşturulduktan sonra 24 saattir; süre dolduğunda sipariş geçersiz olur ve bu adrese ödeme yapılmamalıdır.",
-          "Yanlış ağ (TRC20 dışı), yanlış token, eksik/fazla tutar, süresi dolmuş siparişe yapılan ödeme veya yanlış adrese gönderim nedeniyle oluşan kayıplardan, blokzincir işlemlerinin geri alınamaz niteliği nedeniyle Alpvefit sorumlu değildir; bu hâllerde ödeme incelemeye alınır ve çözüm Alpvefit’in makul değerlendirmesi ile yürütülür. Ağ (işlem) ücretleri gönderene aittir.",
-          "Ödeme, ağ üzerinde gerekli onay sayısına ulaştığında otomatik olarak onaylanır; Alpvefit gerekli gördüğünde ödemeyi elle inceleyebilir."]],
+          "Fiyatlar ABD doları cinsinden liste fiyatıdır. Ödeme, kredi / banka kartı ile sanal POS (ödeme kuruluşu) üzerinden alınır. Kart bilgileri Alpvefit sunucularına iletilmez ve Alpvefit tarafından saklanmaz; kart işlemi ödeme kuruluşunun güvenli ödeme sayfasında gerçekleştirilir. Üye, ödeme kuruluşunun kendi şartlarına tabidir.",
+          "Ödeme penceresi sipariş oluşturulduktan sonra 2 saattir; süre dolduğunda sipariş geçersiz olur ve yeni sipariş oluşturulması gerekir. Hizmetin test aşamasında ödeme sahte (deneme) sanal POS ile yapılabilir; bu aşamada gerçek tahsilat yapılmaz ve hizmet bedeli talep edilmez.",
+          "Kart işleminin banka tarafından reddedilmesi, limit yetersizliği veya 3D Secure doğrulamasının tamamlanmaması gibi nedenlerle ödemenin alınamaması hâlinde sipariş ödenmemiş sayılır ve plan hazırlama süreci başlamaz.",
+          "Ödeme başarıyla alındığında sipariş otomatik olarak onaylanır; Alpvefit gerekli gördüğünde ödemeyi elle inceleyebilir."]],
         ["5. Cayma hakkı ve iade", [
           "Hizmet, kişiye özel hazırlanan ve ödemenin onaylanmasından itibaren ifasına başlanan bir hizmettir. 6502 sayılı Kanun ve Mesafeli Sözleşmeler Yönetmeliği uyarınca, tüketicinin onayı ile cayma süresi içinde ifasına başlanan hizmetlerde ve kişisel ihtiyaçlara göre hazırlanan hizmetlerde cayma hakkı kullanılamaz. Üye, siparişi onaylayarak hizmetin ödeme onayından hemen sonra ifasına başlanmasını talep ettiğini ve bu nedenle cayma hakkının bulunmadığı hususunda bilgilendirildiğini kabul eder.",
-          "Buna rağmen, ilk plan hazırlanmaya başlanmadan önce iletilen yazılı iptal talepleri (" + MAIL + ") Alpvefit tarafından değerlendirilir. Onaylanan iadeler, ödemenin yapıldığı USDT cinsinden ve ağ ücretleri düşülerek aynı cüzdana iade edilir. Hizmetin ifasına başlandıktan sonra iade yapılmaz.",
+          "Buna rağmen, ilk plan hazırlanmaya başlanmadan önce iletilen yazılı iptal talepleri (" + MAIL + ") Alpvefit tarafından değerlendirilir. Onaylanan iadeler, ödemenin yapıldığı karta ve ödeme kuruluşunun işlem süreleri dahilinde iade edilir. Hizmetin ifasına başlandıktan sonra iade yapılmaz.",
           "Alpvefit’in hizmeti sunamaması hâlinde Üye’nin ödediği tutarın ifa edilmeyen kısmı iade edilir."]],
         ["6. Sağlık, egzersiz ve farmakoloji", [
           "Sunulan tüm içerik eğitim ve bilgilendirme amaçlıdır; tıbbi tanı, tedavi veya hekim görüşü yerine geçmez. Üye, programa başlamadan önce bir hekime danışmakla yükümlüdür; sağlık durumunu ve kullandığı ilaçları uzmanlara doğru bildirmekle yükümlüdür.",
@@ -60,13 +60,13 @@
           "The Member declares to be at least 18 years old and to provide accurate and up-to-date information. The Member is responsible for keeping account credentials and two-step verification (Authenticator) codes confidential. Transferring or sharing an account is prohibited.",
           "Alpvefit may temporarily restrict or suspend an account where there is reasonable suspicion of misuse."]],
         ["4. Price and payment", [
-          "Prices are list prices in US dollars and are paid one-to-one in USDT on the TRON (TRC20) network (1 USD = 1 USDT). A 5% discount on the list price is applied automatically for crypto payments. Credit card payment is currently not active.",
-          "Payment must be sent to the wallet address shown on the order page and in the EXACT amount shown (including the order-specific decimals). The payment window is 24 hours after the order is created; once it expires the order becomes void and no payment should be sent to that address.",
-          "Because blockchain transactions are irreversible, Alpvefit is not liable for losses caused by the wrong network (non-TRC20), wrong token, missing/excess amount, payment to an expired order or sending to a wrong address; in these cases the payment is put under review and handled at Alpvefit’s reasonable discretion. Network (transaction) fees are borne by the sender.",
-          "A payment is confirmed automatically once it reaches the required number of network confirmations; Alpvefit may review a payment manually when it deems necessary."]],
+          "Prices are list prices in US dollars. Payment is taken by credit / debit card through a virtual POS (payment institution). Card details are not transmitted to or stored by Alpvefit servers; the card transaction is carried out on the payment institution’s secure payment page. The Member is subject to the payment institution’s own terms.",
+          "The payment window is 2 hours after the order is created; once it expires the order becomes void and a new order must be created. During the testing phase of the service, payment may be made through a fake (trial) virtual POS; no real charge is made at this stage and no service fee is requested.",
+          "If the payment cannot be taken — for example because the bank declines the card, the limit is insufficient or 3D Secure verification is not completed — the order is deemed unpaid and preparation of the plans does not start.",
+          "When the payment is successfully received the order is confirmed automatically; Alpvefit may review a payment manually when it deems necessary."]],
         ["5. Right of withdrawal and refunds", [
           "The service is prepared individually and performance starts as soon as the payment is confirmed. Under Law No. 6502 and the Distance Contracts Regulation, the right of withdrawal cannot be exercised for services whose performance has started with the consumer’s approval within the withdrawal period, or for services prepared according to personal needs. By confirming the order, the Member requests that performance begin immediately after payment confirmation and acknowledges having been informed that no right of withdrawal applies.",
-          "Nevertheless, written cancellation requests (" + MAIL + ") received before preparation of the first plan has started will be considered by Alpvefit. Approved refunds are made in USDT to the same wallet, net of network fees. No refund is made once performance has started.",
+          "Nevertheless, written cancellation requests (" + MAIL + ") received before preparation of the first plan has started will be considered by Alpvefit. Approved refunds are made to the card used for payment, within the processing times of the payment institution. No refund is made once performance has started.",
           "If Alpvefit is unable to provide the service, the unperformed part of the amount paid is refunded."]],
         ["6. Health, exercise and pharmacology", [
           "All content is for education and information only and does not replace medical diagnosis, treatment or a physician’s opinion. The Member must consult a physician before starting a programme and must accurately inform the experts about their health condition and any medication.",
@@ -148,7 +148,7 @@
         ["2. İşlenen veriler", [
           "• Kimlik ve iletişim: ad soyad, kullanıcı adı, e-posta adresi.",
           "• Hesap ve güvenlik: şifre özeti (şifreniz düz metin saklanmaz), iki aşamalı doğrulama bilgileri (şifreli), giriş kayıtları (IP adresi, cihaz bilgisi, zaman).",
-          "• İşlem: sipariş, paket, ödeme tutarı, ödeme işlemi kimliği (hash) ve gönderen cüzdan adresi.",
+          "• İşlem: sipariş, paket, ödeme tutarı ve ödeme kuruluşundaki işlem referansı. Kart numarası ve güvenlik kodu işlenmez ve saklanmaz.",
           "• Sağlık ve koçluk bilgileri (özel nitelikli kişisel veri): boy, kilo, doğum yılı, kan grubu, günlük adım sayısı, haftalık antrenman günü, hedef, sağlık/sakatlık notları; ayrıca size hazırlanan beslenme, antrenman, takviye ve farmakoloji planları. Bu bilgileri paylaşmak isteğe bağlıdır ve kayıt sırasında istenmez."]],
         ["3. İşleme amaçları ve hukuki sebepler", [
           "• Üyelik oluşturma, hesabın güvenliği ve hizmetin sunulması — sözleşmenin kurulması/ifası (KVKK m.5/2-c) ve meşru menfaat (m.5/2-f).",
@@ -173,7 +173,7 @@
         ["2. Data processed", [
           "• Identity and contact: full name, username, e-mail address.",
           "• Account and security: password hash (your password is never stored in plain text), two-step verification data (encrypted), login records (IP address, device information, time).",
-          "• Transaction: order, package, payment amount, payment transaction ID (hash) and sender wallet address.",
+          "• Transaction: order, package, payment amount and the transaction reference at the payment institution. Card number and security code are not processed or stored.",
           "• Health and coaching information (special category data): height, weight, year of birth, blood type, daily steps, weekly training days, goal, health/injury notes; and the nutrition, training, supplement and pharmacology plans prepared for you. Sharing this information is optional and it is not requested at registration."]],
         ["3. Purposes and legal bases", [
           "• Creating the membership, account security and delivering the service — performance of a contract (KVKK Art. 5/2-c) and legitimate interest (Art. 5/2-f).",

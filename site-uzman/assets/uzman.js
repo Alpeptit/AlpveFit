@@ -7,7 +7,7 @@
   var me = null, view, tab = "uyeler", sel = null;
   var KINDS = Object.keys(AVF.KIND);
   var PKG = { starter: "Başlangıç Paketi", advanced: "İleri Seviye Program", competitor: "Yarışmacı Paketi" };
-  var OSTATUS = { pending: "Ödeme bekleniyor", payment_review: "Ağ onayı bekleniyor", flagged: "İncelemede", paid: "Ödendi", expired: "Süresi doldu", cancelled: "İptal edildi" };
+  var OSTATUS = { pending: "Ödeme bekleniyor", paid: "Ödendi", expired: "Süresi doldu", cancelled: "İptal edildi" };
   function pkgText(o) { return o ? (PKG[o.package_key] || o.package_key) + " · " + o.weeks + " hafta" : ""; }
   var STATUS = { draft: ["Taslak", "chip lime"], published: ["Yayında", "chip"], archived: ["Arşiv", "chip lime"] };
 
@@ -151,31 +151,26 @@
 
   // ---------- yönetici: siparişler ----------
   function ordersView(c) {
-    var list = h("div", { class: "stack" }), um = h("div");
-    AVF.mount(c, h("h2", { class: "ptitle", text: "Siparişler" }), list, h("h3", { style: "margin:22px 0 10px", text: "Eşleşmeyen işlemler" }), um);
+    var list = h("div", { class: "stack" });
+    AVF.mount(c, h("h2", { class: "ptitle", text: "Siparişler" }), list);
     function load() {
       AVF.mount(list, AVF.skeleton(3));
       api("GET", "/orders").then(function (rows) {
         if (!rows.length) return AVF.mount(list, AVF.state("tag", "Henüz sipariş yok", ""));
         AVF.mount(list, rows.map(orderRow));
       }, function (e) { AVF.mount(list, AVF.state("alert", "Yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: load }, "Tekrar dene"))); });
-      api("GET", "/unmatched").then(function (rows) {
-        if (!rows.length) return AVF.mount(um, h("p", { class: "hint", text: "Eşleşmeyen işlem yok." }));
-        AVF.mount(um, h("div", { class: "card", style: "padding:6px 12px;overflow:auto" }, h("table", { class: "t stackm" }, h("thead", null, h("tr", null, ["Tarih", "Tutar (USDT)", "Gönderen", "Neden", "İşlem"].map(function (x) { return h("th", { text: x }); }))),
-          h("tbody", null, rows.map(function (r) { return h("tr", null, h("td", { text: AVF.fmtDateTime(r.created_at) }), h("td", { text: money(r.amount) }), h("td", { "data-notr": "", text: r.from_address || "—" }), h("td", { "data-notr": "", text: r.reason || "—" }), h("td", { "data-notr": "", text: String(r.tx_hash || "").slice(0, 12) + "…" })); })))));
-      }, function () { AVF.mount(um, h("p", { class: "hint", text: "Yüklenemedi" })); });
     }
     function orderRow(o) {
-      var eb = h("div"), reason = AVF.input("text", { maxlength: "300", placeholder: "Gerekçe (en az 10 karakter)" }), tx = AVF.input("text", { maxlength: "64", placeholder: "İşlem kimliği / hash (isteğe bağlı)" });
+      var eb = h("div"), reason = AVF.input("text", { maxlength: "300", placeholder: "Gerekçe (en az 10 karakter)" }), tx = AVF.input("text", { maxlength: "80", placeholder: "Ödeme referansı (isteğe bağlı)" });
       var canApprove = o.status !== "paid" && o.status !== "cancelled";
-      return AVF.accordion({ icon: "tag", title: o.order_number + " · " + (OSTATUS[o.status] || o.status), sub: [o.buyer_name, pkgText(o), money(o.expected_amount) + " USDT"].join(" · "), content: [
+      return AVF.accordion({ icon: "tag", title: o.order_number + " · " + (OSTATUS[o.status] || o.status), sub: [o.buyer_name, pkgText(o), money(o.subtotal) + " " + o.currency].join(" · "), content: [
         h("div", { class: "meta" }, h("span", null, "Alıcı: " + o.buyer_email), h("span", null, "Oluşturma: " + AVF.fmtDateTime(o.created_at)), o.paid_at ? h("span", null, "Ödeme: " + AVF.fmtDateTime(o.paid_at)) : null,
-          o.plans_due_at ? h("span", null, "Plan teslim: " + AVF.fmtDate(o.plans_due_at)) : null, o.status === "paid" ? h("span", null, "Yayınlanan plan: " + o.plans_published) : null, o.confirmations ? h("span", null, "Onay: " + o.confirmations) : null),
-        o.tx_hash ? h("p", { class: "hint", "data-notr": "", text: "TX: " + o.tx_hash }) : null,
-        canApprove ? h("div", null, h("p", { class: "hint", text: "Normalde ödeme zincir izleyici tarafından otomatik onaylanır. Elle onay yalnız doğrulanmış ödemeler için kullanılmalıdır; gerekçe denetim kaydına yazılır." }), AVF.field("Gerekçe", reason, { optional: true }), AVF.field("İşlem kimliği", tx, { optional: true }), eb,
+          o.plans_due_at ? h("span", null, "Plan teslim: " + AVF.fmtDate(o.plans_due_at)) : null, o.status === "paid" ? h("span", null, "Yayınlanan plan: " + o.plans_published) : null, o.payment_provider ? h("span", null, "Ödeme: " + (o.payment_provider === "mock" ? "sahte POS (test)" : "sanal POS")) : null),
+        o.payment_ref ? h("p", { class: "hint", "data-notr": "", text: "Ref: " + o.payment_ref }) : null,
+        canApprove ? h("div", null, h("p", { class: "hint", text: "Normalde ödeme sanal POS tarafından otomatik onaylanır. Elle onay yalnız doğrulanmış ödemeler (ör. havale) için kullanılmalıdır; gerekçe denetim kaydına yazılır." }), AVF.field("Gerekçe", reason, { optional: true }), AVF.field("Ödeme referansı", tx, { optional: true }), eb,
           h("button", { class: "btn sm", type: "button", onclick: function () {
             if (!window.confirm("Bu sipariş ödenmiş olarak işaretlenecek ve üyeye erişim açılacak. Onaylıyor musunuz?")) return;
-            api("POST", "/orders/" + o.id + "/approve", { reason: reason.value, txHash: tx.value.trim() || undefined }).then(function () { AVF.toast("Sipariş onaylandı."); load(); }, function (e) { err(eb, e); });
+            api("POST", "/orders/" + o.id + "/approve", { reason: reason.value, paymentRef: tx.value.trim() || undefined }).then(function () { AVF.toast("Sipariş onaylandı."); load(); }, function (e) { err(eb, e); });
           } }, "Elle onayla")) : null] });
     }
     load();
