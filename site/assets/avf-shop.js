@@ -6,6 +6,8 @@
 
   function money(n) { return Number(n).toLocaleString(AVF.lang === "en" ? "en-US" : "tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   AVF.money = money;
+  function moneyC(n, cur) { try { return new Intl.NumberFormat(AVF.lang === "en" ? "en-US" : "tr-TR", { style: "currency", currency: cur || "TRY", maximumFractionDigits: 0 }).format(Number(n)); } catch (e) { return money(n) + " " + cur; } }
+  AVF.moneyC = moneyC;
   function catalog() { return cat ? Promise.resolve(cat) : AVF.api("GET", "/packages").then(function (c) { cat = c; return c; }); }
   var PKG_COPY = {
     starter: { tag: "Temelden başlayanlar için", icon: "dumb", items: ["Kişiye özel beslenme programı", "Kişiye özel antrenman programı", "Vitamin / mineral / takviye planı"] },
@@ -40,7 +42,7 @@
     var price = h("div", { class: "price" }), listP = h("div", { class: "listp" }), buy = h("button", { class: "btn block", type: "button" }, "Satın al");
     var opts = h("div", { class: "seg", role: "radiogroup", "aria-label": "Süre seçin" });
     function paint() {
-      AVF.mount(price, h("b", {}, money(sel.price)), h("span", {}, " USD"));
+      AVF.mount(price, h("b", {}, moneyC(sel.price, cat && cat.currency)));
       AVF.mount(listP, weeksText(sel.weeks) + " · " + (p.pharmacology ? "farmakoloji dahil" : "farmakolojisiz"));
       Array.prototype.forEach.call(opts.children, function (b, i) { b.setAttribute("aria-checked", p.options[i] === sel ? "true" : "false"); });
     }
@@ -69,7 +71,7 @@
       h("button", { class: "x", type: "button", "aria-label": "Kapat", onclick: close }, AVF.icon("x")),
       h("h2", { id: "co-t" }, "Siparişi onayla"), h("p", { class: "sub" }, p.label + " · " + weeksText(opt.weeks)),
       h("div", { class: "sum" },
-        h("div", { class: "tot" }, h("span", {}, "Ödenecek tutar"), h("b", {}, money(opt.price) + " USD"))),
+        h("div", { class: "tot" }, h("span", {}, "Ödenecek tutar"), h("b", {}, moneyC(opt.price, cat && cat.currency)))),
       h("div", { class: "pm" },
         payOn ? h("button", { type: "button", class: "on", "aria-pressed": "true" }, AVF.icon("card"), h("span", {}, h("b", {}, "Kredi / banka kartı"), h("small", {}, "Sanal POS ile güvenli ödeme")), AVF.icon("check"))
               : h("button", { type: "button", disabled: true, "aria-disabled": "true" }, AVF.icon("card"), h("span", {}, h("b", {}, "Kredi / banka kartı"), h("small", {}, "Şu anda aktif değildir")), h("em", {}, "Pasif"))),
@@ -114,7 +116,7 @@
       var head = h("div", { class: "row between", style: "margin-bottom:14px;gap:10px;flex-wrap:wrap" }, h("h2", { class: "ptitle", style: "margin:0", text: o.order_number }), statusChip(o.status));
       var summary = h("div", { class: "card", style: "padding:18px;margin-bottom:14px" }, h("div", { class: "kv" },
         h("div", {}, h("span", {}, "Paket"), h("b", { text: pk.label })), h("div", {}, h("span", {}, "Süre"), h("b", { text: weeksText(o.weeks) })),
-        h("div", {}, h("span", {}, "Tutar"), h("b", { text: money(o.subtotal) + " " + o.currency })),
+        h("div", {}, h("span", {}, "Tutar"), h("b", { text: moneyC(o.subtotal, o.currency) })),
         h("div", {}, h("span", {}, "Ödeme"), h("b", { text: "Kredi / banka kartı" }))));
       var body = [];
       if (o.status === "paid") {
@@ -135,7 +137,7 @@
         okb.addEventListener("click", function () { sim("success", okb); }); nob.addEventListener("click", function () { sim("decline", nob); });
         body.push(h("div", { class: "note warn" }, h("b", {}, "TEST ORTAMI — sahte sanal POS. "), "Gerçek kart bilgisi girmeyin; bu sayfada hiçbir tahsilat yapılmaz. Aşağıdaki düğmelerle ödemenin başarılı veya reddedilmiş olma durumunu deneyebilirsiniz."),
           h("div", { class: "card", style: "padding:20px" }, h("h3", { style: "margin-bottom:6px" }, "Kartla öde"),
-            h("p", { class: "hint" }, "Ödenecek tutar: " + money(o.subtotal) + " " + o.currency), perr,
+            h("p", { class: "hint" }, "Ödenecek tutar: " + moneyC(o.subtotal, o.currency)), perr,
             h("div", { class: "stack", style: "margin-top:12px" }, okb, nob),
             h("div", { class: "left", style: "margin-top:14px" }, AVF.icon("clock"), h("span", {}, "Kalan süre: "), h("b", { "data-left": "" }, ""))),
           h("div", { style: "margin-top:14px" }, h("button", { class: "btn ghost sm", type: "button", onclick: function () {
@@ -160,7 +162,7 @@
       if (!rows.length) return el.appendChild(AVF.state("card", "Henüz siparişiniz yok", "Bir paket seçtiğinizde siparişleriniz burada görünür.", h("a", { class: "btn", href: "/paketler", "data-link": "" }, "Paketleri incele")));
       el.appendChild(h("div", { class: "stack" }, rows.map(function (o) {
         return h("a", { class: "card ordrow", href: "/panel/siparis/" + o.id, "data-link": "" }, h("span", { class: "tile" }, AVF.icon("card")),
-          h("span", { class: "t" }, h("b", {}, (labels[o.package_key] || o.package_key) + " · " + weeksText(o.weeks)), h("small", {}, o.order_number + " · " + AVF.fmtDate(o.created_at) + " · " + money(o.subtotal) + " " + o.currency)), statusChip(o.status), AVF.icon("chev", "chev"));
+          h("span", { class: "t" }, h("b", {}, (labels[o.package_key] || o.package_key) + " · " + weeksText(o.weeks)), h("small", {}, o.order_number + " · " + AVF.fmtDate(o.created_at) + " · " + moneyC(o.subtotal, o.currency))), statusChip(o.status), AVF.icon("chev", "chev"));
       })));
     }, function (e) { AVF.mount(el, h("h2", { class: "ptitle", text: "Siparişlerim" }), AVF.state("alert", "Siparişler yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: function () { AVF.ordersView(el); } }, "Tekrar dene"))); });
   };

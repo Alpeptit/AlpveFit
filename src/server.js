@@ -18,6 +18,7 @@ import { accountRouter } from "./routes/account.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { ordersRouter } from "./routes/orders.js";
 import { profileRouter } from "./routes/profile.js";
+import { blogRouter } from "./routes/blog.js";
 import { startDataRetentionJob } from "./services/dataRetention.js";
 import { normalizeOrigin } from "./utils/originCheck.js";
 import { clientIpMiddleware, originGuardMiddleware, cloudflareOnlyMiddleware, isCloudflareIp, viaCloudflare, edgePeerIp } from "./utils/clientIp.js";
@@ -211,6 +212,7 @@ app.use("/api", privacyRouter);       // /api/me/request-delete, /api/me/confirm
 app.use("/api", accountRouter);       // /api/account/* (ad/e-posta/şifre değişikliği)
 app.use("/api", notificationsRouter); // /api/notifications
 app.use("/api", ordersRouter);        // /api/packages, /api/orders/* — paket siparişi (USDT TRC20)
+app.use("/api", blogRouter);          // /api/blog — herkese açık blog (yazma: /api/admin/blog)
 app.use("/api", profileRouter);       // /api/profile — üyenin koçluk bilgileri
 
 app.get("/api/health", (req, res) => res.json({ ok: true, ...(dbMigrations.state === "ok" ? {} : { db: dbMigrations.state }) }));

@@ -36,9 +36,9 @@
   }
   function renderChrome() {
     var u = AVF.session.user, path = location.pathname;
-    var items = [["/", "home", "Ana Sayfa"], ["/paketler", "tag", "Paketler"]]; if (u) items.push(["/panel", "user", "Panelim"]);
+    var items = [["/paketler", "tag", "Paketler"], ["/sss", "list", "SSS"], ["/hakkimizda", "users", "Hakkımızda"], ["/blog", "book", "Blog"], ["/araclar", "calc", "Araçlar"], ["/forum", "msg", "Forum"]]; if (u) items.push(["/panel", "user", "Panelim"]);
     if (u && (u.role === "coach" || u.role === "admin")) items.push(["/uzman", "users", "Uzman Paneli"]);
-    AVF.mount(nav, items.map(function (i) { var a = i[0] === "/uzman" ? h("a", { href: i[0] }, AVF.icon(i[1]), i[2]) : link(i[0], [AVF.icon(i[1]), i[2]]); if (i[0] === "/" ? path === "/" : path.indexOf(i[0]) === 0) a.setAttribute("aria-current", "page"); return a; }));
+    AVF.mount(nav, items.map(function (i) { var a = i[0] === "/uzman" ? h("a", { href: i[0] }, AVF.icon(i[1]), i[2]) : link(i[0], i[0] === "/forum" ? [AVF.icon(i[1]), i[2], h("em", { class: "soon", text: "Yakında" })] : [AVF.icon(i[1]), i[2]]); if (i[0] === "/" ? path === "/" : path.indexOf(i[0]) === 0) a.setAttribute("aria-current", "page"); return a; }));
     AVF.mount(drawer, h("nav", null, h("span", { class: "logo", style: "margin-bottom:12px" }, h("i"), "ALPVEFIT"), items.map(function (i) { return i[0] === "/uzman" ? h("a", { href: i[0] }, i[2]) : link(i[0], i[2]); }),
       u ? h("a", { href: "#", onclick: function (e) { e.preventDefault(); logout(); } }, "Çıkış yap") : h("a", { href: "#", onclick: function (e) { e.preventDefault(); drawer.classList.remove("open"); AVF.auth.open("login"); } }, "Giriş yap / Kayıt ol")));
     AVF.mount(tools,
@@ -70,6 +70,13 @@
     if (p === "/giris" || p === "/kayit" || p === "/sifremi-unuttum") { if (AVF.session.user) return go("/panel", true); homePage(); return AVF.auth.open(p === "/kayit" ? "register" : "login"); }
     if (p === "/") return homePage();
     if (p === "/paketler") return AVF.packagesPage(view);
+    if (p === "/sss") return AVF.pages.faq(view);
+    if (p === "/hakkimizda") return AVF.pages.about(view);
+    if (p === "/forum") return AVF.pages.forum(view);
+    if (p === "/blog") return AVF.pages.blog(view);
+    if (p.indexOf("/blog/") === 0) return AVF.pages.post(view, p.slice(6));
+    if (p === "/araclar") return AVF.pages.tools(view);
+    if (p.indexOf("/araclar/") === 0) return AVF.pages.tools(view, p.slice(9));
     if (p.indexOf("/yasal/") === 0 && AVF.legalPage(view, p.slice(7))) return;
     if (p === "/panel" || p.indexOf("/panel/") === 0) return panelPage(p.slice(7));
     notFound();
@@ -82,69 +89,41 @@
   // ---------- ana sayfa ----------
   function homePage() {
     var u = AVF.session.user;
+    function planRow(icon, t, s) {
+      return h("div", { class: "prow" }, h("span", { class: "tile dk" }, AVF.icon(icon)), h("span", { class: "t" }, h("b", { text: t }), h("small", { text: s })), AVF.icon("chev", "go"));
+    }
     AVF.mount(view,
       h("section", { class: "hero hero-split" }, h("div", { class: "wrap" },
         h("div", { class: "hero-copy" },
-          h("div", { class: "eyebrow" }, "Uzaktan eğitim ve koçluk"),
-          h("h1", { text: "Alpvefit" }),
+          h("span", { class: "eyebrow" }, AVF.icon("globe"), "Uzaktan eğitim ve koçluk"),
+          h("h1", { text: "Size özel program, uzman koçluk." }),
           h("p", { text: "Beslenme, antrenman ve takviye programlarınız uzman koçlar tarafından size özel hazırlanır; tek bir yerde, yalnızca sizin hesabınızda yayınlanır." }),
           h("div", { class: "cta" }, link("/paketler", "Paketleri incele", { class: "btn" }), u ? link("/panel", "Panelime git", { class: "btn ghost" }) : h("button", { class: "btn ghost", type: "button", onclick: function () { AVF.auth.open("register"); } }, "Kayıt ol")),
-          h("ul", { class: "heroTicks" }, h("li", {}, "Ödemeden sonra 7 gün içinde programınız hazır"), h("li", {}, "Kredi / banka kartı ile güvenli ödeme"), h("li", {}, "Planlarınızı yalnızca siz görürsünüz"))),
-        heroVisual())),
-      h("div", { class: "strip", "aria-hidden": "true" }, h("div", { class: "mq" }, ticker().concat(ticker()))),
-      h("section", { class: "section" }, h("div", { class: "wrap" }, h("h2", { class: "sec" }, "Nasıl çalışır?"),
-        h("div", { class: "grid3" },
-          step("1", "card", "Paketini seç ve öde", "Size uygun paketi ve süreyi seçin. Kredi / banka kartı ile sanal POS üzerinden ödeyin; ödeme otomatik onaylanır."),
-          step("2", "id", "Bilgilerini ekle", "Boy, kilo, günlük adım sayınız gibi bilgileri panelinizden isteğe bağlı olarak ekleyin; kayıt sırasında istenmez."),
-          step("3", "list", "7 gün içinde programın hazır", "Beslenme, antrenman ve takviye programlarınız uzmanlarımızca hazırlanıp panelinizde yayınlanır, size bildirim gelir.")))),
-      h("section", { class: "section alt" }, h("div", { class: "wrap grid3" },
-        feat("globe", "Uzaktan eğitim", "Nerede olursanız olun uzmanınızla çalışın. Başlangıç, İleri Seviye ve Yarışmacı paketleri.", "Online", true),
-        feat("pin", "Yüz yüze eğitim", "Yüz yüze eğitim paketi için bizimle iletişime geçin: destek@alpvefit.com", "Yüz yüze", false),
-        feat("list", "Kişiye özel planlar", "Planlarınız yetkili uzman tarafından hazırlanır; kimin hazırladığı ve ne zaman yayınlandığı her planda görünür.", "Planlarım", false))),
-      h("section", { class: "section" }, h("div", { class: "wrap about" },
-        aboutVisual(),
-        h("div", {}, h("h2", { class: "sec" }, "Programınız size özel"),
-          h("p", { class: "lead" }, "Her program kişinin hedefine, yaşam düzenine ve sağlık durumuna göre uzmanlar tarafından elle hazırlanır. Otomatik üretilmiş şablon kullanılmaz."),
-          h("ul", { class: "ticks" }, h("li", {}, "Programı hazırlayan uzmanın adı ve yayın tarihi her planda yer alır"), h("li", {}, "Farmakoloji içeriği isteğe bağlıdır; yalnızca yetkili uzmanlarca ve ilgili paketlerde eklenir"), h("li", {}, "Alpvefit herhangi bir ürün veya madde satmaz")),
-          h("div", { style: "margin-top:18px" }, link("/paketler", "Paketleri incele", { class: "btn" }))))),
-      h("section", { class: "section alt" }, h("div", { class: "wrap narrow" }, h("h2", { class: "sec" }, "Sık sorulanlar"),
-        h("div", { class: "stack" },
-          faq("Ödeme nasıl yapılıyor?", "Kredi / banka kartı ile sanal POS üzerinden ödenir. Kart bilgileriniz Alpvefit sunucularında saklanmaz. Şu an test aşamasındayız; ödeme sahte (deneme) sanal POS ile yapılır ve gerçek tahsilat olmaz."),
-          faq("Programım ne zaman hazır olur?", "Ödemeniz onaylandıktan sonra 7 gün içinde. Her plan yayınlandığında panelinizde görünür ve bildirim alırsınız."),
-          faq("Kişisel bilgilerimi vermek zorunda mıyım?", "Hayır, isteğe bağlıdır. Boy, kilo, meslek gibi bilgiler programın size uygun hazırlanmasına yardımcı olur; açık rızanızla kaydedilir ve istediğiniz zaman silebilirsiniz."),
-          faq("Farmakoloji desteği zorunlu mu?", "Hayır. İleri Seviye ve Yarışmacı paketlerinde yer alır ancak tamamen isteğe bağlıdır; hiçbir üyeye zorunlu kılınmaz. Karar ve sorumluluk üyeye aittir."))))
+          h("ul", { class: "heroTicks" }, h("li", {}, AVF.icon("check"), "Ödemeden sonra 7 gün içinde programınız hazır"), h("li", {}, AVF.icon("check"), "Kredi / banka kartı ile güvenli ödeme"), h("li", {}, AVF.icon("check"), "Planlarınızı yalnızca siz görürsünüz"))),
+        h("div", { class: "plancard", "aria-hidden": "true" },
+          h("div", { class: "row between" }, h("h2", { text: "Planlarım" }), h("span", { class: "chip dk", text: "3 aktif" })),
+          planRow("apple", "Haftalık beslenme planı", "Hazırlayan: Uzman koç"),
+          planRow("dumb", "Dört günlük antrenman", "Hazırlayan: Uzman koç"),
+          planRow("pill", "Vitamin / mineral planı", "Hazırlayan: Uzman koç")))),
+      h("section", { class: "section alt" }, h("div", { class: "wrap" },
+        h("h2", { class: "sec" }, "Neden Alpvefit?"),
+        h("div", { class: "grid3", style: "margin-top:22px" },
+          feat("globe", "Uzaktan eğitim", "Nerede olursanız olun uzmanınızla çalışın. Başlangıç, İleri Seviye ve Yarışmacı paketleri.", "Online", true),
+          feat("pin", "Yüz yüze eğitim", "Yüz yüze eğitim paketi için bizimle iletişime geçin: destek@alpvefit.com", "Yüz yüze", false),
+          feat("list", "Kişiye özel planlar", "Planlarınız yetkili uzman tarafından hazırlanır; kimin hazırladığı ve ne zaman yayınlandığı her planda görünür.", "Planlarım", false)))),
+      h("section", { class: "band" }, h("div", { class: "wrap band-in" },
+        h("div", {}, h("h2", { text: "Programınız size özel" }),
+          h("p", { text: "Her program kişinin hedefine, yaşam düzenine ve sağlık durumuna göre uzmanlar tarafından elle hazırlanır. Otomatik üretilmiş şablon kullanılmaz." })),
+        link("/paketler", "Paketleri incele", { class: "btn light" })))
     );
   }
-  function ticker() {
-    return ["Beslenme", "Antrenman", "Takviye", "Kişiye özel", "Uzaktan koçluk", "Uzman onaylı"].map(function (t) { return h("span", { text: t }); });
-  }
-  function heroVisual() {
-    var NS = "http://www.w3.org/2000/svg";
-    var ring = document.createElementNS(NS, "svg"); ring.setAttribute("viewBox", "0 0 84 84"); ring.setAttribute("class", "ring"); ring.setAttribute("aria-hidden", "true");
-    ["bg", "fg"].forEach(function (c) { var k = document.createElementNS(NS, "circle"); k.setAttribute("class", c); k.setAttribute("cx", "42"); k.setAttribute("cy", "42"); k.setAttribute("r", "36"); ring.appendChild(k); });
-    function bar(v) { var i = h("i"); i.style.setProperty("--h", v + "%"); i.style.animationDelay = (v / 100) + "s"; return i; }
-    return h("div", { class: "hv", "aria-hidden": "true" },
-      h("div", { class: "orb" }),
-      h("div", { class: "hc a" }, h("small", { text: "Haftalık program" }), h("b", { text: "Antrenman" }), ring),
-      h("div", { class: "hc b" }, h("small", { text: "Beslenme planı" }), h("b", { text: "Hazırlandı" }), h("div", { class: "bars" }, [45, 70, 55, 90, 65, 100].map(bar))),
-      h("div", { class: "hc c" }, h("div", { class: "mini" }, h("span", { class: "tile teal" }, AVF.icon("shield")), h("span", {}, h("small", { text: "Hazırlayan" }), h("b", {}, h("i", { class: "pulse" }), "Uzman koç")))));
-  }
-  function aboutVisual() {
-    return h("div", { class: "about-vis", "aria-hidden": "true" }, h("div", { class: "r r1" }), h("div", { class: "r r2" }),
-      h("div", { class: "core" }, AVF.icon("dumb")),
-      h("span", { class: "sat s1" }, AVF.icon("apple")), h("span", { class: "sat s2" }, AVF.icon("pill")), h("span", { class: "sat s3" }, AVF.icon("list")));
-  }
-  function step(n, icon, title, text) {
-    return h("div", { class: "card feat" }, h("div", { class: "stepn" }, h("span", { class: "tile" }, AVF.icon(icon)), h("i", { "data-notr": "", text: n })), h("h3", { text: title }), h("p", { text: text }));
-  }
-  function faq(q, a) { return AVF.accordion({ icon: "list", title: q, content: h("p", { style: "margin:0;color:var(--muted)", text: a }) }); }
   function feat(icon, title, text, chip, teal) {
     return h("div", { class: "card feat" }, h("span", { class: "tile" + (teal ? " teal" : "") }, AVF.icon(icon)), h("h3", { text: title }), h("p", { text: text }), h("div", { style: "margin-top:14px" }, h("span", { class: "chip" + (teal ? "" : " lime"), text: chip })));
   }
 
   // ---------- panel ----------
   function panelHero(title, sub) {
-    return h("section", { class: "hero", style: "padding:56px 0 60px" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow", text: "Hesabım" }), h("h1", { text: title }), h("p", { text: sub })));
+    return h("section", { class: "hero panelhero", style: "padding:48px 0 52px" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow", text: "Hesabım" }), h("h1", { text: title }), h("p", { text: sub })));
   }
   function panelPage(sub) {
     var u = AVF.session.user;

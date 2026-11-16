@@ -5,6 +5,7 @@
 
   // ---------- simgeler (yalnız sabit, güvenilir SVG yolları) ----------
   var P = {
+    arrow: "M5 12h14M13 6l6 6-6 6", back: "M19 12H5M11 6l-6 6 6 6", send: "M22 2L11 13M22 2l-7 20-4-9-9-4z", book: "M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19V5M9 7h6", calc: "M6 3h12v18H6zM9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01", msg: "M4 5h16v11H9l-5 4z", save: "M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7",
     home: "M3 11l9-8 9 8M5 10v10h14V10", user: "M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0", bell: "M6 16V11a6 6 0 1112 0v5l2 2H4zM10 20a2 2 0 004 0",
     lock: "M6 11h12v10H6zM8 11V8a4 4 0 118 0v3", shield: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z", check: "M5 12l5 5 9-10", x: "M6 6l12 12M18 6L6 18",
     eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 100-6 3 3 0 000 6z", eyeoff: "M3 3l18 18M10 6.2A9.7 9.7 0 0112 6c6 0 10 6 10 6a17 17 0 01-3 3.5M6.5 7.5A17 17 0 002 12s4 7 10 7c1.6 0 3-.4 4.3-1",
@@ -34,8 +35,23 @@
       else el.setAttribute(k, v);
     });
     for (var i = 2; i < arguments.length; i++) add(el, arguments[i]);
+    if ((tag === "a" || tag === "button") && /(^|\s)btn(\s|$)/.test(el.className)) decorate(el);
     return el;
   };
+  // Tüm düğmeler simge taşır: etiketten anlamlı bir simge seçilir (yalnız simgesi olmayan, metinli düğmelerde).
+  var BTN_ICONS = [
+    [/giriş|login|sign in/i, "user"], [/kayıt ol|üye ol/i, "user"], [/çıkış/i, "out"], [/kopyala/i, "copy"],
+    [/sil\b|silin|kaldır|hesabı sil/i, "trash"], [/iptal|kapat|vazgeç|reddet/i, "x"], [/geri\b|önceki|ana sayfa/i, "back"],
+    [/öde|satın|kart/i, "card"], [/gönder|yayınla|ilet/i, "send"], [/yeni|ekle|oluştur/i, "plus"], [/yenile|tekrar|dene/i, "refresh"],
+    [/kaydet|onayla|doğrula|tamam|evet|etkinleştir|aktif/i, "check"], [/şifre|güvenlik/i, "lock"], [/e-posta|mail/i, "mail"]
+  ];
+  function decorate(el) {
+    if (el.classList.contains("noico") || el.querySelector("svg") || !el.textContent.trim()) return;
+    var txt = el.textContent, name = "arrow", lead = false;
+    for (var i = 0; i < BTN_ICONS.length; i++) if (BTN_ICONS[i][0].test(txt)) { name = BTN_ICONS[i][1]; lead = name !== "arrow"; break; }
+    var ic = AVF.icon(name, "bico");
+    if (name === "back" || lead) el.insertBefore(ic, el.firstChild); else el.appendChild(ic);
+  }
   function add(el, c) {
     if (c == null || c === false) return;
     if (Array.isArray(c)) return c.forEach(function (x) { add(el, x); });
@@ -170,5 +186,10 @@
     if (parts.some(function (p) { p = p.trim().toLowerCase(); return low.indexOf(p) >= 0 || p.indexOf(low) >= 0; })) return "Şifreniz kullanıcı adınız veya adınızla bağlantılı olamaz.";
     return "";
   };
-  AVF.busy = function (btn, on, label) { btn.disabled = !!on; if (label !== undefined) { if (on) { btn.dataset.l = btn.textContent; btn.textContent = label; } else if (btn.dataset.l) btn.textContent = btn.dataset.l; } };
+  AVF.busy = function (btn, on, label) {
+    btn.disabled = !!on;
+    if (label === undefined) return;
+    if (on) { btn._kids = Array.prototype.slice.call(btn.childNodes); AVF.clear(btn); btn.appendChild(document.createTextNode(label)); }
+    else if (btn._kids) { AVF.clear(btn); btn._kids.forEach(function (k) { btn.appendChild(k); }); btn._kids = null; }
+  };
 })();

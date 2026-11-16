@@ -23,11 +23,11 @@
   function err(box, e) { AVF.mount(box, h("div", { class: "note err", role: "alert", text: AVF.errText(e) })); }
 
   function frame(content) {
-    var tabs = [["uyeler", "users", "Üyeler"]]; if (me.role === "admin") tabs.push(["siparisler", "tag", "Siparişler"], ["kullanicilar", "cog", "Kullanıcılar"], ["denetim", "list", "Denetim kaydı"]);
+    var tabs = [["uyeler", "users", "Üyeler"]]; if (me.role === "admin") tabs.push(["siparisler", "tag", "Siparişler"], ["blog", "book", "Blog"], ["kullanicilar", "cog", "Kullanıcılar"], ["denetim", "list", "Denetim kaydı"]);
     var menu = h("nav", { class: "card menu", "aria-label": "Uzman menüsü" }, tabs.map(function (t) {
       var b = h("a", { href: "#", onclick: function (e) { e.preventDefault(); tab = t[0]; sel = null; render(); } }, AVF.icon(t[1]), t[2]); if (t[0] === tab) b.setAttribute("aria-current", "page"); return b;
     }));
-    AVF.mount(view, h("section", { class: "hero", style: "padding:56px 0 60px" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow", text: "Çalışma alanı" }), h("h1", { text: me.role === "admin" ? "Yönetici Paneli" : "Uzman Paneli" }),
+    AVF.mount(view, h("section", { class: "hero panelhero", style: "padding:48px 0 52px" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow", text: "Çalışma alanı" }), h("h1", { text: me.role === "admin" ? "Yönetici Paneli" : "Uzman Paneli" }),
       h("p", { text: me.name + " · " + (me.role === "admin" ? "Tam yetki" : "Yetkili olduğunuz türler: " + (me.kinds.length ? me.kinds.map(function (k) { return AVF.KIND[k].label; }).join(", ") : "henüz tanımlı değil")) }))),
       h("div", { class: "wrap pbody" }, h("aside", { class: "side" }, menu), content));
   }
@@ -36,6 +36,7 @@
     var c = h("div");
     frame(c);
     if (tab === "siparisler") return ordersView(c);
+    if (tab === "blog") return blogView(c);
     if (tab === "kullanicilar") return usersView(c);
     if (tab === "denetim") return auditView(c);
     if (sel) return memberView(c, sel); return clientsView(c);
@@ -149,6 +150,45 @@
     }, function () { AVF.mount(slot, h("p", { class: "hint", text: "Kişisel bilgiler yüklenemedi." })); });
   }
 
+  // ---------- yönetici: blog ----------
+  function slugify(t) { return String(t).toLowerCase().replace(/ç/g, "c").replace(/ğ/g, "g").replace(/ı/g, "i").replace(/ö/g, "o").replace(/ş/g, "s").replace(/ü/g, "u").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80); }
+  function blogView(c) {
+    var list = h("div", { class: "stack" });
+    function load() {
+      AVF.mount(list, AVF.skeleton(2));
+      api("GET", "/blog").then(function (rows) { AVF.mount(list, rows.length ? rows.map(postRow) : AVF.state("book", "Henüz yazı yok", "")); }, function (e) { err(list, e); });
+    }
+    function form(p, done) {
+      var t = AVF.input("text", { maxlength: "160", value: p ? p.title : "" }), sl = AVF.input("text", { maxlength: "80", value: p ? p.slug : "", placeholder: "ornek-yazi-adresi" });
+      var ex = h("textarea", { class: "inp", maxlength: "300", rows: "2", id: "bx" + Math.random().toString(36).slice(2, 7) }); ex.value = p ? p.excerpt : "";
+      var bd = h("textarea", { class: "inp", maxlength: "40000", rows: "14", id: "bb" + Math.random().toString(36).slice(2, 7) }); bd.value = p ? p.body : "";
+      var st = h("select", { class: "inp", id: "bs" + Math.random().toString(36).slice(2, 7) }, h("option", { value: "draft", text: "Taslak" }), h("option", { value: "published", text: "Yayında" })); st.value = p ? p.status : "draft";
+      var msg = h("div", { "aria-live": "polite" });
+      if (!p) t.addEventListener("input", function () { if (!sl.dataset.touched) sl.value = slugify(t.value); });
+      sl.addEventListener("input", function () { sl.dataset.touched = "1"; });
+      var save = h("button", { class: "btn", type: "button", onclick: function () {
+        var body = { title: t.value, slug: sl.value, excerpt: ex.value, body: bd.value, status: st.value };
+        AVF.busy(save, true, "Kaydediliyor…");
+        api(p ? "PUT" : "POST", p ? "/blog/" + p.id : "/blog", body).then(function () { AVF.toast("Yazı kaydedildi."); done(); }, function (e) { AVF.busy(save, false, ""); err(msg, e); });
+      } }, "Kaydet");
+      var del = p ? h("button", { class: "btn ghost danger-t", type: "button", onclick: function () {
+        if (!del.dataset.sure) { del.dataset.sure = "1"; del.lastChild.textContent = "Silmek için tekrar tıklayın"; return; }
+        api("DELETE", "/blog/" + p.id).then(function () { AVF.toast("Yazı silindi."); done(); }, function (e) { err(msg, e); });
+      } }, "Sil") : null;
+      return h("div", {}, AVF.field("Başlık", t), AVF.field("Adres (slug)", sl), AVF.field("Özet", ex, { optional: true }), AVF.field("İçerik (düz metin; paragraflar arasında boş satır, alt başlık için ## )", bd), AVF.field("Durum", st), msg, h("div", { class: "row" }, save, del));
+    }
+    function postRow(p) {
+      return AVF.accordion({ icon: "book", title: p.title, sub: (p.status === "published" ? "Yayında" : "Taslak") + " · /blog/" + p.slug, content: form(p, load) });
+    }
+    var addBox = h("div", { class: "card", style: "padding:20px;display:none" });
+    var add = h("button", { class: "btn", type: "button", onclick: function () {
+      addBox.style.display = addBox.style.display === "none" ? "block" : "none";
+      AVF.mount(addBox, h("h3", { style: "margin-bottom:14px" }, "Yeni yazı"), form(null, function () { addBox.style.display = "none"; load(); }));
+    } }, "Yeni yazı ekle");
+    AVF.mount(c, h("div", { class: "row between", style: "margin-bottom:14px" }, h("h2", { class: "ptitle", style: "margin:0", text: "Blog" }), add), addBox, list);
+    load();
+  }
+
   // ---------- yönetici: siparişler ----------
   function ordersView(c) {
     var list = h("div", { class: "stack" });
@@ -163,7 +203,7 @@
     function orderRow(o) {
       var eb = h("div"), reason = AVF.input("text", { maxlength: "300", placeholder: "Gerekçe (en az 10 karakter)" }), tx = AVF.input("text", { maxlength: "80", placeholder: "Ödeme referansı (isteğe bağlı)" });
       var canApprove = o.status !== "paid" && o.status !== "cancelled";
-      return AVF.accordion({ icon: "tag", title: o.order_number + " · " + (OSTATUS[o.status] || o.status), sub: [o.buyer_name, pkgText(o), money(o.subtotal) + " " + o.currency].join(" · "), content: [
+      return AVF.accordion({ icon: "tag", title: o.order_number + " · " + (OSTATUS[o.status] || o.status), sub: [o.buyer_name, pkgText(o), (AVF.moneyC ? AVF.moneyC(o.subtotal, o.currency) : money(o.subtotal) + " " + o.currency)].join(" · "), content: [
         h("div", { class: "meta" }, h("span", null, "Alıcı: " + o.buyer_email), h("span", null, "Oluşturma: " + AVF.fmtDateTime(o.created_at)), o.paid_at ? h("span", null, "Ödeme: " + AVF.fmtDateTime(o.paid_at)) : null,
           o.plans_due_at ? h("span", null, "Plan teslim: " + AVF.fmtDate(o.plans_due_at)) : null, o.status === "paid" ? h("span", null, "Yayınlanan plan: " + o.plans_published) : null, o.payment_provider ? h("span", null, "Ödeme: " + (o.payment_provider === "mock" ? "sahte POS (test)" : "sanal POS")) : null),
         o.payment_ref ? h("p", { class: "hint", "data-notr": "", text: "Ref: " + o.payment_ref }) : null,

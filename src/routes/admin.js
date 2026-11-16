@@ -264,6 +264,58 @@ adminRouter.get("/audit", requireAdmin, async (req, res) => {
   res.json(rows);
 });
 
+
+// ---------- blog (yalnız yönetici) ----------
+const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+function blogFields(b, partial) {
+  const out = {};
+  const need = (k) => !partial || b[k] !== undefined;
+  if (need("title")) { if (!isNonEmptyString(b.title) || cleanText(b.title).length < 3 || cleanText(b.title).length > 160) return { error: "Başlık 3–160 karakter olmalı." }; out.title = cleanText(b.title); }
+  if (need("slug")) { const sl = String(b.slug || "").trim().toLowerCase(); if (!SLUG_RE.test(sl) || sl.length > 80) return { error: "Adres (slug) yalnız küçük harf, rakam ve tire içerebilir." }; out.slug = sl; }
+  if (need("body")) { if (!isNonEmptyString(b.body) || cleanText(b.body).length > 40000) return { error: "İçerik boş olamaz (en çok 40.000 karakter)." }; out.body = cleanText(b.body); }
+  if (b.excerpt !== undefined) { const ex = cleanText(b.excerpt); if (ex.length > 300) return { error: "Özet en çok 300 karakter olmalı." }; out.excerpt = ex; }
+  if (b.status !== undefined) { if (b.status !== "draft" && b.status !== "published") return { error: "Geçersiz durum." }; out.status = b.status; }
+  return { out };
+}
+adminRouter.get("/blog", requireAdmin, async (req, res) => {
+  const { rows } = await pool.query(`SELECT id, slug, title, excerpt, body, status, author_name, published_at, updated_at FROM blog_posts ORDER BY updated_at DESC LIMIT 200`);
+  res.json(rows);
+});
+adminRouter.post("/blog", requireAdmin, async (req, res) => {
+  const { out, error } = blogFields(req.body || {}, false); if (error) return bad(res, error);
+  const { rows: me } = await pool.query(`SELECT full_name FROM users WHERE id = $1`, [req.user.sub]);
+  const { rows: dup } = await pool.query(`SELECT 1 FROM blog_posts WHERE slug = $1`, [out.slug]); if (dup.length) return bad(res, "Bu adres (slug) zaten kullanılıyor.");
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO blog_posts (slug, title, excerpt, body, status, author_id, author_name, published_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7, CASE WHEN $5 = 'published' THEN now() END) RETURNING id`,
+      [out.slug, out.title, out.excerpt || "", out.body, out.status || "draft", req.user.sub, me[0]?.full_name || ""]);
+    await logAudit(req.user.sub, "blog.create", "blog_post", rows[0].id, { slug: out.slug, status: out.status || "draft" }, ip(req));
+    res.status(201).json({ id: rows[0].id });
+  } catch (e) { if (e.code === "23505") return bad(res, "Bu adres (slug) zaten kullanılıyor."); throw e; }
+});
+adminRouter.put("/blog/:id", requireAdmin, async (req, res) => {
+  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Yazı bulunamadı." });
+  const { out, error } = blogFields(req.body || {}, true); if (error) return bad(res, error);
+  const keys = Object.keys(out); if (!keys.length) return bad(res, "Değişiklik yok.");
+  const sets = keys.map((k, i) => `${k} = $${i + 2}`);
+  if (out.status === "published") sets.push("published_at = COALESCE(published_at, now())");
+  try {
+    if (out.slug) { const { rows: dup } = await pool.query(`SELECT 1 FROM blog_posts WHERE slug = $1 AND id <> $2`, [out.slug, req.params.id]); if (dup.length) return bad(res, "Bu adres (slug) zaten kullanılıyor."); }
+    const { rows: upd } = await pool.query(`UPDATE blog_posts SET ${sets.join(", ")}, updated_at = now() WHERE id = $1 RETURNING id`, [req.params.id, ...keys.map((k) => out[k])]);
+    if (!upd.length) return res.status(404).json({ error: "Yazı bulunamadı." });
+    await logAudit(req.user.sub, "blog.update", "blog_post", req.params.id, { fields: keys }, ip(req));
+    res.json({ ok: true });
+  } catch (e) { if (e.code === "23505") return bad(res, "Bu adres (slug) zaten kullanılıyor."); throw e; }
+});
+adminRouter.delete("/blog/:id", requireAdmin, async (req, res) => {
+  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Yazı bulunamadı." });
+  const { rows: del } = await pool.query(`DELETE FROM blog_posts WHERE id = $1 RETURNING id`, [req.params.id]);
+  if (!del.length) return res.status(404).json({ error: "Yazı bulunamadı." });
+  await logAudit(req.user.sub, "blog.delete", "blog_post", req.params.id, {}, ip(req));
+  res.json({ ok: true });
+});
+
 // ---------- üye profili (üyenin kendi girdiği koçluk bilgileri) ----------
 // Yalnız yönetici veya üyeye ATANMIŞ uzman görür. Rıza verilmemişse/boşsa null döner.
 adminRouter.get("/clients/:id/profile", async (req, res) => {

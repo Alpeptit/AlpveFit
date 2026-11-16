@@ -1,10 +1,10 @@
 // Paket kataloğu — TEK KAYNAK. Fiyat/süre/farmakoloji bilgisi yalnız buradan gelir; istemcinin gönderdiği fiyat HİÇBİR ZAMAN kullanılmaz.
 // Fiyatlar tek para biriminde (CURRENCY) liste fiyatıdır; ödeme sanal POS (kart) ile alınır.
-export const CURRENCY = "USD";
+export const CURRENCY = "TRY";
 export const PACKAGES = {
-  starter:    { pharmacology: false, options: [{ weeks: 12, price: 149 }, { weeks: 24, price: 249 }] },
-  advanced:   { pharmacology: true,  options: [{ weeks: 16, price: 229 }, { weeks: 24, price: 329 }] },
-  competitor: { pharmacology: true,  options: [{ weeks: 12, price: 399 }] },
+  starter:    { pharmacology: false, options: [{ weeks: 12, price: 4990 }, { weeks: 24, price: 8490 }] },
+  advanced:   { pharmacology: true,  options: [{ weeks: 16, price: 7490 }, { weeks: 24, price: 10990 }] },
+  competitor: { pharmacology: true,  options: [{ weeks: 12, price: 13990 }] },
 };
 export const PACKAGE_KEYS = Object.keys(PACKAGES);
 export const PACKAGE_LABELS = { starter: "Başlangıç Paketi", advanced: "İleri Seviye Program", competitor: "Yarışmacı Paketi" };
