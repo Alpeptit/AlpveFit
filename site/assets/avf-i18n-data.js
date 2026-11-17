@@ -4,6 +4,12 @@
   var AVF = (window.AVF = window.AVF || {});
   AVF.DICT = AVF.DICT || {}; AVF.PATTERNS = AVF.PATTERNS || [];
   var D = {
+"Forum yalnızca üyelere açıktır": "The forum is open to members only",
+"Foruma erişmek için hesabınıza giriş yapın. Hesabınız yoksa birkaç adımda üye olabilirsiniz.": "Sign in to access the forum. If you don't have an account, you can sign up in a few steps.",
+"18 yaş uyarısı": "Age notice (18+)",
+"Forum, yetişkinlere yönelik sağlık, antrenman ve farmakoloji tartışmaları içerebilir. Devam etmek için 18 yaşını doldurduğunuzu onaylamanız gerekir.": "The forum may contain adult-oriented health, training and pharmacology discussions. To continue, you must confirm that you are 18 or older.",
+"18 yaşından büyüğüm, devam et": "I am over 18, continue",
+
     "Bu patika bir yere çıkmıyor. Aradığınız sayfa taşınmış ya da hiç var olmamış olabilir; mantarımız bile haritayı ters tutuyor.": "This path leads nowhere. The page you are looking for may have moved or never existed — even our mushroom is holding the map upside down.",
     "inç": "in",
     "Devamını oku": "Read more",
