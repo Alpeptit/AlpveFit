@@ -27,7 +27,7 @@
   AVF.pages.faq = function (view) {
     var group = [];
     page(view, "Sık sorulan sorular", "Sık sorulan sorular", "Aradığınızı bulamazsanız canlı destekten veya destek@alpvefit.com adresinden bize ulaşın.",
-      h("div", { class: "faq" }, FAQ.map(function (q, i) { return AVF.accordion({ icon: q[0], title: q[1], group: group, open: i === 0, content: h("p", { class: "faq-a", text: q[2] }) }); })), "help");
+      h("div", { class: "faq" }, FAQ.map(function (q) { return AVF.accordion({ icon: q[0], title: q[1], group: group, content: h("p", { class: "faq-a", text: q[2] }) }); })), "help");
   };
 
   // ---------- Hakkımızda ----------

@@ -17,7 +17,7 @@
   };
   var PKG_CATS = [
     ["list", "Program", [["Kişiye özel beslenme programı", function () { return true; }], ["Kişiye özel antrenman programı", function () { return true; }], ["Vitamin / mineral / takviye planı", function () { return true; }]]],
-    ["users", "Uzman desteği", [["Farmakoloji desteği (isteğe bağlı)", function (p) { return !!p.pharmacology; }], ["Yarışma ve sahne hazırlığı", function (p) { return p.key === "competitor"; }]]],
+    ["users", "Uzman desteği", [["Kan tahlili kontrolü", function (p) { return p.key === "advanced" || p.key === "competitor"; }], ["Farmakoloji desteği (isteğe bağlı)", function (p) { return !!p.pharmacology; }], ["Yarışma ve sahne hazırlığı", function (p) { return p.key === "competitor"; }]]],
     ["shield", "Teslim ve gizlilik", [["Ödemeden sonra 24 saat içinde teslim", function () { return true; }], ["Planlar yalnızca sizin panelinizde", function () { return true; }]]],
   ];
   var STATUS = { pending: ["Ödeme bekleniyor", "chip"], paid: ["Ödendi", "chip lime"], expired: ["Süresi doldu", "chip mute"], cancelled: ["İptal edildi", "chip mute"] };
@@ -41,8 +41,7 @@
       AVF.mount(box, h("div", { class: "pkggrid" }, c.packages.map(function (p) { return pkgCard(p, c); })),
         h("div", { class: "pkgnotes" },
           h("div", { class: "pnote" }, AVF.icon("card"), h("span", {}, "Ödeme kredi / banka kartı ile sanal POS üzerinden alınır. Kart bilgileriniz AlpveFit sunucularında saklanmaz.")),
-          h("div", { class: "pnote" }, AVF.icon("pulse"), h("span", {}, "Programlar bilgilendirme ve eğitim amaçlıdır; tıbbi hizmet değildir. Farmakoloji içeriği isteğe bağlıdır ve hiçbir üyeye zorunlu kılınmaz."))),
-        c.payment && c.payment.test ? h("div", { class: "note warn", style: "margin-top:12px" }, h("b", {}, "Test aşaması: "), "ödeme sistemi şu anda sahte (deneme) sanal POS ile çalışır; gerçek tahsilat yapılmaz.") : null);
+          null));
     }, function (e) { AVF.mount(box, AVF.state("alert", "Paketler yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: function () { AVF.packagesPage(view); } }, "Tekrar dene"))); });
   };
   function pkgCard(p, c) {
@@ -87,7 +86,6 @@
       h("div", { class: "pm" },
         payOn ? h("button", { type: "button", class: "on", "aria-pressed": "true" }, AVF.icon("card"), h("span", {}, h("b", {}, "Kredi / banka kartı"), h("small", {}, "Sanal POS ile güvenli ödeme")), AVF.icon("check"))
               : h("button", { type: "button", disabled: true, "aria-disabled": "true" }, AVF.icon("card"), h("span", {}, h("b", {}, "Kredi / banka kartı"), h("small", {}, "Şu anda aktif değildir")), h("em", {}, "Pasif"))),
-      payOn && c.payment.test ? h("div", { class: "note warn", style: "margin:10px 0" }, h("b", {}, "Test aşaması: "), "ödeme sahte (deneme) sanal POS ile yapılır; gerçek tahsilat olmaz.") : null,
       lbl(chk1, ["", lnk("kullanim-kosullari", "Hizmet Şartları ve Mesafeli Satış Sözleşmesi"), "’ni okudum, kabul ediyorum. Hizmetin ödeme onayından hemen sonra ifasına başlanmasını talep ediyor ve cayma hakkının bulunmadığı konusunda bilgilendirildiğimi kabul ediyorum."]),
       p.pharmacology ? lbl(chk2, ["", lnk("kullanim-kosullari", "Hizmet Şartları"), "’ndaki sağlık ve farmakoloji hükümlerini okudum. Farmakoloji içeriğinin isteğe bağlı olduğunu, bana zorunlu kılınmadığını; kullanıp kullanmayacağıma kendi irademle karar vereceğimi ve sonuçlarının bana ait olduğunu kabul ediyorum."]) : null,
       lbl(chk3, [lnk("kvkk", "KVKK Aydınlatma Metni"), "’ni okudum."]), err, go);

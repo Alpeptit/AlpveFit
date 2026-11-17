@@ -4,6 +4,7 @@
   var AVF = (window.AVF = window.AVF || {});
   AVF.DICT = AVF.DICT || {}; AVF.PATTERNS = AVF.PATTERNS || [];
   var D = {
+"Kan tahlili kontrolü": "Blood test review",
 "AlpveFit maskotu: dambıl curl yapan kaslı mantar": "AlpveFit mascot: a muscular mushroom doing dumbbell curls",
 "Çevrimiçi": "Online",
 "Çevrimdışı": "Offline",

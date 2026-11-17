@@ -13,7 +13,7 @@
           "AlpveFit, **uzaktan eğitim ve koçluk** hizmeti sunan bir platformdur. Sitede fiziksel ürün satılmaz ve gönderim yapılmaz; hizmet yalnızca dijital olarak sunulur.",
           "İletişim: **" + MAIL + "**"]],
         ["Hizmetin kapsamı", [
-          "Uzaktan Eğitim Sistemi üç paketten oluşur: **Başlangıç Paketi** (12 veya 24 hafta), **İleri Seviye Program** (16 veya 24 hafta, farmakoloji desteği dahil) ve **Yarışmacı Paketi** (12 hafta, farmakoloji desteği dahil). Güncel fiyat ve süreler Paketler sayfasında yer alır.",
+          "Uzaktan Eğitim Sistemi üç paketten oluşur: **Başlangıç Paketi** (12 veya 24 hafta), **İleri Seviye Program** (16 veya 24 hafta, farmakoloji desteği dahil) ve **Yarışmacı Paketi** (12 hafta, farmakoloji desteği dahil). İleri Seviye Program ve Yarışmacı Paketi’nde **kan tahlili kontrolü** de yer alır: Üye’nin paylaştığı tahlil sonuçları, programın planlanması ve takibi amacıyla uzman tarafından incelenir; bu inceleme tıbbi değerlendirme veya teşhis yerine geçmez. Güncel fiyat ve süreler Paketler sayfasında yer alır.",
           "Ödemenin onaylanmasından sonra beslenme, antrenman ve takviye programlarınız **en geç 24 saat içinde** yetkili uzmanlarımızca hazırlanır ve hesabınızdaki panelde yayınlanır. Planlar **yalnızca sizin hesabınızda** görünür.",
           "Programlar kişiye özel hazırlanır. Profilinizde paylaştığınız bilgiler (boy, kilo, meslek, günlük adım sayısı vb.) yalnızca programınızın hazırlanması amacıyla uzmanlarca kullanılır; bu bilgileri paylaşmak isteğe bağlıdır."]],
         ["Üyelik ve hesap güvenliği", [
@@ -51,7 +51,7 @@
           "AlpveFit is a **remote education and coaching** platform. No physical products are sold or shipped; the service is delivered digitally only.",
           "Contact: **" + MAIL + "**"]],
         ["Scope of the service", [
-          "The Remote Education System consists of three packages: **Starter Package** (12 or 24 weeks), **Advanced Program** (16 or 24 weeks, pharmacology support included) and **Competitor Package** (12 weeks, pharmacology support included). Current prices and durations are shown on the Packages page.",
+          "The Remote Education System consists of three packages: **Starter Package** (12 or 24 weeks), **Advanced Program** (16 or 24 weeks, pharmacology support included) and **Competitor Package** (12 weeks, pharmacology support included). The Advanced Program and Competitor Package also include a **blood test review**: the test results shared by the Member are reviewed by the expert to plan and track the program; this review does not replace a medical assessment or diagnosis. Current prices and durations are shown on the Packages page.",
           "After your payment is confirmed, your nutrition, training and supplement programs are prepared by our authorised experts **within 24 hours at the latest** and published in your panel. Plans are visible **only in your own account**.",
           "Programs are prepared individually. The details you share in your profile (height, weight, occupation, daily steps, etc.) are used by experts only to prepare your program; sharing them is optional."]],
         ["Membership and account security", [

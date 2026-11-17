@@ -38,7 +38,7 @@
         }, function (er) { AVF.busy(btn, false); msg(box, AVF.errText(er), "err"); });
       } }, h("p", { class: "hint", text: "Ad soyad ayda en fazla bir kez değiştirilebilir." }), AVF.field("Yeni ad soyad", inp, { optional: true }), box, btn));
     }
-    start(acc.querySelector(".panel")); return acc;
+    start(acc.querySelector(".pad")); return acc;
   }
 
   // ---------- E-posta ----------
@@ -59,7 +59,7 @@
         }, function (er) { AVF.busy(btn, false); msg(box, AVF.errText(er), "err"); });
       } }, h("p", { class: "hint", text: "Değişiklik iki adımda onaylanır: önce mevcut, sonra yeni adresinize kod gönderilir." }), AVF.field("Yeni e-posta adresi", inp, { optional: true }), box, btn));
     }
-    start(acc.querySelector(".panel")); return acc;
+    start(acc.querySelector(".pad")); return acc;
   }
 
   // ---------- Şifre ----------
@@ -79,14 +79,14 @@
         }, function (er) { AVF.busy(btn, false); msg(box, AVF.errText(er), "err"); });
       } }, AVF.field("Mevcut şifre", o, { optional: true }), AVF.field("Yeni şifre", n, { optional: true, hint: "En az 8 karakter; en az 1 harf ve 1 noktalama işareti; boşluk ve ardışık sayı olmaz." }), box, btn));
     }
-    start(acc.querySelector(".panel")); return acc;
+    start(acc.querySelector(".pad")); return acc;
   }
 
   // ---------- İki adımlı doğrulama (Google Authenticator) ----------
   function tfaSection(user, refresh) {
     var panelRole = user.role === "coach" || user.role === "admin";
     var acc = AVF.accordion({ icon: "shield", teal: true, title: "İki Adımlı Doğrulama", sub: (user.totp_enabled ? "Açık" : "Kapalı") + " · Google Authenticator" });
-    var p = acc.querySelector(".panel");
+    var p = acc.querySelector(".pad");
     function render() {
       acc.setTitleSub((user.totp_enabled ? "Açık" : "Kapalı") + " · Google Authenticator");
       var box = h("div");
@@ -177,7 +177,7 @@
         }, function (er) { AVF.busy(btn, false); msg(box, AVF.errText(er), "err"); });
       } }, h("div", { class: "note warn" }, "Hesabınız ve size bağlı tüm planlar kalıcı olarak silinir."), AVF.field("Şifreniz", pw, { optional: true }), box, btn));
     }
-    start(acc.querySelector(".panel")); return acc;
+    start(acc.querySelector(".pad")); return acc;
   }
 
   AVF.accountSections = function (user, refresh, afterLogout) {

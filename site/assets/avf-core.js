@@ -183,14 +183,15 @@
   AVF.accordion = function (opts) {
     var wrap = AVF.h("div", { class: "card acc" + (opts.open ? " open" : "") });
     var id = "acc" + Math.random().toString(36).slice(2, 8);
-    var panel = AVF.h("div", { class: "panel", id: id, role: "region" });
+    // Yumuşak açılış: dış kap (grid 0fr → 1fr) yüksekliği, iç dolgu (pad) saydamlığı canlandırır. İçerik "panel"e yazılır.
+    var panel = AVF.h("div", { class: "pad" }), outer = AVF.h("div", { class: "panel-o", id: id, role: "region" }, AVF.h("div", { class: "panel" }, panel));
     var btn = AVF.h("button", { type: "button", "aria-expanded": opts.open ? "true" : "false", "aria-controls": id, onclick: function () {
       var o = wrap.classList.toggle("open"); btn.setAttribute("aria-expanded", o ? "true" : "false"); if (o && opts.onOpen) opts.onOpen(panel);
       // Grup (ör. SSS): bir öğe açılınca diğerleri kapanır.
       if (o && opts.group) opts.group.forEach(function (w) { if (w !== wrap && w.classList.contains("open")) { w.classList.remove("open"); var b = w.querySelector("button[aria-expanded]"); if (b) b.setAttribute("aria-expanded", "false"); } });
     } }, AVF.h("span", { class: "tile" + (opts.teal ? " teal" : "") }, AVF.icon(opts.icon || "list")),
       AVF.h("span", { class: "t" }, AVF.h("b", { text: opts.title }), opts.sub ? AVF.h("small", { text: opts.sub }) : null), AVF.icon("chev", "chev"));
-    wrap.appendChild(btn); wrap.appendChild(panel);
+    wrap.appendChild(btn); wrap.appendChild(outer);
     if (opts.group) opts.group.push(wrap);
     if (opts.content) AVF.mount(panel, opts.content);
     wrap.setTitleSub = function (s) { var sm = btn.querySelector("small"); if (sm) sm.textContent = s; };

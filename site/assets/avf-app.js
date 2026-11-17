@@ -150,11 +150,7 @@
   // ---------- ana sayfa ----------
   function homePage() {
     var u = AVF.session.user;
-    var reps = h("b", { text: "0" }), stage = h("div", { class: "stage", "aria-hidden": "false" });
-    var m = AVF.mascot(); stage.appendChild(m);
-    // Tekrar sayacı: her curl döngüsünün sonunda artar (12'de sıfırlanır) — yalnız süs; hareket azaltma tercihinde gizlenir.
-    var fore = m.querySelector(".msc-fore"), n = 0;
-    if (fore) fore.addEventListener("animationiteration", function () { n = n % 12 + 1; reps.textContent = String(n); });
+    var stage = h("div", { class: "stage" }), m = AVF.mascot(); stage.appendChild(m);
     AVF.mount(view,
       h("section", { class: "hero hero-split home" }, h("div", { class: "wrap" },
         h("div", { class: "hero-copy" },
@@ -166,9 +162,7 @@
             h("li", {}, h("span", { class: "tk" }, AVF.icon("clock")), h("span", { text: "Ödemeden sonra 24 saat içinde programınız hazır!" })),
             h("li", {}, h("span", { class: "tk" }, AVF.icon("card")), h("span", { text: "Kredi / banka kartı ile güvenli ödeme" })),
             h("li", {}, h("span", { class: "tk" }, AVF.icon("lock")), h("span", { text: "Planlarınız kişisel ve yalnızca size aittir" })))),
-        h("div", { class: "stagewrap" }, stage,
-          h("div", { class: "stage-chip c1" }, AVF.icon("dumb"), h("span", { text: "Dambıl curl" }), h("span", { class: "rep" }, reps, h("span", { text: " / 12" }))),
-          h("div", { class: "stage-chip c2" }, AVF.icon("check"), h("span", { text: "Doğru form, kontrollü tempo" }))))),
+        h("div", { class: "stagewrap" }, stage))),
       h("section", { class: "section" }, h("div", { class: "wrap" },
         h("div", { class: "shead center" }, h("span", { class: "kicker" }, AVF.icon("spark"), h("span", { text: "Neden AlpveFit", "data-notr": "" })), h("h2", { class: "sec", text: "Eğitim sürecinizin tamamı tek hesapta" }), h("p", { text: "Size özel hazırlanan, yalnızca sizin görebileceğiniz ve 24 saat içinde teslim edilen planlar." })),
         h("div", { class: "grid3" },
@@ -181,6 +175,7 @@
         AVF.pkgGrid({ compact: true }),
         h("div", { class: "center", style: "margin-top:34px" }, link("/paketler", "Paketleri incele", { class: "btn light lg" }))))
     );
+    AVF.mascotPlay(m);
   }
   function feat(icon, title, text) {
     return h("div", { class: "card feat" }, h("span", { class: "tile" }, AVF.icon(icon)), h("h3", { text: title }), h("p", { text: text }));

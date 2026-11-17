@@ -1,68 +1,88 @@
-/* AlpveFit maskotu — kaslı, kırmızı benekli mantar. Tek kaynak: ana sayfadaki dambıl curl animasyonu ve canlı destek avatarı.
+/* AlpveFit maskotu — kaslı, kırmızı benekli mantar. Tek kaynak: ana sayfa sahnesi ve canlı destek avatarı.
    Çizim sabit, güvenilir bir SVG metnidir (kullanıcı verisi içermez); DOMParser ile ayrıştırılıp belgeye eklenir.
-   Hareket CSS ile yapılır (avf.css → .msc-*): ön kol dirsek etrafında döner, pazı kası kasılır, gövde nefes alır.
-   Tempo: ~1 sn kaldırma, kısa sıkıştırma, ~1,3 sn kontrollü indirme (nizami form). Hareket azaltma tercihinde sabit durur. */
+   Kollar "birleşik siluet" tekniğiyle çizilir: kolun dış çizgisi gövdeden ÖNCE, dolgusu SONRA çizilir; omuzda çizgi görünmez.
+   Hareketler (avf.css → .msc.m-*): dambıl curl, çift pazı pozu, zıplama ve el sallama sırayla döner (AVF.mascotPlay).
+   Her hareket dinlenme pozunda başlar ve biter; geçişlerde sıçrama olmaz. Hareket azaltma tercihinde maskot sabit durur. */
 (function () {
   "use strict";
   var AVF = window.AVF;
-  var O = "#3A2A20", CREAM = "#F8ECDD", SHADE = "#EBD7BF", RED = "#E0352B", RED2 = "#B9261E", IRON = "#1C1C1F";
+  var O = "#3B2A22", CREAM = "#FCF1E4", SHADE = "#EFDCC6", IRON = "#1D1D20";
 
-  var CAP = '<path d="M58 166C58 92 106 46 160 46s102 46 102 120c-30 14-174 14-204 0z" fill="' + RED + '" stroke="' + O + '" stroke-width="3.5" stroke-linejoin="round"/>' +
-    '<path d="M74 150c-4-50 30-86 70-92" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="7" stroke-linecap="round"/>' +
-    '<path d="M70 162c40 9 140 9 180 0" fill="none" stroke="' + RED2 + '" stroke-width="5" stroke-linecap="round" opacity=".55"/>' +
-    '<circle cx="112" cy="104" r="14" fill="#fff"/><circle cx="162" cy="76" r="16" fill="#fff"/><circle cx="212" cy="106" r="13" fill="#fff"/>' +
-    '<circle cx="86" cy="142" r="8.5" fill="#fff"/><circle cx="236" cy="146" r="8" fill="#fff"/><circle cx="152" cy="128" r="9.5" fill="#fff"/><circle cx="192" cy="138" r="6.5" fill="#fff"/><circle cx="128" cy="62" r="5" fill="#fff"/>';
-  var FACE = '<g class="msc-eyes"><ellipse cx="143" cy="203" rx="5.2" ry="6.6" fill="' + O + '"/><ellipse cx="177" cy="203" rx="5.2" ry="6.6" fill="' + O + '"/>' +
-    '<circle cx="144.8" cy="200.6" r="1.7" fill="#fff"/><circle cx="178.8" cy="200.6" r="1.7" fill="#fff"/></g>' +
-    '<path d="M132 189l16 5M188 189l-16 5" stroke="' + O + '" stroke-width="3.4" stroke-linecap="round"/>' +
-    '<circle cx="131" cy="215" r="6.5" fill="#F29C93" opacity=".55"/><circle cx="189" cy="215" r="6.5" fill="#F29C93" opacity=".55"/>' +
-    '<path d="M150 217q10 8 20 0" fill="none" stroke="' + O + '" stroke-width="3.2" stroke-linecap="round"/>';
+  var DEFS = '<defs><radialGradient id="mscCap" cx="38%" cy="28%" r="80%"><stop offset="0" stop-color="#F25A4C"/><stop offset=".55" stop-color="#E2382D"/><stop offset="1" stop-color="#C42A21"/></radialGradient>' +
+    '<linearGradient id="mscStem" x1="0" x2="1"><stop offset="0" stop-color="#FFF7EE"/><stop offset=".62" stop-color="' + CREAM + '"/><stop offset="1" stop-color="' + SHADE + '"/></linearGradient></defs>';
+  var CAP = '<ellipse cx="160" cy="166" rx="84" ry="9" fill="#E8D2BA" stroke="' + O + '" stroke-width="3"/>' +
+    '<path d="M60 150C60 86 104 42 160 42s100 44 100 108c0 12-10 18-24 18H84c-14 0-24-6-24-18z" fill="url(#mscCap)" stroke="' + O + '" stroke-width="3" stroke-linejoin="round"/>' +
+    '<path d="M78 128c2-36 28-64 62-72" fill="none" stroke="#fff" stroke-opacity=".32" stroke-width="7" stroke-linecap="round"/>' +
+    '<g fill="#fff"><ellipse cx="114" cy="98" rx="15" ry="13"/><ellipse cx="166" cy="70" rx="17" ry="13"/><ellipse cx="213" cy="102" rx="14" ry="12"/>' +
+    '<ellipse cx="88" cy="140" rx="8" ry="7"/><ellipse cx="234" cy="142" rx="8" ry="7"/><ellipse cx="156" cy="124" rx="10" ry="8.5"/><ellipse cx="194" cy="136" rx="6" ry="5"/></g>';
+  var FACE = '<g class="msc-eyes"><ellipse cx="142" cy="202" rx="7.5" ry="8.5" fill="#fff" stroke="' + O + '" stroke-width="2.4"/><ellipse cx="178" cy="202" rx="7.5" ry="8.5" fill="#fff" stroke="' + O + '" stroke-width="2.4"/>' +
+    '<circle cx="143.5" cy="204" r="4.4" fill="' + O + '"/><circle cx="176.5" cy="204" r="4.4" fill="' + O + '"/><circle cx="145" cy="202" r="1.5" fill="#fff"/><circle cx="178" cy="202" r="1.5" fill="#fff"/></g>' +
+    '<path d="M133 188q8-4 15 0M172 188q7-4 15 0" fill="none" stroke="' + O + '" stroke-width="3" stroke-linecap="round"/>' +
+    '<ellipse cx="130" cy="217" rx="6.5" ry="4" fill="#F59A8F" opacity=".6"/><ellipse cx="190" cy="217" rx="6.5" ry="4" fill="#F59A8F" opacity=".6"/>' +
+    '<path d="M151 215q9 9 18 0z" fill="' + O + '" stroke="' + O + '" stroke-width="2" stroke-linejoin="round"/><path d="M155 218q5 3 10 0" fill="none" stroke="#F07D72" stroke-width="2.4" stroke-linecap="round"/>';
+
+  // kol parçaları: dış çizgi (OUT) ve dolgu (IN) ayrı çizilir
+  var UL = "M110 184Q92 198 84 230", UR = "M210 184Q228 198 236 230";
+  function stroke(d, w, c) { return '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"/>'; }
 
   function full() {
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 26 368 322" class="msc" role="img" aria-label="AlpveFit maskotu: dambıl curl yapan kaslı mantar">' +
-      '<ellipse class="msc-shadow" cx="160" cy="322" rx="78" ry="9" fill="#111113" opacity=".12"/>' +
-      '<g class="msc-body">' +
-      // bacaklar ve ayakkabılar
-      '<rect x="127" y="270" width="22" height="44" rx="10" fill="' + CREAM + '" stroke="' + O + '" stroke-width="3.5"/>' +
-      '<rect x="171" y="270" width="22" height="44" rx="10" fill="' + CREAM + '" stroke="' + O + '" stroke-width="3.5"/>' +
-      '<path d="M120 318c0-9 8-13 18-13s19 4 19 13z" fill="' + IRON + '"/><path d="M163 318c0-9 9-13 19-13s18 4 18 13z" fill="' + IRON + '"/>' +
-      '<path d="M122 318h33M165 318h33" stroke="#fff" stroke-opacity=".5" stroke-width="2.5" stroke-linecap="round"/>' +
-      // sağ kol (izleyiciye göre sağ): yumruk belde
-      '<path d="M214 186C236 194 254 206 258 226C254 238 236 246 218 252" fill="none" stroke="' + O + '" stroke-width="35" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<path d="M214 186C236 194 254 206 258 226C254 238 236 246 218 252" fill="none" stroke="' + CREAM + '" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<path d="M228 196c12 4 20 12 22 22" fill="none" stroke="' + SHADE + '" stroke-width="7" stroke-linecap="round"/>' +
-      // sol üst kol: sabit, dirsek gövdeye yakın
-      '<path d="M101 184C88 200 80 218 76 236" fill="none" stroke="' + O + '" stroke-width="37" stroke-linecap="round"/>' +
-      '<path d="M101 184C88 200 80 218 76 236" fill="none" stroke="' + CREAM + '" stroke-width="30" stroke-linecap="round"/>' +
-      // gövde (sap): omuzdan bele daralan kaslı form
-      '<path d="M100 166C97 200 105 242 116 284Q160 300 204 284C215 242 223 200 220 166z" fill="' + CREAM + '" stroke="' + O + '" stroke-width="3.5" stroke-linejoin="round"/>' +
-      '<path d="M206 176c4 34 0 70-10 104" fill="none" stroke="' + SHADE + '" stroke-width="9" stroke-linecap="round" opacity=".9"/>' +
-      '<g stroke="#D9C2A6" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M160 232v42"/><path d="M146 238q6 3 12 0M162 238q6 3 12 0M147 252q5 3 11 0M162 252q5 3 11 0M148 266q5 2 10 0M162 266q5 2 10 0"/></g>' +
-      // şapka altı (lameller)
-      '<ellipse cx="160" cy="168" rx="100" ry="12" fill="#E9D3BA" stroke="' + O + '" stroke-width="3.5"/>' +
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 22 300 300" class="msc" role="img" aria-label="AlpveFit maskotu">' + DEFS +
+      '<ellipse class="msc-shadow" cx="160" cy="306" rx="70" ry="8" fill="#111113" opacity=".1"/>' +
+      '<g class="msc-all">' +
+      // bacaklar ve spor ayakkabılar
+      '<rect x="131" y="262" width="22" height="34" rx="10" fill="' + CREAM + '" stroke="' + O + '" stroke-width="3"/><rect x="167" y="262" width="22" height="34" rx="10" fill="' + SHADE + '" stroke="' + O + '" stroke-width="3"/>' +
+      '<path d="M124 304c0-10 7-14 17-14 9 0 16 4 16 14z" fill="' + IRON + '"/><path d="M163 304c0-10 7-14 16-14 10 0 17 4 17 14z" fill="' + IRON + '"/>' +
+      '<path d="M125 304h31M164 304h31" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="141" cy="295" r="2" fill="#E2382D"/><circle cx="179" cy="295" r="2" fill="#E2382D"/>' +
+      // üst kolların dış çizgisi (gövdenin arkasında)
+      stroke(UL, 42, O) + stroke(UR, 42, O) +
+      // gövde (sap)
+      '<path d="M101 164c-7 34 1 72 15 104 3 9 85 9 88 0 14-32 22-70 15-104z" fill="url(#mscStem)" stroke="' + O + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M136 252q24 8 48 0" fill="none" stroke="' + SHADE + '" stroke-width="4" stroke-linecap="round"/>' +
+      // üst kolların dolgusu (omuz çizgisini örter) ve pazılar
+      stroke(UL, 36, CREAM) + stroke(UR, 36, CREAM) +
+      '<ellipse class="msc-bl" cx="90" cy="206" rx="11" ry="14" fill="' + SHADE + '"/><ellipse class="msc-br" cx="230" cy="206" rx="11" ry="14" fill="' + SHADE + '"/>' +
+      '<path d="M120 182q14 10 30 6M200 182q-14 10-30 6" fill="none" stroke="' + SHADE + '" stroke-width="3.5" stroke-linecap="round"/>' +
       CAP + FACE +
-      // sol kol: pazı kası (üst kol gövdenin arkasından çıkar, yukarıda çizildi)
-      '<ellipse class="msc-bicep" cx="81" cy="206" rx="12" ry="16" fill="' + SHADE + '" opacity=".95"/>' +
-      // ön kol + dambıl: dirsek (76,236) etrafında döner
-      '<g class="msc-fore">' +
-      '<path d="M76 236L76 288" stroke="' + O + '" stroke-width="31" stroke-linecap="round"/><path d="M76 236L76 288" stroke="' + CREAM + '" stroke-width="24" stroke-linecap="round"/>' +
-      '<circle cx="76" cy="292" r="14.5" fill="' + CREAM + '" stroke="' + O + '" stroke-width="3.5"/>' +
-      '<rect x="46" y="288.5" width="60" height="7" rx="3.5" fill="#55555B"/>' +
-      '<rect x="38" y="276" width="13" height="32" rx="4" fill="' + IRON + '"/><rect x="101" y="276" width="13" height="32" rx="4" fill="' + IRON + '"/>' +
-      '<rect x="30" y="281" width="9" height="22" rx="3" fill="' + IRON + '"/><rect x="113" y="281" width="9" height="22" rx="3" fill="' + IRON + '"/>' +
-      '<path d="M41 281v22M104 281v22" stroke="#fff" stroke-opacity=".22" stroke-width="2"/>' +
-      '</g></g></svg>';
+      // sağ ön kol (izleyiciye göre): dirsek (236,230) etrafında döner; dinlenmede yumruk belde
+      '<g class="msc-fr">' + stroke("M236 230V266", 38, O) + stroke("M236 230V266", 32, CREAM) +
+      '<circle cx="236" cy="272" r="15" fill="' + CREAM + '" stroke="' + O + '" stroke-width="3"/><path d="M230 268q6 3 12 0" fill="none" stroke="' + SHADE + '" stroke-width="2.5" stroke-linecap="round"/></g>' +
+      // sol ön kol + dambıl: dirsek (84,230) etrafında döner
+      '<g class="msc-fl">' + stroke("M84 230V266", 38, O) + stroke("M84 230V266", 32, CREAM) +
+      '<rect x="56" y="268.5" width="56" height="7" rx="3.5" fill="#5A5A61"/>' +
+      '<rect x="48" y="256" width="12" height="32" rx="4" fill="' + IRON + '"/><rect x="108" y="256" width="12" height="32" rx="4" fill="' + IRON + '"/>' +
+      '<rect x="41" y="261" width="8" height="22" rx="3" fill="' + IRON + '"/><rect x="119" y="261" width="8" height="22" rx="3" fill="' + IRON + '"/>' +
+      '<path d="M51 260v24M111 260v24" stroke="#fff" stroke-opacity=".25" stroke-width="2"/>' +
+      '<circle cx="84" cy="272" r="15" fill="' + CREAM + '" stroke="' + O + '" stroke-width="3"/></g>' +
+      '</g></svg>';
   }
-  // Canlı destek avatarı: şapka + yüz (kollar yok), kare çerçeveye sığar.
+  // Canlı destek avatarı: şapka + yüz.
   function mini() {
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="52 40 216 220" class="msc-mini" aria-hidden="true">' +
-      '<path d="M104 166C102 196 108 228 116 252Q160 266 204 252C212 228 218 196 216 166z" fill="' + CREAM + '" stroke="' + O + '" stroke-width="5" stroke-linejoin="round"/>' +
-      '<ellipse cx="160" cy="168" rx="100" ry="12" fill="#E9D3BA" stroke="' + O + '" stroke-width="5"/>' + CAP.replace(/stroke-width="3.5"/g, 'stroke-width="5"') + FACE + '</svg>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="54 36 212 212" class="msc-mini" aria-hidden="true">' + DEFS +
+      '<path d="M108 164c-4 30-3 56 4 80h96c7-24 8-50 4-80z" fill="url(#mscStem)" stroke="' + O + '" stroke-width="4" stroke-linejoin="round"/>' +
+      CAP.replace(/stroke-width="3"/g, 'stroke-width="4"') + FACE + '</svg>';
   }
+  var uid = 0;
   function parse(str) {
+    // her örnekte degrade kimlikleri benzersiz olmalı (aynı sayfada birden çok maskot olabilir)
+    var n = ++uid; str = str.replace(/mscCap/g, "mscCap" + n).replace(/mscStem/g, "mscStem" + n);
     var doc = new DOMParser().parseFromString(str, "image/svg+xml");
     return document.importNode(doc.documentElement, true);
   }
   AVF.mascot = function () { return parse(full()); };
   AVF.mascotMini = function () { return parse(mini()); };
+
+  // Hareket sırası: 3 curl → çift pazı → 2 zıplama → el sallama → baştan. Süreler avf.css'teki animasyonlarla aynıdır.
+  var SEQ = [["m-curl", 7800], ["m-flex", 2800], ["m-hop", 1700], ["m-wave", 2600]];
+  AVF.mascotPlay = function (svg) {
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    var i = 0;
+    (function next() {
+      if (!document.body.contains(svg)) return;                       // sayfa değişti: dur
+      SEQ.forEach(function (s) { svg.classList.remove(s[0]); });
+      void svg.getBoundingClientRect();                                // animasyonu yeniden başlat
+      svg.classList.add(SEQ[i][0]);
+      setTimeout(next, SEQ[i][1]); i = (i + 1) % SEQ.length;
+    })();
+  };
 })();
