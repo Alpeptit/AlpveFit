@@ -143,6 +143,10 @@ const CODE_TEXT = {
     tr: { s: "Google Authenticator Etkinleştirme Onayı", e: "Hesap güvenliği", t: "Google Authenticator'ı etkinleştirin", d: "Google Authenticator ile iki adımlı giriş doğrulamasını etkinleştirme işlemini onaylamak için aşağıdaki kodu girin." },
     en: { s: "Confirm Google Authenticator Setup", e: "Account security", t: "Turn on Google Authenticator", d: "Enter the code below to confirm turning on two-step sign-in verification with Google Authenticator." },
   },
+  "2fa_disable": {
+    tr: { s: "İki Adımlı Doğrulamayı Kapatma Onayı", e: "Hesap güvenliği", t: "İki adımlı doğrulamayı kapatın", d: "Google Authenticator ile iki adımlı giriş doğrulamasını kapatma talebinizi onaylamak için aşağıdaki kodu girin. Kapatıldığında girişte yalnız şifreniz istenir." },
+    en: { s: "Confirm Turning Off Two-Step Verification", e: "Account security", t: "Turn off two-step verification", d: "Enter the code below to confirm turning off two-step sign-in verification with Google Authenticator. Afterwards only your password is required to sign in." },
+  },
   totp_renew: {
     tr: { s: "Google Authenticator Yenileme Onayı", e: "Hesap güvenliği", t: "Google Authenticator'ı yenileyin", d: "Hesabınızdaki Google Authenticator kurulumunu yeni bir telefona / uygulamaya taşımak için aşağıdaki kodu girin. Yeni kurulum doğrulanana kadar mevcut kurulumunuz geçerli kalır; doğrulandığında eski kurulum ve eski kurtarma kodları geçersiz olur." },
     en: { s: "Confirm Google Authenticator Renewal", e: "Account security", t: "Renew Google Authenticator", d: "Enter the code below to move the Google Authenticator setup on your account to a new phone / app. Your current setup keeps working until the new one is verified; after that, the old setup and old recovery codes stop working." },

@@ -25,18 +25,30 @@
   function codesList(codes) { return h("div", null, h("div", { class: "note warn" }, "Kurtarma kodlarınızı şimdi güvenli bir yere kaydedin. Bir daha gösterilmeyecek; her kod yalnız bir kez kullanılır."), h("div", { class: "codes" }, codes.map(function (c) { return h("span", { text: c }); }))); }
 
   // ---------- Ad soyad ----------
+  // Kural (sunucuyla aynı): yalnız harf, 2–4 kelime (en fazla 3 boşluk), her kelime en az 2 harf, en çok 50 karakter; ayda bir değişiklik; her zaman e-posta onayı.
+  function nameIssue(v) {
+    var n = String(v || "").trim().replace(/\s+/g, " "); if (!n) return "";
+    if (/\d/.test(n)) return "Ad soyad sayı içeremez.";
+    if (/[^A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû ]/.test(n)) return "Ad soyad yalnızca harf içerebilir.";
+    var w = n.split(" "); if (w.length > 4) return "En fazla 3 boşluk kullanılabilir.";
+    if (w.length < 2) return "Ad ve soyadı aralarında boşluk bırakarak yazın."; if (w.some(function (x) { return x.length < 2; })) return "Her kelime en az 2 harf olmalıdır.";
+    if (n.length > 50) return "En fazla 50 karakter olabilir."; return "";
+  }
   function nameSection(user, refresh) {
     var acc = AVF.accordion({ icon: "id", title: "Ad Soyad", sub: AVF.maskName(user.full_name) });
     function start(p) {
-      var inp = AVF.input("text", { value: user.full_name, maxlength: "100", autocomplete: "name" }); var box = h("div"), btn = h("button", { class: "btn", type: "submit" }, "Kod Gönder");
+      var inp = AVF.input("text", { value: "", maxlength: "60", autocomplete: "name", placeholder: "Yeni Adınız Soyadınız" }); var box = h("div"), live = h("p", { class: "hint live", "aria-live": "polite" }), btn = h("button", { class: "btn", type: "submit" }, AVF.icon("mail", "bico"), "Onay Kodu Gönder");
+      inp.addEventListener("input", function () { var m = nameIssue(inp.value); live.textContent = m; live.classList.toggle("bad", !!m); });
       AVF.mount(p, h("form", { novalidate: true, onsubmit: function (e) {
-        e.preventDefault(); msg(box, ""); AVF.busy(btn, true, "Gönderiliyor…");
+        e.preventDefault(); msg(box, ""); var iss = nameIssue(inp.value) || (inp.value.trim() ? "" : "Yeni ad soyadınızı yazın."); if (iss) return msg(box, iss, "err");
+        AVF.busy(btn, true, "Gönderiliyor…");
         AVF.api("POST", "/account/request-name-change", { newName: inp.value.trim() }).then(function () {
           AVF.mount(p, codeStep({ purpose: "name_change", text: "Ad soyad değişikliğini onaylamak için e-postanıza gelen kodu girin.", cancel: function () { start(p); }, confirm: function (c) {
             return AVF.api("POST", "/account/confirm-name-change", { code: c }).then(function (r) { user.full_name = r.fullName; acc.setTitleSub(AVF.maskName(r.fullName)); refresh(); AVF.toast("Ad soyadınız güncellendi."); start(p); });
           } }));
         }, function (er) { AVF.busy(btn, false); msg(box, AVF.errText(er), "err"); });
-      } }, h("p", { class: "hint", text: "Ad soyad ayda en fazla bir kez değiştirilebilir." }), AVF.field("Yeni ad soyad", inp, { optional: true }), box, btn));
+      } }, h("ul", { class: "rulelist" }, h("li", null, AVF.icon("calendar"), "Ayda yalnızca 1 kez değiştirilebilir"), h("li", null, AVF.icon("id"), "En fazla 3 boşluk (4 kelime)"), h("li", null, AVF.icon("mail"), "Değişiklik her zaman e-posta koduyla onaylanır")),
+        AVF.field("Yeni ad soyad", inp, { optional: true, icon: "id" }), live, box, btn));
     }
     start(acc.querySelector(".pad")); return acc;
   }
@@ -45,7 +57,7 @@
   function emailSection(user, refresh) {
     var acc = AVF.accordion({ icon: "mail", title: "E-posta Adresi", sub: user.email });
     function start(p) {
-      var inp = AVF.input("email", { maxlength: "200", autocomplete: "email", autocapitalize: "none" }); var box = h("div"), btn = h("button", { class: "btn", type: "submit" }, "Kod Gönder");
+      var inp = AVF.input("email", { maxlength: "200", autocomplete: "email", autocapitalize: "none", placeholder: "Yeni E-Posta Adresiniz" }); var box = h("div"), btn = h("button", { class: "btn", type: "submit" }, AVF.icon("mail", "bico"), "Onay Kodu Gönder");
       AVF.mount(p, h("form", { novalidate: true, onsubmit: function (e) {
         e.preventDefault(); msg(box, ""); AVF.busy(btn, true, "Gönderiliyor…");
         AVF.api("POST", "/account/request-email-change", { newEmail: inp.value.trim() }).then(function () {
@@ -57,7 +69,7 @@
             });
           } }));
         }, function (er) { AVF.busy(btn, false); msg(box, AVF.errText(er), "err"); });
-      } }, h("p", { class: "hint", text: "Değişiklik iki adımda onaylanır: önce mevcut, sonra yeni adresinize kod gönderilir." }), AVF.field("Yeni e-posta adresi", inp, { optional: true }), box, btn));
+      } }, h("ol", { class: "steps2" }, h("li", null, h("span", { class: "n", text: "1" }), h("span", null, h("b", { text: "Mevcut adresiniz" }), h("small", { text: "Önce eski e-posta adresinize onay kodu gider" }))), h("li", null, h("span", { class: "n", text: "2" }), h("span", null, h("b", { text: "Yeni adresiniz" }), h("small", { text: "Ardından yeni adresinize doğrulama kodu gider" })))), AVF.field("Yeni e-posta adresi", inp, { optional: true, icon: "mail" }), box, btn));
     }
     start(acc.querySelector(".pad")); return acc;
   }
@@ -66,8 +78,9 @@
   function passwordSection(user, refresh, afterLogout) {
     var acc = AVF.accordion({ icon: "lock", title: "Şifre", sub: "••••••••" });
     function start(p) {
-      var o = AVF.passwordInput({ autocomplete: "current-password", maxlength: "200" }), n = AVF.passwordInput({ autocomplete: "new-password", maxlength: "200" });
-      var box = h("div"), btn = h("button", { class: "btn", type: "submit" }, "Kod Gönder");
+      var o = AVF.passwordInput({ autocomplete: "current-password", maxlength: "200", placeholder: "Mevcut Şifrenizi Girin" }), n = AVF.passwordInput({ autocomplete: "new-password", maxlength: "200", placeholder: "Yeni Şifrenizi Girin" });
+      var meter = AVF.passwordMeter(n.input, function () { return { fullName: user.full_name, username: user.username }; });
+      var box = h("div"), btn = h("button", { class: "btn", type: "submit" }, AVF.icon("mail", "bico"), "Onay Kodu Gönder");
       AVF.mount(p, h("form", { novalidate: true, onsubmit: function (e) {
         e.preventDefault(); msg(box, "");
         var pe = AVF.passwordError(n.input.value, user.full_name, user.username); if (pe) return msg(box, pe, "err");
@@ -77,7 +90,7 @@
             return AVF.api("POST", "/account/confirm-password-change", { code: c }).then(function (r) { AVF.toast(r.message); if (!r.keptSession) afterLogout(); else start(p); });
           } }));
         }, function (er) { AVF.busy(btn, false); msg(box, AVF.errText(er), "err"); });
-      } }, AVF.field("Mevcut şifre", o, { optional: true }), AVF.field("Yeni şifre", n, { optional: true, hint: "En az 8 karakter; en az 1 harf ve 1 noktalama işareti; boşluk ve ardışık sayı olmaz." }), box, btn));
+      } }, AVF.field("Mevcut şifre", o, { optional: true, icon: "lock" }), AVF.field("Yeni şifre", n, { optional: true, icon: "key" }), meter, box, btn));
     }
     start(acc.querySelector(".pad")); return acc;
   }
@@ -102,11 +115,11 @@
             }, function (er) { AVF.busy(b, false); msg(box, AVF.errText(er), "err"); });
           } }, "Etkinleştir"));
       } else {
-        AVF.mount(p, h("p", { class: "hint", text: "Kalan kurtarma kodu: " + (user.recovery_codes_left == null ? "—" : user.recovery_codes_left) }), box,
+        AVF.mount(p, h("p", { class: "hint", text: "Kalan kurtarma kodu: " + (user.recovery_codes_left == null ? "—" : user.recovery_codes_left) + ". Kapatma ve kurtarma kodu yenileme e-postanıza gelen kodla onaylanır; Google Authenticator kodu gerekmez." }), box,
           h("div", { class: "row" },
-            h("button", { class: "btn ghost sm", type: "button", onclick: function () { recovery(); } }, "Kurtarma kodlarını yenile"),
-            h("button", { class: "btn ghost sm", type: "button", onclick: function () { renew(); } }, "Authenticator'ı yenile"),
-            panelRole ? null : h("button", { class: "btn ghost sm", type: "button", onclick: function () { disable(); } }, "Kapat")));
+            h("button", { class: "btn ghost sm", type: "button", onclick: function () { recovery(); } }, AVF.icon("refresh", "bico"), "Kurtarma kodlarını yenile"),
+            h("button", { class: "btn ghost sm", type: "button", onclick: function () { renew(); } }, AVF.icon("device", "bico"), "Authenticator'ı yenile"),
+            panelRole ? null : h("button", { class: "btn ghost sm", type: "button", onclick: function () { disable(); } }, AVF.icon("x", "bico"), "İki adımlı doğrulamayı kapat")));
       }
     }
     function setup(r, activatePath, extra) {
@@ -140,7 +153,7 @@
     }
     function disable() {
       AVF.api("POST", "/2fa/request-toggle", { method: "totp" }).then(function () {
-        AVF.mount(p, codeStep({ text: "Kapatmak için Google Authenticator uygulamanızdaki 6 haneli kodu girin.", cancel: render, confirm: function (c) {
+        AVF.mount(p, codeStep({ text: "İki adımlı doğrulamayı kapatmak için e-postanıza gelen kodu girin.", cancel: render, confirm: function (c) {
           return AVF.api("POST", "/2fa/confirm-toggle", { code: c }).then(function () { user.totp_enabled = false; refresh(); AVF.toast("İki adımlı doğrulama kapatıldı."); render(); });
         } }));
       }, function (er) { AVF.toast(AVF.errText(er), "err"); });
@@ -149,16 +162,24 @@
   }
 
   // ---------- Son girişler ----------
+  function uaInfo(ua) {
+    ua = String(ua || ""); var b = /Edg\//.test(ua) ? "Edge" : /OPR\/|Opera/.test(ua) ? "Opera" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Tarayıcı";
+    var o = /Windows/.test(ua) ? "Windows" : /Android/.test(ua) ? "Android" : /iPhone|iPad|iOS/.test(ua) ? "iOS" : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /Linux/.test(ua) ? "Linux" : "";
+    return { name: b + (o ? " · " + o : ""), mobile: /Android|iPhone|iPad|Mobile/.test(ua) };
+  }
   function historySection() {
     var loaded = false;
-    var acc = AVF.accordion({ icon: "list", title: "Son Girişler", sub: "Hesabınıza yapılan son girişler", onOpen: function (p) {
+    var acc = AVF.accordion({ icon: "clock", title: "Son Girişler", sub: "Hesabınıza yapılan son girişler", onOpen: function (p) {
       if (loaded) return; AVF.mount(p, AVF.skeleton(2));
       AVF.api("GET", "/account/login-history").then(function (rows) {
         loaded = true;
-        AVF.mount(p, rows.length ? h("table", { class: "t stackm" }, h("thead", null, h("tr", null, h("th", { text: "Tarih" }), h("th", { text: "IP" }), h("th", { text: "Cihaz" }))),
-          h("tbody", null, rows.map(function (r) { return h("tr", null, h("td", { text: AVF.fmtDateTime(r.created_at) }), h("td", { text: r.ip_address || "—" }), h("td", { text: String(r.user_agent || "—").slice(0, 80) })); })))
+        AVF.mount(p, rows.length ? h("ul", { class: "hist" }, rows.map(function (r, i) {
+          var u = uaInfo(r.user_agent);
+          return h("li", { style: "animation-delay:" + Math.min(i, 8) * 45 + "ms" }, h("span", { class: "tile" }, AVF.icon(u.mobile ? "device" : "globe")),
+            h("span", { class: "t" }, h("b", { text: u.name }), h("small", null, h("span", { class: "m" }, AVF.icon("clock"), AVF.fmtDateTime(r.created_at)), h("span", { class: "m" }, AVF.icon("pin"), r.ip_address || "—"))));
+        }))
           : h("p", { class: "hint", text: "Henüz giriş kaydı yok." }));
-      }, function (er) { AVF.mount(p, h("div", { class: "note err", text: AVF.errText(er) }), h("button", { class: "btn ghost sm", type: "button", onclick: function () { loaded = false; acc.querySelector("button").click(); acc.querySelector("button").click(); } }, "Tekrar dene")); });
+      }, function (er) { AVF.mount(p, h("div", { class: "note err", text: AVF.errText(er) })); });
     } });
     return acc;
   }

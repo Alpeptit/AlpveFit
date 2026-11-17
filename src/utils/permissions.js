@@ -8,8 +8,8 @@
 
 export const PANEL_ROLES = ["admin", "coach"];
 export const ROLE_LABELS = { admin: "Tam yetki", coach: "Uzman", user: "Üye" };
-export const PLAN_KINDS = ["nutrition", "training", "supplement", "pharmacology"];
-export const KIND_LABELS = { nutrition: "Beslenme programı", training: "Antrenman programı", supplement: "Takviye / vitamin / mineral planı", pharmacology: "Farmakoloji planı" };
+export const PLAN_KINDS = ["nutrition", "training", "supplement", "pharmacology", "notes"];
+export const KIND_LABELS = { nutrition: "Beslenme programı", training: "Antrenman programı", supplement: "Takviye / vitamin / mineral planı", pharmacology: "Farmakoloji planı", notes: "Değerli notlar" };
 
 export const isPanelRole = (role) => PANEL_ROLES.includes(role);
 export const isPlanKind = (k) => PLAN_KINDS.includes(k);

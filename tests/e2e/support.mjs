@@ -20,7 +20,7 @@ r = await C1.c.call("GET", "/admin/tickets"); chk("uzman (koç) destek talepleri
 // ---- destek talebi ----
 r = await new Client().call("POST", "/tickets", { title: "Yardım", subject: "Diğer", message: "x" }); chk("ticket için giriş gerekir", r.status === 401, r);
 r = await M1.c.call("POST", "/tickets", { title: "Ödeme sorusu", subject: "Bilinmeyen", message: "Merhaba" }); chk("geçersiz konu reddedilir", r.status === 400, r);
-r = await M1.c.call("POST", "/tickets", { title: "Ödeme sorusu", subject: "Paketler ve ödeme", message: "Kartla ödeme yapabilir miyim?" });
+r = await M1.c.call("POST", "/tickets", { title: "Ödeme sorusu", subject: "Ödeme Sorunları", message: "Kartla ödeme yapabilir miyim?" });
 chk("üye destek talebi oluşturur (T-######)", r.status === 201 && /^T-\d{6}$/.test(r.body.ticket_number), r);
 const tid = r.body.id, tnum = r.body.ticket_number;
 r = await M2.c.call("GET", `/tickets/${tid}`); chk("başka üye talebi göremez", r.status === 404, r);

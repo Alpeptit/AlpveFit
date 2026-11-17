@@ -385,7 +385,7 @@ adminRouter.post("/tickets/:id/reply", requireAdmin, async (req, res) => {
   const { rows } = await pool.query(
     `INSERT INTO ticket_messages (ticket_id, from_role, admin_id, body) VALUES ($1, 'support', $2, $3) RETURNING id, from_role, body, created_at`, [req.params.id, req.user.sub, cleanText(m)]);
   await pool.query(`UPDATE tickets SET status = 'answered', updated_at = now() WHERE id = $1 RETURNING id`, [req.params.id]);
-  await pool.query(`INSERT INTO notifications (user_id, type, text) VALUES ($1, 'ticket', $2) RETURNING id`, [t.rows[0].user_id, `${t.rows[0].ticket_number} numaralı destek talebinize yanıt verildi.`]);
+  await pool.query(`INSERT INTO notifications (user_id, type, text, data) VALUES ($1, 'ticket', $2, $3) RETURNING id`, [t.rows[0].user_id, `${t.rows[0].ticket_number} numaralı destek talebinize yanıt verildi.`, JSON.stringify({ ticketId: req.params.id, ticketNumber: t.rows[0].ticket_number })]);
   pool.query(`SELECT email, preferred_lang FROM users WHERE id = $1`, [t.rows[0].user_id])
     .then(({ rows: u }) => u[0] && sendMail(u[0].email, ticketReplyMail(u[0].preferred_lang || mailLang(req), { ticketNumber: t.rows[0].ticket_number })))
     .catch(() => {});   // bildirim e-postası gönderilemezse yanıt yine kaydedilmiş olur
@@ -398,7 +398,7 @@ adminRouter.patch("/tickets/:id/close", requireAdmin, async (req, res) => {
   const { rows } = await pool.query(
     `UPDATE tickets SET status = 'closed', closed_at = now(), closed_by = 'admin', updated_at = now() WHERE id = $1 AND status <> 'closed' RETURNING id, user_id, ticket_number`, [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: "Destek talebi bulunamadı veya zaten kapatılmış." });
-  await pool.query(`INSERT INTO notifications (user_id, type, text) VALUES ($1, 'ticket', $2) RETURNING id`, [rows[0].user_id, `${rows[0].ticket_number} numaralı destek talebiniz sonuçlandırılarak kapatıldı.`]);
+  await pool.query(`INSERT INTO notifications (user_id, type, text, data) VALUES ($1, 'ticket', $2, $3) RETURNING id`, [rows[0].user_id, `${rows[0].ticket_number} numaralı destek talebiniz sonuçlandırılarak kapatıldı.`, JSON.stringify({ ticketId: rows[0].id, ticketNumber: rows[0].ticket_number })]);
   await logAudit(req.user.sub, "ticket_close", "ticket", req.params.id, {}, ip(req));
   res.json({ ok: true });
 });

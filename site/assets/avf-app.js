@@ -107,16 +107,59 @@
       langSwitch(),
       u && (u.role === "coach" || u.role === "admin") ? h("a", { class: "ibtn plain desk-only", href: "/uzman", "aria-label": "Uzman paneli", title: "Uzman paneli" }, AVF.icon("users")) : null,
       link("/forum", AVF.icon("msg"), { class: "ibtn plain mob-only", "aria-label": "Forum", title: "Forum" }),
-      u ? link("/panel/bildirimler", [AVF.icon("bell"), unread ? h("span", { class: "badge", "aria-label": unread + " okunmamış bildirim", text: String(unread > 99 ? "99+" : unread) }) : null], { class: "ibtn plain", "aria-label": "Bildirimler", title: "Bildirimler" }) : null,
+      u ? bellMenu() : null,
       u ? link("/panel", AVF.icon("user"), { class: "ibtn plain acct", "aria-label": "Hesabım", title: "Hesabım" })
         : h("button", { class: "ibtn plain acct", type: "button", "aria-label": "Giriş yap / Kayıt ol", title: "Giriş yap / Kayıt ol", onclick: function () { AVF.auth.open("login"); } }, AVF.icon("user")));
+  }
+  function notifTarget(n) {
+    var d = n.data || {};
+    if (n.type === "plan_published" && d.kind && AVF.KIND[d.kind]) return "/panel/" + AVF.KIND[d.kind].slug;
+    if (n.type === "ticket" && d.ticketId) return "/panel/destek/" + d.ticketId;
+    if ((n.type === "order_paid" || n.type === "order_payment") && n.order_id) return "/panel/siparis/" + n.order_id;
+    if (n.type === "security") return "/panel/hesap";
+    return "/panel/bildirimler";
+  }
+  function notifIcon(n) { return n.type === "security" ? "shield" : n.type === "ticket" ? "ticket" : n.type.indexOf("order") === 0 ? "card" : "list"; }
+  function bellMenu() {
+    var wrap = h("div", { class: "bell" });
+    var pop = h("div", { class: "bell-pop", role: "menu", hidden: "" });
+    var btn = h("button", { class: "ibtn plain", type: "button", "aria-label": "Bildirimler", title: "Bildirimler", "aria-haspopup": "true", "aria-expanded": "false" },
+      AVF.icon("bell"), unread ? h("span", { class: "badge", "aria-label": unread + " okunmamış bildirim", text: String(unread > 99 ? "99+" : unread) }) : null);
+    function close() { pop.hidden = true; btn.setAttribute("aria-expanded", "false"); document.removeEventListener("click", away, true); document.removeEventListener("keydown", esc, true); }
+    function away(e) { if (!wrap.contains(e.target)) close(); }
+    function esc(e) { if (e.key === "Escape") { close(); btn.focus(); } }
+    btn.addEventListener("click", function () {
+      if (!pop.hidden) return close();
+      pop.hidden = false; btn.setAttribute("aria-expanded", "true");
+      document.addEventListener("click", away, true); document.addEventListener("keydown", esc, true);
+      AVF.mount(pop, h("div", { class: "bp-head" }, h("b", { text: "Bildirimler" })), AVF.skeleton(2));
+      AVF.api("GET", "/notifications").then(function (rows) {
+        unread = rows.filter(function (r) { return !r.read_at; }).length;
+        var top = rows.slice(0, 5);
+        AVF.mount(pop, h("div", { class: "bp-head" }, h("b", { text: "Bildirimler" }), unread ? h("span", { class: "bp-n", text: unread + " yeni" }) : null),
+          top.length ? h("div", { class: "bp-list" }, top.map(function (n) {
+            var a = h("a", { class: "bp-item" + (n.read_at ? "" : " new"), href: notifTarget(n), role: "menuitem", onclick: function (e) {
+              e.preventDefault(); close();
+              if (!n.read_at) AVF.api("POST", "/notifications/" + n.id + "/read", {}).then(function () { refreshUnread(); }, function () {});
+              go(notifTarget(n));
+            } }, h("span", { class: "tile" + (n.type === "security" ? " teal" : "") }, AVF.icon(notifIcon(n))),
+              h("span", { class: "bp-t" }, notifText(n), h("small", { text: AVF.fmtDateTime(n.created_at) })));
+            return a;
+          })) : h("div", { class: "bp-empty" }, AVF.icon("bell"), h("span", { text: "Henüz bildiriminiz yok." })),
+          h("a", { class: "bp-all", href: "/panel/bildirimler", onclick: function (e) { e.preventDefault(); close(); go("/panel/bildirimler"); } }, "Tüm bildirimleri gör"));
+      }, function () { AVF.mount(pop, h("div", { class: "bp-empty" }, "Bildirimler yüklenemedi.")); });
+    });
+    wrap.appendChild(btn); wrap.appendChild(pop); return wrap;
   }
   function refreshUnread() {
     if (!AVF.session.user) { unread = 0; return renderChrome(); }
     AVF.api("GET", "/notifications").then(function (rows) { unread = rows.filter(function (r) { return !r.read_at; }).length; renderChrome(); }, function () { /* sessiz */ });
   }
   function logout() {
-    AVF.api("POST", "/account/logout", {}).then(null, function () { /* oturum zaten kapalı olabilir */ }).then(function () { sessionGone(); AVF.toast("Çıkış yapıldı."); });
+    AVF.confirmDialog({ icon: "out", title: "Çıkış yapmak istediğinize emin misiniz?", text: "Güvenli çıkış yaptığınızda oturumunuz bu cihazda kapatılır.", confirm: "Evet, çıkış yap", cancel: "Vazgeç" }).then(function (ok) {
+      if (!ok) return;
+      AVF.api("POST", "/account/logout", {}).then(null, function () { /* oturum zaten kapalı olabilir */ }).then(function () { sessionGone(); AVF.toast("Çıkış yapıldı."); });
+    });
   }
   function sessionGone(why, data) {
     AVF.session.user = null; kinds = null; unread = 0; renderChrome();
@@ -216,10 +259,12 @@
           h("div", { class: "card ucard" }, h("span", { class: "tile" }, AVF.icon("shield")), h("div", null, h("b", { text: AVF.maskName(u.full_name) }), h("small", { text: u.email }), h("span", { class: "ok" }, "✓ E-posta doğrulandı"))), menuEl),
         content));
     function paintMenu() {
+      var granted = (kinds || []).map(function (k) { return k.kind; });
+      var plans = Object.keys(AVF.KIND).map(function (k) { return h("div", { class: "pm-sub" }, link("/panel/" + AVF.KIND[k].slug, [AVF.icon(AVF.KIND[k].icon), h("span", { text: AVF.KIND[k].label }), kinds && granted.indexOf(k) < 0 ? AVF.icon("lock", "pm-lock") : null], sub === AVF.KIND[k].slug ? { "aria-current": "page" } : {})); });
       var items = [["", "list", "Planlarım"]];
-      (kinds || []).forEach(function (k) { items.push([AVF.KIND[k.kind].slug, AVF.KIND[k.kind].icon, AVF.KIND[k.kind].label]); });
-      items.push(["siparisler", "card", "Siparişlerim"], ["profil", "id", "Kişisel Bilgilerim"], ["destek", "ticket", "Destek Taleplerim"], ["bildirimler", "bell", "Bildirimler"], ["hesap", "cog", "Hesap Ayarları"]);
-      AVF.mount(menuEl, items.map(function (i) {
+      var rest = [["siparisler", "card", "Siparişlerim"], ["profil", "id", "Kişisel Bilgilerim"], ["destek", "ticket", "Destek Taleplerim"], ["bildirimler", "bell", "Bildirimler"], ["hesap", "cog", "Hesap Ayarları"]];
+      AVF.mount(menuEl, items.concat([["__plans"]]).concat(rest).map(function (i) {
+        if (i[0] === "__plans") return h("div", { class: "pm-group" }, plans);
         var a = link("/panel" + (i[0] ? "/" + i[0] : ""), [AVF.icon(i[1]), i[2], i[0] === "bildirimler" && unread ? h("span", { class: "badge", text: String(unread) }) : null]);
         if (i[0] === sub || (i[0] === "siparisler" && sub.indexOf("siparis/") === 0) || (i[0] === "destek" && sub.indexOf("destek/") === 0)) a.setAttribute("aria-current", "page"); return a;
       }), h("button", { class: "pm-out", type: "button", onclick: logout }, AVF.icon("out"), "Çıkış yap"));
@@ -248,12 +293,12 @@
     var o = AVF.overview || { kinds: [], coaches: [] };
     AVF.mount(el, h("h2", { class: "ptitle", text: "Planlarım" }), AVF.packageStatusCard());
     if (o.coaches.length) el.appendChild(h("div", { class: "note" }, "Koçunuz: ", h("span", { "data-notr": "", text: o.coaches.map(function (c) { return c.name; }).join(", ") })));
-    if (!o.kinds.length) return el.appendChild(AVF.state("list", "Henüz erişiminiz açık bir plan bölümü yok", "Bir paket satın aldığınızda ve ödemeniz onaylandığında plan bölümleriniz burada açılır.", link("/paketler", "Paketleri incele", { class: "btn" })));
-    el.appendChild(h("div", { class: "stack" }, o.kinds.map(function (k) {
-      var m = AVF.KIND[k.kind];
+    if (!o.kinds.length) el.appendChild(h("div", { class: "note" }, "Bir paket satın aldığınızda ve ödemeniz onaylandığında plan bölümleriniz açılır. ", link("/paketler", "Paketleri incele", { style: "font-weight:700" })));
+    el.appendChild(h("div", { class: "stack" }, Object.keys(AVF.KIND).map(function (key) {
+      var m = AVF.KIND[key], k = o.kinds.filter(function (x) { return x.kind === key; })[0];
       return link("/panel/" + m.slug, [h("span", { class: "tile" }, AVF.icon(m.icon)),
-        h("span", { class: "t", style: "flex:1;min-width:0" }, h("b", { style: "display:block;font-size:16px", text: m.label }), h("small", { style: "color:var(--muted)", text: k.count ? k.count + " yayınlanmış plan" + (k.lastPublishedAt ? " · son: " + AVF.fmtDate(k.lastPublishedAt) : "") : "Henüz yayınlanmış plan yok" })), AVF.icon("chev", "chev")],
-        { class: "card", style: "display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none" });
+        h("span", { class: "t", style: "flex:1;min-width:0" }, h("b", { style: "display:block;font-size:16px", text: m.label }), h("small", { style: "color:var(--muted)", text: !k ? "Hesabınız için henüz etkin değil" : k.count ? k.count + " yayınlanmış plan" + (k.lastPublishedAt ? " · son: " + AVF.fmtDate(k.lastPublishedAt) : "") : "Henüz yayınlanmış plan yok" })), AVF.icon(k ? "chev" : "lock", k ? "chev" : "pm-lock")],
+        { class: "card ovk" + (k ? "" : " off"), style: "display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none" });
     })));
   }
 

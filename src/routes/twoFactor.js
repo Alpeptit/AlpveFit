@@ -29,25 +29,21 @@ function genBackupCodes(count = 8) {
 }
 
 // ---------- adım 1: onay yöntemi ----------
-// v55: iki adımlı GİRİŞ doğrulaması yalnız Google Authenticator'dır ve isteğe bağlıdır (varsayılan kapalı). E-posta, giriş MFA
-// yöntemi olarak KULLANILMAZ.
-// v56: • AÇMA: hesaba kayıtlı e-postaya gelen tek kullanımlık, 5 dakika geçerli kodla onaylanır (ardından QR + uygulama kodu).
-//      • KAPATMA: YALNIZ Google Authenticator uygulamasındaki geçerli 6 haneli kodla onaylanır — e-posta kodu istenmez ve
-//        e-postayla onay kodu GÖNDERİLMEZ. Kod tekrar kullanım korumalıdır (verifyTotpOnce) ve hatalı denemeler ortak kilit
-//        merdivenine yazılır.
+// İki adımlı GİRİŞ doğrulaması yalnız Google Authenticator'dır ve isteğe bağlıdır (varsayılan kapalı).
+// Açma VE kapatma, oturum sahibinin hesabına kayıtlı e-postaya gelen tek kullanımlık, 5 dakika geçerli kodla onaylanır;
+// kapatırken Authenticator kodu istenmez (telefon kaybında kullanıcı kilitli kalmasın). Panel rolleri (uzman/yönetici) kapatamaz.
 twoFactorRouter.post("/2fa/request-toggle", requireAuth, async (req, res) => {
   const { rows } = await pool.query(`SELECT email, totp_enabled, role FROM users WHERE id = $1`, [req.user.sub]);
   const user = rows[0];
   const enabled = !!user.totp_enabled;
   // Yönetici işlemleri Google Authenticator'ı ZORUNLU kılar (requireAdmin); kapatmak yöneticiyi paneline kilitlerdi.
   if (enabled && isPanelRole(user.role)) return res.status(403).json({ error: "Yönetici hesaplarında iki adımlı doğrulama zorunludur ve kapatılamaz." });
-  if (enabled) return res.json({ method: "totp", message: "Google Authenticator uygulamanızdaki 6 haneli kodu girin." });
   if (req.body?.method != null && req.body.method !== "totp") {
     return res.status(400).json({ error: "İki adımlı giriş doğrulaması yalnız Google Authenticator ile yapılabilir." });
   }
 
   const code = await createVerificationCode(req.user.sub, "2fa_toggle", null, 5);
-  const mailResult = await sendMail(user.email, codeMail("2fa_enable", code, mailLang(req)));
+  const mailResult = await sendMail(user.email, codeMail(enabled ? "2fa_disable" : "2fa_enable", code, mailLang(req)));
   if (mailResult.reason === "send_failed" || mailResult.reason === "smtp_required_in_production") {
     return res.status(503).json({ error: "E-posta gönderilemedi, lütfen birazdan tekrar deneyin.", mailFailed: true });
   }
@@ -68,10 +64,8 @@ twoFactorRouter.post("/2fa/confirm-toggle", requireAuth, async (req, res) => {
   const disabling = !!pre[0]?.totp_enabled;
   if (disabling && isPanelRole(pre[0].role)) return res.status(403).json({ error: "Yönetici hesaplarında iki adımlı doğrulama zorunludur ve kapatılamaz." });
 
-  // v56: kapatma = Authenticator kodu (tekrar kullanım korumalı); açma = e-posta kodu. Yanlış kod ortak kilit merdivenine yazılır.
-  const ok = disabling
-    ? await verifyTotpOnce(req.user.sub, String(code ?? ""), pre[0].totp_secret)
-    : (await verifyCode(req.user.sub, "2fa_toggle", code)).valid;
+  // Açma ve kapatma e-posta koduyla onaylanır. Yanlış kod ortak kilit merdivenine yazılır.
+  const ok = (await verifyCode(req.user.sub, "2fa_toggle", code)).valid;
   if (!ok) {
     return sendCodeFailure(res, await recordFailure(identifier, "verification_code"));
   }
@@ -89,7 +83,7 @@ twoFactorRouter.post("/2fa/confirm-toggle", requireAuth, async (req, res) => {
     await pool.query(`UPDATE verification_codes SET consumed_at = now() WHERE user_id = $1 AND purpose IN ('2fa_toggle', 'login_totp_ticket') AND consumed_at IS NULL`, [req.user.sub]);
     await pool.query(`INSERT INTO notifications (user_id, type, text) VALUES ($1, 'security', $2)`,
       [req.user.sub, "Google Authenticator ile iki adımlı doğrulama kapatıldı."]);
-    await logAudit(req.user.sub, "totp_disabled", "user", req.user.sub, { via: "totp_code" }, req.ip);
+    await logAudit(req.user.sub, "totp_disabled", "user", req.user.sub, { via: "email_code" }, req.ip);
     // güvenlik bilgilendirmesi (onay kodu DEĞİL; işlem zaten tamamlandı): hesap sahibinin habersiz kapatmayı fark edebilmesi için
     sendMail(rows[0].email, noticeMail("totp_disabled", mailLang(req))).catch(() => {});
     return res.json({ enabled: false, message: "İki adımlı doğrulama kapatıldı." });

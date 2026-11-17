@@ -6,7 +6,21 @@ import { logAudit } from "../utils/auditLog.js";
 
 export const profileRouter = withAsyncErrors(express.Router());
 const BLOOD = ["A+", "A-", "B+", "B-", "AB+", "AB-", "0+", "0-"];
-export const PROFILE_COLS = `height_cm, weight_kg, birth_year, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, updated_at`;
+export const PROFILE_COLS = `height_cm, weight_kg, birth_year, to_char(birth_date, 'YYYY-MM-DD') AS birth_date, gender, steps_range, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, updated_at`;
+const GENDERS = ["female", "male"];
+const STEPS = ["0-2000", "2000-4000", "4000-6000", "6000-8000", "8000-10000", "10000+"];
+const GOALS = ["Yağ Yakımı", "Kas Kazanımı", "Güç Artışı"];
+/** "YYYY-MM-DD" → geçerli, gelecekte olmayan ve en az 14 yaşında bir takvim tarihi mi? */
+function dateIn(v) {
+  if (v === "" || v === null || v === undefined) return { v: null };
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v));
+  if (!m) return { err: "Doğum tarihi geçersiz." };
+  const y = +m[1], mo = +m[2], d = +m[3], dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return { err: "Doğum tarihi geçersiz." };
+  const now = new Date(), limit = new Date(Date.UTC(now.getUTCFullYear() - 14, now.getUTCMonth(), now.getUTCDate()));
+  if (y < 1930 || dt > limit) return { err: "Doğum tarihi geçersiz (en az 14 yaşında olmalısınız)." };
+  return { v: String(v), year: y };
+}
 
 const clean = (v, max) => {
   const s = String(v ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").replace(/\r\n?/g, "\n").trim();
@@ -28,9 +42,14 @@ profileRouter.get("/profile", requireAuth, async (req, res) => {
 
 profileRouter.put("/profile", requireAuth, async (req, res) => {
   const b = req.body || {};
-  const h = intIn(b.heightCm, 100, 250, "Boy"), by = intIn(b.birthYear, 1930, new Date().getFullYear() - 14, "Doğum yılı");
-  const st = intIn(b.dailySteps, 0, 100000, "Günlük adım sayısı"), td = intIn(b.trainingDays, 0, 7, "Haftalık antrenman günü");
-  for (const x of [h, by, st, td]) if (x.err) return res.status(400).json({ error: x.err });
+  const h = intIn(b.heightCm, 100, 250, "Boy"), bd = dateIn(b.birthDate), td = intIn(b.trainingDays, 0, 7, "Haftalık antrenman günü");
+  for (const x of [h, bd, td]) if (x.err) return res.status(400).json({ error: x.err });
+  const by = { v: bd.v ? bd.year : null };
+  const gender = b.gender === "" || b.gender == null ? null : String(b.gender);
+  if (gender !== null && !GENDERS.includes(gender)) return res.status(400).json({ error: "Geçersiz cinsiyet seçimi." });
+  const stepsRange = b.stepsRange === "" || b.stepsRange == null ? null : String(b.stepsRange);
+  if (stepsRange !== null && !STEPS.includes(stepsRange)) return res.status(400).json({ error: "Geçersiz günlük adım aralığı." });
+  const st = { v: null };
   let w = null;
   if (b.weightKg !== "" && b.weightKg !== null && b.weightKg !== undefined) {
     w = Number(b.weightKg);
@@ -39,23 +58,23 @@ profileRouter.put("/profile", requireAuth, async (req, res) => {
   }
   const blood = b.bloodType === "" || b.bloodType == null ? null : String(b.bloodType);
   if (blood !== null && !BLOOD.includes(blood)) return res.status(400).json({ error: "Geçersiz kan grubu." });
-  const occupation = b.occupation ? clean(b.occupation, 80) : null, goal = b.goal ? clean(b.goal, 500) : null, notes = b.healthNotes ? clean(b.healthNotes, 1000) : null;
+  const occupation = b.occupation ? clean(b.occupation, 80) : null, goal = b.goal ? String(b.goal) : null, notes = b.healthNotes ? clean(b.healthNotes, 1000) : null;
   if (b.occupation && occupation === null) return res.status(400).json({ error: "Meslek en fazla 80 karakter olabilir." });
-  if (b.goal && goal === null) return res.status(400).json({ error: "Hedef en fazla 500 karakter olabilir." });
+  if (goal !== null && !GOALS.includes(goal)) return res.status(400).json({ error: "Lütfen hedefinizi listeden seçin." });
   if (b.healthNotes && notes === null) return res.status(400).json({ error: "Sağlık notları en fazla 1000 karakter olabilir." });
 
   // Sağlık verisi (KVKK m.6 özel nitelikli): kan grubu, kilo/boy dahil bu bölüm için AÇIK RIZA zorunlu. Rıza zamanı saklanır; geri alınabilir.
-  const hasAny = [h.v, w, by.v, st.v, td.v, blood, occupation, goal, notes].some((x) => x !== null && x !== "");
+  const hasAny = [h.v, w, by.v, bd.v, gender, stepsRange, td.v, blood, occupation, goal, notes].some((x) => x !== null && x !== "");
   const prior = await pool.query(`SELECT health_consent_at FROM member_profiles WHERE user_id = $1`, [req.user.sub]);
   const consentAt = prior.rows[0]?.health_consent_at || null;
   if (hasAny && !consentAt && b.healthConsent !== true) return res.status(400).json({ error: "Bu bilgileri kaydedebilmemiz için açık rızanızı onaylamanız gerekir.", code: "consent_required" });
   const { rows } = await pool.query(
-    `INSERT INTO member_profiles (user_id, height_cm, weight_kg, birth_year, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $11 THEN now() END, now())
+    `INSERT INTO member_profiles (user_id, height_cm, weight_kg, birth_year, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, birth_date, gender, steps_range, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $11 THEN now() END, $12, $13, $14, now())
      ON CONFLICT (user_id) DO UPDATE SET height_cm=$2, weight_kg=$3, birth_year=$4, occupation=$5, daily_steps=$6, blood_type=$7, training_days=$8, goal=$9, health_notes=$10,
-       health_consent_at = COALESCE(member_profiles.health_consent_at, CASE WHEN $11 THEN now() END), updated_at = now()
+       health_consent_at = COALESCE(member_profiles.health_consent_at, CASE WHEN $11 THEN now() END), birth_date=$12, gender=$13, steps_range=$14, updated_at = now()
      RETURNING ${PROFILE_COLS}`,
-    [req.user.sub, h.v, w, by.v, occupation || null, st.v, blood, td.v, goal || null, notes || null, hasAny && b.healthConsent === true]);
+    [req.user.sub, h.v, w, by.v, occupation || null, st.v, blood, td.v, goal || null, notes || null, hasAny && b.healthConsent === true, bd.v, gender, stepsRange]);
   await logAudit(req.user.sub, "profile_update", "user", req.user.sub, {}, req.ip || null);
   res.json(rows[0]);
 });

@@ -10,14 +10,14 @@ import { checkHourlyActionLimit } from "../utils/rateLimit.js";
 
 export const supportRouter = withAsyncErrors(express.Router());
 export const TICKETS_PER_HOUR = 5;
-export const TICKET_SUBJECTS = ["Paketler ve ödeme", "Programım", "Hesap ve güvenlik", "Teknik sorun", "Diğer"];
+export const TICKET_SUBJECTS = ["Hesap ve Güvenlik Ayarları", "Teknik Sorunlar", "Ödeme Sorunları", "Plan ve Programım", "Revizasyon Ayı", "Diğer"];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Destek talebi başlığı: 3–144 karakter, denetim karakteri yok. Geçerliyse null. */
+/** Destek talebi başlığı: 3–244 karakter, denetim karakteri yok. Geçerliyse null. */
 export function ticketTitleError(title) {
   const t = typeof title === "string" ? title.trim() : "";
   if (t.length < 3) return "Lütfen en az 3 karakterlik bir başlık girin.";
-  if (t.length > 144) return "Başlık en fazla 144 karakter olabilir.";
+  if (t.length > 244) return "Başlık en fazla 244 karakter olabilir.";
   if (/[\u0000-\u001F\u007F]/.test(t)) return "Başlık geçersiz karakter içeriyor.";
   return null;
 }

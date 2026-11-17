@@ -29,6 +29,12 @@
     list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01", cog: "M12 15a3 3 0 100-6 3 3 0 000 6zM19 12l2-1-1.5-3-2.2.6a7 7 0 00-1.3-.8L15.5 5h-3l-.5 2.8-1.3.8L8.5 8 7 11l2 1v1l-2 1 1.5 3 2.2-.6c.4.3.8.6 1.3.8l.5 2.8h3l.5-2.8c.5-.2.9-.5 1.3-.8l2.2.6 1.5-3-2-1z",
     alert: "M12 8v5M12 17h.01M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z", users: "M16 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 20v-1a4 4 0 00-3-3.9M16 4.1a3.5 3.5 0 010 6.8",
     cookie: "M12 3a9 9 0 109 9 4 4 0 01-4-4 4 4 0 01-5-5zM8.5 11h.01M12 16h.01M15.5 13h.01", out: "M9 21H5V3h4M16 17l5-5-5-5M21 12H9", refresh: "M20 11a8 8 0 00-14-4L4 9M4 4v5h5M4 13a8 8 0 0014 4l2-2M20 20v-5h-5", plus: "M12 5v14M5 12h14", card: "M2 6h20v12H2zM2 10h20M6 15h4", coin: "M12 21a9 9 0 100-18 9 9 0 000 18zM9 9h5a1.8 1.8 0 010 3.6H9m0 0h5.4a1.8 1.8 0 010 3.6H9M12 7v2M12 16v2", copy: "M8 8h12v12H8zM4 16V4h12", clock: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2", clipboard: "M9 4h6v3H9zM7 5H5v16h14V5h-2M9 12h6M9 16h4", tag: "M3 12V4h8l10 10-8 8zM7.5 8.5h.01", trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
+    female: "M12 13a5 5 0 100-10 5 5 0 000 10zM12 13v8M8.5 18h7", male: "M10 20a6 6 0 100-12 6 6 0 000 12zM14.3 9.7L21 3M15 3h6v6",
+    drop: "M12 3C9 8 6 11 6 15a6 6 0 0012 0c0-4-3-7-6-12z", briefcase: "M3 8h18v12H3zM9 8V5h6v3M3 13h18", calendar: "M4 6h16v15H4zM4 10h16M8 3v4M16 3v4",
+    ruler: "M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2", weight: "M6 8h12l2 12H4zM9 8a3 3 0 016 0M10 14h4", flame: "M12 21a6 6 0 006-6c0-3-2-5-3-8-1.5 1.5-2 2.5-3 2.5C11 7 10 5 9 3 8 8 6 10 6 15a6 6 0 006 6z",
+    bolt: "M13 2L4 14h7l-1 8 9-12h-7z", steps: "M3 16l6-9h3l1 4 7 2v4H3zM3 20h18", image: "M3 5h18v14H3zM8 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM21 16l-5-5-8 8",
+    notes: "M5 3h14v18H5zM9 8h6M9 12h6M9 16h3", device: "M3 5h18v11H3zM8 20h8M12 16v4", clip: "M20 12l-8 8a5 5 0 01-7-7l9-9a3.5 3.5 0 015 5l-9 9a2 2 0 01-3-3l8-8",
+    key: "M14 10a4 4 0 11-3.9 5H7l-2 2H3v-2l6.3-6.3A4 4 0 0114 10zM15.5 9.5h.01", muscle: "M4 15c0-3 2-4 4-4l2-3c1-2 4-2 5 0l1 3c2 0 4 1 4 4s-2 4-5 4H9c-3 0-5-1-5-4z",
     ext: "M14 4h6v6M20 4l-9 9M18 14v6H4V6h6", reply: "M5 4v7a4 4 0 004 4h10M15 11l4 4-4 4", info: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 11v5M12 8h.01",
     youtube: "M3 8.5a3 3 0 013-3h12a3 3 0 013 3v7a3 3 0 01-3 3H6a3 3 0 01-3-3zM10 9.5v5l4.5-2.5z",
     instagram: "M4 8a4 4 0 014-4h8a4 4 0 014 4v8a4 4 0 01-4 4H8a4 4 0 01-4-4zM12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM17 7h.01",
@@ -150,6 +156,8 @@
 
   // ---------- biçim ----------
   AVF.fmtDate = function (iso) { try { return new Date(iso).toLocaleDateString(AVF.locale ? AVF.locale() : "tr-TR", { day: "2-digit", month: "long", year: "numeric" }); } catch (e) { return ""; } };
+  // Gün.Ay.Yıl Saat:Dakika:Saniye (sipariş listesi)
+  AVF.fmtFull = function (iso) { try { var d = new Date(iso), z = function (n) { return String(n).padStart(2, "0"); }; return z(d.getDate()) + "." + z(d.getMonth() + 1) + "." + d.getFullYear() + " " + z(d.getHours()) + ":" + z(d.getMinutes()) + ":" + z(d.getSeconds()); } catch (e) { return ""; } };
   AVF.fmtDateTime = function (iso) { try { return new Date(iso).toLocaleString(AVF.locale ? AVF.locale() : "tr-TR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
   AVF.fmtTime = function (iso) { try { return new Date(iso).toLocaleTimeString(AVF.locale ? AVF.locale() : "tr-TR", { hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
   AVF.maskName = function (n) {
@@ -159,8 +167,9 @@
   AVF.KIND = {
     nutrition: { label: "Beslenme Programı", icon: "apple", slug: "beslenme" },
     training: { label: "Antrenman Programı", icon: "dumb", slug: "antrenman" },
-    supplement: { label: "Takviye / Vitamin / Mineral", icon: "pill", slug: "takviye" },
-    pharmacology: { label: "Farmakoloji Planı", icon: "flask", slug: "farmakoloji" },
+    supplement: { label: "Supplement Planlaması", icon: "pill", slug: "takviye" },
+    pharmacology: { label: "Farmakolojik Planlama", icon: "flask", slug: "farmakoloji" },
+    notes: { label: "Değerli Notlar", icon: "notes", slug: "notlar" },
   };
   AVF.DELIVERY = { online: "Uzaktan (online)", in_person: "Yüz yüze", hybrid: "Uzaktan + yüz yüze" };
 
@@ -293,5 +302,63 @@
     if (label === undefined) return;
     if (on) { btn._kids = Array.prototype.slice.call(btn.childNodes); AVF.clear(btn); btn.appendChild(document.createTextNode(label)); }
     else if (btn._kids) { AVF.clear(btn); btn._kids.forEach(function (k) { btn.appendChild(k); }); btn._kids = null; }
+  };
+
+  // ---------- ortak bileşenler: logolu seçim, tarih seçici, şifre ilerlemesi, onay penceresi ----------
+  // Logolu seçim kartları (radyo grubu). items: [{ value, label, icon }]; onChange(value) isteğe bağlı.
+  AVF.choice = function (o) {
+    var val = o.value == null ? "" : o.value, h = AVF.h;
+    var el = h("div", { class: "choice c" + (o.cols || o.items.length), role: "radiogroup", "aria-label": o.label || "" });
+    var btns = o.items.map(function (it) {
+      var b = h("button", { type: "button", class: "ch", role: "radio", "data-v": it.value, "aria-checked": "false", onclick: function () { set(val === it.value && o.clearable ? "" : it.value, true); } },
+        h("span", { class: "chi" }, AVF.icon(it.icon || "check")), h("span", { class: "chl", text: it.label }));
+      el.appendChild(b); return b;
+    });
+    function set(v, fire) { val = v; btns.forEach(function (b) { var on = b.getAttribute("data-v") === v; b.classList.toggle("on", on); b.setAttribute("aria-checked", on ? "true" : "false"); }); if (fire && o.onChange) o.onChange(v); }
+    el.addEventListener("keydown", function (e) { if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "ArrowDown" && e.key !== "ArrowUp") return; e.preventDefault(); var i = btns.indexOf(document.activeElement); if (i < 0) return; var n = btns[(i + (e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : btns.length - 1)) % btns.length]; n.focus(); n.click(); });
+    set(val, false); el.get = function () { return val; }; el.set = function (v) { set(v, false); };
+    return el;
+  };
+  // Gün / ay / yıl seçici. value: "YYYY-MM-DD" veya "". get() → "YYYY-MM-DD" veya "" (eksik/geçersizse "").
+  var MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+  AVF.dateSelect = function (value, minAge) {
+    var h = AVF.h, m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || ""), now = new Date(), maxY = now.getFullYear() - (minAge || 14);
+    function sel(id, ph, opts, cur) { var s = h("select", { class: "inp", id: id, "aria-label": ph }, h("option", { value: "" }, ph), opts.map(function (o) { return h("option", { value: o[0], selected: cur === o[0] }, o[1]); })); return s; }
+    var dOpts = [], yOpts = []; for (var d = 1; d <= 31; d++) dOpts.push([String(d), String(d)]); for (var y = maxY; y >= 1930; y--) yOpts.push([String(y), String(y)]);
+    var sd = sel("ds-d" + ++uid, "Gün", dOpts, m ? String(+m[3]) : ""), sm = sel("ds-m" + ++uid, "Ay", MONTHS.map(function (n, i) { return [String(i + 1), n]; }), m ? String(+m[2]) : ""), sy = sel("ds-y" + ++uid, "Yıl", yOpts, m ? String(+m[1]) : "");
+    var el = h("div", { class: "dsel" }, sd, sm, sy);
+    el.get = function () {
+      if (!sd.value || !sm.value || !sy.value) return ""; var y2 = +sy.value, mo = +sm.value, d2 = +sd.value, dt = new Date(Date.UTC(y2, mo - 1, d2));
+      if (dt.getUTCMonth() !== mo - 1) return ""; return y2 + "-" + String(mo).padStart(2, "0") + "-" + String(d2).padStart(2, "0");
+    };
+    el.partial = function () { return !!(sd.value || sm.value || sy.value) && !el.get(); };
+    return el;
+  };
+  // Şifre kuralları: yazdıkça her kural işaretlenir ve çubuk dolar. ctx() → { fullName, username }.
+  AVF.passwordMeter = function (input, ctx) {
+    var h = AVF.h;
+    var RULES = [["En az 8 karakter", function (p) { return p.length >= 8; }], ["En az 1 harf", function (p) { return /[a-zA-Z]/.test(p); }],
+      ["En az 1 noktalama işareti", function (p) { return /[!"#$%&'()*+,\-./:;<=>?@[\]^_`{|}~]/.test(p); }], ["Boşluk yok", function (p) { return p.length > 0 && !/\s/.test(p); }],
+      ["Ardışık sayı yok", function (p) { var d = (p.match(/\d+/g) || []).join(""); for (var i = 0; i + 2 < d.length; i++) { var a = +d[i], b = +d[i + 1], c = +d[i + 2]; if ((b - a === 1 && c - b === 1) || (a - b === 1 && b - c === 1)) return false; } return p.length > 0; }],
+      ["Ad / kullanıcı adınızla ilgisiz", function (p) { if (!p) return false; var c = ctx ? ctx() : {}, low = p.trim().toLowerCase(), parts = [c.username].concat(String(c.fullName || "").split(" ")).filter(function (x) { return x && x.trim().length >= 3; }); return !parts.some(function (x) { x = x.trim().toLowerCase(); return low.indexOf(x) >= 0 || x.indexOf(low) >= 0; }); }]];
+    var bar = h("span", { class: "pmb-f" }), lis = RULES.map(function (r) { return h("li", null, AVF.icon("check", "ico"), h("span", { text: r[0] })); });
+    var el = h("div", { class: "pmeter", "aria-live": "polite" }, h("div", { class: "pmb" }, bar), h("ul", null, lis));
+    function upd() { var p = input.value, ok = 0; RULES.forEach(function (r, i) { var y = r[1](p); lis[i].classList.toggle("ok", y); if (y) ok++; }); bar.style.width = Math.round(ok / RULES.length * 100) + "%"; el.setAttribute("data-s", ok === RULES.length ? "full" : ok >= 4 ? "mid" : "low"); }
+    input.addEventListener("input", upd); upd(); el.done = function () { return el.getAttribute("data-s") === "full"; };
+    return el;
+  };
+  // Onay penceresi (tarayıcının confirm'ü değil). Promise<boolean>.
+  AVF.confirmDialog = function (o) {
+    return new Promise(function (resolve) {
+      var h = AVF.h, prev = document.activeElement, done = false;
+      var ok = h("button", { class: "btn" + (o.danger ? " danger" : ""), type: "button" }, o.confirm || "Evet"), no = h("button", { class: "btn ghost", type: "button" }, o.cancel || "Vazgeç");
+      var box = h("div", { class: "cdlg", role: "alertdialog", "aria-modal": "true", "aria-labelledby": "cdt" }, h("span", { class: "tile" }, AVF.icon(o.icon || "alert")), h("h3", { id: "cdt", text: o.title }), o.text ? h("p", { text: o.text }) : null, h("div", { class: "row" }, ok, no));
+      var ov = h("div", { class: "cov" }, box);
+      function close(v) { if (done) return; done = true; ov.classList.add("out"); document.removeEventListener("keydown", key); setTimeout(function () { if (ov.parentNode) ov.parentNode.removeChild(ov); AVF.lockScroll(false); if (prev && prev.focus) try { prev.focus(); } catch (e) { /* yok */ } resolve(v); }, 180); }
+      function key(e) { if (e.key === "Escape") close(false); else if (e.key === "Tab") { var f = [no, ok]; var i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? 1 : 1)) % 2].focus(); } }
+      ok.addEventListener("click", function () { close(true); }); no.addEventListener("click", function () { close(false); });
+      ov.addEventListener("mousedown", function (e) { if (e.target === ov) close(false); });
+      document.addEventListener("keydown", key); AVF.lockScroll(true); document.body.appendChild(ov); setTimeout(function () { no.focus(); }, 30);
+    });
   };
 })();

@@ -21,18 +21,30 @@
       }));
     }, function (e) { AVF.mount(list, AVF.state("alert", "Destek talepleri yüklenemedi", AVF.errText(e))); });
   };
+  var SUBJ_ICON = { "Hesap ve Güvenlik Ayarları": "shield", "Teknik Sorunlar": "wrench", "Ödeme Sorunları": "card", "Plan ve Programım": "list", "Revizasyon Ayı": "calendar", "Diğer": "help" };
   function newTicket(el) {
-    var title = AVF.input("text", { maxlength: "144", placeholder: "Kısaca konu başlığı" });
-    var subj = h("select", { class: "inp", id: "tsubj" });
+    var title = AVF.input("text", { maxlength: "244", placeholder: "Talebinizi kısaca özetleyin" });
+    var tcnt = h("span", { class: "cnt", text: "0/244" }); title.addEventListener("input", function () { tcnt.textContent = title.value.length + "/244"; });
     var msg = h("textarea", { class: "inp", id: "tmsg", rows: "6", maxlength: String(MAXLEN), placeholder: "Talebinizi ayrıntılı olarak yazın…" });
-    var err = h("p", { class: "err", role: "alert" }), btn = h("button", { class: "btn", type: "submit" }, "Talebi gönder");
+    var mcnt = h("span", { class: "cnt", text: "0/" + MAXLEN }); msg.addEventListener("input", function () { mcnt.textContent = msg.value.length + "/" + MAXLEN; mcnt.classList.toggle("near", msg.value.length > MAXLEN - 100); });
+    var subjBox = h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("list")), "Konu", h("span", { class: "req", text: "Zorunlu" })), AVF.skeleton(1)), subj = null;
+    var err = h("p", { class: "err", role: "alert" }), btn = h("button", { class: "btn", type: "submit" }, AVF.icon("send", "bico"), "Talebi gönder");
     AVF.mount(el, h("div", { class: "row between", style: "margin-bottom:18px" }, h("h2", { class: "ptitle", style: "margin:0", text: "Yeni destek talebi" }), plink("/panel/destek", "Taleplerime dön", { class: "btn ghost sm" })),
-      h("form", { class: "card", style: "padding:22px", novalidate: true, onsubmit: function (e) {
-        e.preventDefault(); err.textContent = ""; AVF.busy(btn, true);
-        AVF.api("POST", "/tickets", { title: title.value.trim(), subject: subj.value, message: msg.value.trim() }).then(function (t) { AVF.toast("Destek talebiniz oluşturuldu."); AVF.go("/panel/destek/" + t.id); },
+      h("form", { class: "card tform", style: "padding:22px", novalidate: true, onsubmit: function (e) {
+        e.preventDefault(); err.textContent = "";
+        if (!subj || !subj.get()) { err.textContent = "Lütfen bir konu seçin."; return; }
+        AVF.busy(btn, true);
+        AVF.api("POST", "/tickets", { title: title.value.trim(), subject: subj.get(), message: msg.value.trim() }).then(function (t) { AVF.toast("Destek talebiniz oluşturuldu."); AVF.go("/panel/destek/" + t.id); },
           function (e2) { AVF.busy(btn, false); err.textContent = AVF.errText(e2); });
-      } }, AVF.field("Başlık", title, { icon: "file" }), AVF.field("Konu", subj, { icon: "list" }), AVF.field("Mesajınız", msg, { icon: "chat", hint: "En fazla " + MAXLEN + " karakter." }), err, btn));
-    AVF.api("GET", "/tickets/subjects").then(function (list) { AVF.mount(subj, list.map(function (s) { return h("option", { value: s, text: s }); })); }, function () {});
+      } }, h("div", { class: "field" }, h("label", { for: title.id }, h("span", { class: "tile" }, AVF.icon("file")), "Başlık", h("span", { class: "req", text: "Zorunlu" })), title, h("div", { class: "row between" }, h("span"), tcnt)),
+        subjBox,
+        h("div", { class: "field" }, h("label", { for: "tmsg" }, h("span", { class: "tile" }, AVF.icon("chat")), "Mesajınız", h("span", { class: "req", text: "Zorunlu" })), msg, h("div", { class: "row between" }, h("span"), mcnt)),
+        h("div", { class: "upl off" }, h("span", { class: "tile" }, AVF.icon("image")), h("span", { class: "t" }, h("b", { text: "Görsel ekle" }), h("small", { text: "Ekran görüntüsü veya fotoğraf ekleme yakında etkinleşecek." })), h("button", { class: "btn ghost sm", type: "button", disabled: true }, AVF.icon("clip", "bico"), "Dosya seç")),
+        err, btn));
+    AVF.api("GET", "/tickets/subjects").then(function (list) {
+      subj = AVF.choice({ label: "Konu", cols: 3, items: list.map(function (x) { return { value: x, label: x, icon: SUBJ_ICON[x] || "help" }; }) });
+      AVF.mount(subjBox, subjBox.firstChild, subj);
+    }, function () { AVF.mount(subjBox, subjBox.firstChild, h("p", { class: "err", text: "Konular yüklenemedi, sayfayı yenileyin." })); });
   }
   function ticketDetail(el, id) {
     AVF.mount(el, h("h2", { class: "ptitle", text: "Destek talebi" }), AVF.skeleton(2));

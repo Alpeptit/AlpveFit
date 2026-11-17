@@ -14,7 +14,7 @@ export const PLAN_DELIVERY_HOURS = 24;
 /** Üyeye ödemeyle açılan plan türleri. Farmakoloji yalnız farmakolojili paketlerde. */
 export function kindsForPackage(key) {
   const p = PACKAGES[key];
-  return p ? ["nutrition", "training", "supplement", ...(p.pharmacology ? ["pharmacology"] : [])] : [];
+  return p ? ["nutrition", "training", "supplement", ...(p.pharmacology ? ["pharmacology"] : []), "notes"] : [];
 }
 export function findOption(key, weeks) {
   const p = PACKAGES[key];

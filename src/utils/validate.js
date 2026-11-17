@@ -39,19 +39,19 @@ export function isSafeHttpUrl(value) {
 }
 
 // ---------- Ad soyad kuralı (kayıt, ad değişikliği ve adres alıcısı için TEK kaynak) ----------
-// Yalnızca harf; ad ile soyad arasında boşluk; en az 1, en fazla 2 boşluk
-// (yani 2–3 kelime); her kelime en az 2 harf. Fazla boşluklar tek boşluğa indirgenir.
+// Yalnızca harf; ad ile soyad arasında boşluk; en az 1, en fazla 3 boşluk
+// (yani 2–4 kelime); her kelime en az 2 harf. Fazla boşluklar tek boşluğa indirgenir.
 const NAME_WORD = "[A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû]{2,}";
 // Ad soyad en fazla 50 karakter (kayıt, profil ad değişikliği, adres alıcısı). Arayüz de 50'den fazlasının yazılmasına izin vermez.
 export const FULL_NAME_MAX = 50;
-const FULL_NAME_RE = new RegExp(`^${NAME_WORD}( ${NAME_WORD}){1,2}$`);
+const FULL_NAME_RE = new RegExp(`^${NAME_WORD}( ${NAME_WORD}){1,3}$`);
 export function normalizeFullName(value) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 /**
  * Geçerliyse null, değilse kullanıcıya gösterilecek (alan bazında, nedeni söyleyen) hata mesajını döner.
  * v43 — boşluk kuralı TEK biçimde: baş/son boşluklar ve art arda boşluklar (sekme, bölünmez boşluk dahil) önce temizlenir,
- * ardından EN FAZLA 2 boşluk (3 kelime) kuralı uygulanır. Ön yüzdeki ALP.nameError birebir aynı sırayı ve mesajları kullanır.
+ * ardından EN FAZLA 3 boşluk (4 kelime) kuralı uygulanır. Ön yüzdeki ALP.nameError birebir aynı sırayı ve mesajları kullanır.
  */
 // v51 — ad soyad alanında kullanılamayan BİRLEŞİMLER: tek tek kelimeler serbesttir ("Ahmet Kaş", "Yavuz Çav" geçerli),
 // yalnızca aşağıdaki kelime dizisi ad soyadın içinde ARDIŞIK geçerse reddedilir. Karşılaştırma Türkçe küçük harf ve
@@ -124,7 +124,7 @@ export function fullNameError(value) {
   if (/\d/.test(n)) return "Ad soyad alanı sayı içeremez.";
   if (/[^A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû ]/.test(n)) return "Ad soyad yalnızca harf içerebilir.";
   const words = n.split(" ");
-  if (words.length > 3) return "Ad soyad en fazla 2 boşluk içerebilir (örn. Mustafa Kemal Atatürk).";
+  if (words.length > 4) return "Ad soyad en fazla 3 boşluk içerebilir.";
   if (words.length < 2) return "Lütfen ad ve soyadınızı aralarında boşluk bırakarak yazın.";
   if (n.length > FULL_NAME_MAX) return `Ad soyad en fazla ${FULL_NAME_MAX} karakter olabilir.`;
   if (words.some((w) => w.length < 2) || !FULL_NAME_RE.test(n)) return "Her kelime en az 2 harf olmalıdır.";
@@ -144,9 +144,9 @@ export function messageError(value, emptyMsg) {
 }
 
 // ---------- Ticket başlığı (TEK KAYNAK) — her iki ticket türü (Soru Sor / Ödeme Bildir) ----------
-export const MAX_TITLE_LENGTH = 144;
+export const MAX_TITLE_LENGTH = 244;
 const TITLE_RE = /^[A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû\s]+$/;
-/** Başlık: zorunlu, en fazla 144 karakter, yalnızca harf (eski arayüz kuralı). Geçerliyse null. */
+/** Başlık: zorunlu, en fazla 244 karakter, yalnızca harf (eski arayüz kuralı). Geçerliyse null. */
 export function ticketTitleError(title) {
   const t = typeof title === "string" ? title.trim() : "";
   if (!t) return "Lütfen bir başlık giriniz.";
