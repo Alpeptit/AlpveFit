@@ -27,6 +27,13 @@
   }
   function money(n) { return Number(n).toLocaleString(AVF.lang === "en" ? "en-US" : "tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function api(m, p, b) { return AVF.api(m, "/admin" + p, b); }
+  function attList(list) {
+    if (!list || !list.length) return null;
+    return h("div", { class: "batt" }, list.map(function (a) {
+      var img = a.mime === "image/png" || a.mime === "image/jpeg", url = "/api/admin/attachments/" + a.id;
+      return h("a", { class: "batt-i" + (img ? " img" : ""), href: url, target: "_blank", rel: "noopener", title: a.filename }, img ? h("img", { src: url, alt: "", loading: "lazy" }) : [AVF.icon("file"), h("span", { "data-notr": "", text: a.filename })]);
+    }));
+  }
   function err(box, e) { AVF.mount(box, h("div", { class: "note err", role: "alert", text: AVF.errText(e) })); }
 
   function frame(content) {
@@ -74,7 +81,7 @@
   function thread(msgs, mineRole) {
     return h("div", { class: "tthread" }, msgs.map(function (m) {
       var mine = m.sender ? m.sender === "admin" : m.from_role === "support";
-      return h("div", { class: "msg" + (mine ? " mine" : " theirs") }, h("div", { class: "bub-w" }, h("div", { class: "bub", "data-notr": "", text: m.body }), h("span", { class: "t", text: AVF.fmtDateTime(m.created_at) })));
+      return h("div", { class: "msg" + (mine ? " mine" : " theirs") }, h("div", { class: "bub-w" }, h("div", { class: "bub", "data-notr": "", text: m.body }), attList(m.attachments), h("span", { class: "t", text: AVF.fmtDateTime(m.created_at) })));
     }));
   }
   function replyForm(onSend) {
@@ -194,11 +201,16 @@
     var slot = pf.querySelector(".pinfo");
     api("GET", "/clients/" + m.id + "/profile").then(function (P) {
       if (!P) return AVF.mount(slot, h("p", { class: "hint", text: "Üye henüz kişisel bilgi paylaşmadı (isteğe bağlıdır)." }));
-      var items = [["Boy (cm)", P.height_cm], ["Kilo (kg)", P.weight_kg], ["Cinsiyet", P.gender === "female" ? "Kadın" : P.gender === "male" ? "Erkek" : ""], ["Doğum tarihi", P.birth_date ? P.birth_date.split("-").reverse().join(".") : P.birth_year], ["Günlük adım aralığı", String(P.steps_range || "").replace("-", "–")], ["Meslek", P.occupation], ["Günlük adım", P.daily_steps], ["Haftalık antrenman günü", P.training_days], ["Kan grubu", P.blood_type]].filter(function (x) { return x[1] !== null && x[1] !== undefined && x[1] !== ""; });
+      var items = [["Boy (cm)", P.height_cm], ["Kilo (kg)", P.weight_kg], ["Cinsiyet", P.gender === "female" ? "Kadın" : P.gender === "male" ? "Erkek" : ""], ["Doğum tarihi", P.birth_date ? P.birth_date.split("-").reverse().join(".") : P.birth_year], ["Çalışma saati", AVF.workText ? AVF.workText(P.work_hours) : P.work_hours], ["Günlük adım aralığı", String(P.steps_range || "").replace("-", "–")], ["Meslek", P.occupation], ["Günlük adım", P.daily_steps], ["Haftalık antrenman günü", P.training_days], ["Kan grubu", P.blood_type]].filter(function (x) { return x[1] !== null && x[1] !== undefined && x[1] !== ""; });
       AVF.mount(slot, h("ul", { class: "ticks" }, items.map(function (x) { return h("li", null, h("b", { text: x[0] + ": " }), h("span", { "data-notr": "", text: String(x[1]) })); })),
         P.goal ? h("p", null, h("b", { text: "Hedef: " }), h("span", { "data-notr": "", text: P.goal })) : null,
         P.health_notes ? h("p", null, h("b", { text: "Sağlık / sakatlık notları: " }), h("span", { "data-notr": "", text: P.health_notes })) : null,
+        h("div", { class: "pfiles" }),
         h("p", { class: "hint", text: "Bu bilgiler üyenin açık rızasıyla paylaşılmıştır; yalnızca program hazırlama amacıyla kullanın." }));
+      var fs = slot.querySelector(".pfiles");
+      api("GET", "/clients/" + m.id + "/files").then(function (list) {
+        if (list.length) AVF.mount(fs, h("p", null, h("b", { text: "Sağlık / sakatlık dosyaları:" })), AVF.fileBox({ files: list, readOnly: true, max: 4, base: "/api/admin/attachments/" }));
+      }, function () { /* sessiz */ });
     }, function () { AVF.mount(slot, h("p", { class: "hint", text: "Kişisel bilgiler yüklenemedi." })); });
   }
 

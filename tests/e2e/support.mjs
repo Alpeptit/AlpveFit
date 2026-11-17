@@ -12,7 +12,7 @@ r = await M1.c.call("POST", "/live-chat/start", {}); chk("canlı destek başlatm
 r = await A.c.call("GET", "/admin/live-chats"); chk("yönetici canlı destek listesi ucu yok (404)", r.status === 404, r);
 r = await A.c.call("GET", "/admin/support/summary"); chk("özet yalnız açık talepleri sayar", r.status === 200 && typeof r.body.tickets === "number" && !("chats" in r.body), r.body);
 const page = (c, path) => fetch(BASE + path, { redirect: "manual", headers: c ? { cookie: c.cookieHeader() } : {} });
-let pr = await page(null, "/admin"); chk("/admin misafire genel 404", pr.status === 404, pr.status);
+let pr = await page(null, "/admin"); chk("/admin oturumsuz ziyaretçiye sitenin olağan giriş sayfasını açar (yönetim içeriği yok)", pr.status === 200 && !(await pr.text()).includes("uzman.js"), pr.status);
 pr = await page(M1.c, "/admin"); chk("/admin üyeye genel 404", pr.status === 404, pr.status);
 pr = await page(A.c, "/admin"); chk("/admin yöneticiyi /uzman'a yönlendirir", pr.status === 302 && pr.headers.get("location") === "/uzman", pr.status);
 r = await C1.c.call("GET", "/admin/tickets"); chk("uzman (koç) destek taleplerine erişemez", r.status === 403 || r.status === 404, r);

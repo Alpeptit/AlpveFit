@@ -6,10 +6,20 @@ import { logAudit } from "../utils/auditLog.js";
 
 export const profileRouter = withAsyncErrors(express.Router());
 const BLOOD = ["A+", "A-", "B+", "B-", "AB+", "AB-", "0+", "0-"];
-export const PROFILE_COLS = `height_cm, weight_kg, birth_year, to_char(birth_date, 'YYYY-MM-DD') AS birth_date, gender, steps_range, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, updated_at`;
+export const PROFILE_COLS = `height_cm, weight_kg, birth_year, to_char(birth_date, 'YYYY-MM-DD') AS birth_date, gender, steps_range, work_hours, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, updated_at`;
 const GENDERS = ["female", "male"];
 const STEPS = ["0-2000", "2000-4000", "4000-6000", "6000-8000", "8000-10000", "10000+"];
 const GOALS = ["Yağ Yakımı", "Kas Kazanımı", "Güç Artışı"];
+const WORK_MODES = ["shift", "flexible", "none"];
+const WORK_RE = /^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/;
+/** Çalışma saati: "HH:MM-HH:MM" (başlangıç ≠ bitiş) veya "shift" / "flexible" / "none". */
+function workIn(v) {
+  if (v === "" || v === null || v === undefined) return { v: null };
+  const s = String(v);
+  if (WORK_MODES.includes(s)) return { v: s };
+  if (!WORK_RE.test(s) || s.slice(0, 5) === s.slice(6)) return { err: "Çalışma saati geçersiz; başlangıç ve bitiş saatini seçin." };
+  return { v: s };
+}
 /** "YYYY-MM-DD" → geçerli, gelecekte olmayan ve en az 14 yaşında bir takvim tarihi mi? */
 function dateIn(v) {
   if (v === "" || v === null || v === undefined) return { v: null };
@@ -43,7 +53,8 @@ profileRouter.get("/profile", requireAuth, async (req, res) => {
 profileRouter.put("/profile", requireAuth, async (req, res) => {
   const b = req.body || {};
   const h = intIn(b.heightCm, 100, 250, "Boy"), bd = dateIn(b.birthDate), td = intIn(b.trainingDays, 0, 7, "Haftalık antrenman günü");
-  for (const x of [h, bd, td]) if (x.err) return res.status(400).json({ error: x.err });
+  const wh = workIn(b.workHours);
+  for (const x of [h, bd, td, wh]) if (x.err) return res.status(400).json({ error: x.err });
   const by = { v: bd.v ? bd.year : null };
   const gender = b.gender === "" || b.gender == null ? null : String(b.gender);
   if (gender !== null && !GENDERS.includes(gender)) return res.status(400).json({ error: "Geçersiz cinsiyet seçimi." });
@@ -64,17 +75,19 @@ profileRouter.put("/profile", requireAuth, async (req, res) => {
   if (b.healthNotes && notes === null) return res.status(400).json({ error: "Sağlık notları en fazla 1000 karakter olabilir." });
 
   // Sağlık verisi (KVKK m.6 özel nitelikli): kan grubu, kilo/boy dahil bu bölüm için AÇIK RIZA zorunlu. Rıza zamanı saklanır; geri alınabilir.
-  const hasAny = [h.v, w, by.v, bd.v, gender, stepsRange, td.v, blood, occupation, goal, notes].some((x) => x !== null && x !== "");
+  const hasAny = [h.v, w, by.v, bd.v, gender, stepsRange, wh.v, td.v, blood, occupation, goal, notes].some((x) => x !== null && x !== "");
+  // Boş form kaydedilmez: hiçbir bilgi girilmeden "kaydedildi" denmez. Tüm bilgileri kaldırmak için ayrı silme işlemi vardır.
+  if (!hasAny) return res.status(400).json({ error: "Kaydetmek için en az bir bilgi girin.", code: "empty" });
   const prior = await pool.query(`SELECT health_consent_at FROM member_profiles WHERE user_id = $1`, [req.user.sub]);
   const consentAt = prior.rows[0]?.health_consent_at || null;
   if (hasAny && !consentAt && b.healthConsent !== true) return res.status(400).json({ error: "Bu bilgileri kaydedebilmemiz için açık rızanızı onaylamanız gerekir.", code: "consent_required" });
   const { rows } = await pool.query(
-    `INSERT INTO member_profiles (user_id, height_cm, weight_kg, birth_year, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, birth_date, gender, steps_range, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $11 THEN now() END, $12, $13, $14, now())
+    `INSERT INTO member_profiles (user_id, height_cm, weight_kg, birth_year, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, birth_date, gender, steps_range, work_hours, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $11 THEN now() END, $12, $13, $14, $15, now())
      ON CONFLICT (user_id) DO UPDATE SET height_cm=$2, weight_kg=$3, birth_year=$4, occupation=$5, daily_steps=$6, blood_type=$7, training_days=$8, goal=$9, health_notes=$10,
-       health_consent_at = COALESCE(member_profiles.health_consent_at, CASE WHEN $11 THEN now() END), birth_date=$12, gender=$13, steps_range=$14, updated_at = now()
+       health_consent_at = COALESCE(member_profiles.health_consent_at, CASE WHEN $11 THEN now() END), birth_date=$12, gender=$13, steps_range=$14, work_hours=$15, updated_at = now()
      RETURNING ${PROFILE_COLS}`,
-    [req.user.sub, h.v, w, by.v, occupation || null, st.v, blood, td.v, goal || null, notes || null, hasAny && b.healthConsent === true, bd.v, gender, stepsRange]);
+    [req.user.sub, h.v, w, by.v, occupation || null, st.v, blood, td.v, goal || null, notes || null, hasAny && b.healthConsent === true, bd.v, gender, stepsRange, wh.v]);
   await logAudit(req.user.sub, "profile_update", "user", req.user.sub, {}, req.ip || null);
   res.json(rows[0]);
 });
@@ -82,6 +95,7 @@ profileRouter.put("/profile", requireAuth, async (req, res) => {
 // Rıza geri alma: profil bilgileri silinir.
 profileRouter.delete("/profile", requireAuth, async (req, res) => {
   await pool.query(`DELETE FROM member_profiles WHERE user_id = $1`, [req.user.sub]);
+  await pool.query(`DELETE FROM attachments WHERE user_id = $1 AND scope = 'profile'`, [req.user.sub]);   // sağlık görselleri de silinir
   await logAudit(req.user.sub, "profile_delete", "user", req.user.sub, {}, req.ip || null);
   res.json({ ok: true });
 });

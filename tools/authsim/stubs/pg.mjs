@@ -8,6 +8,7 @@ function lit(v) {
   if (typeof v === "bigint") return String(v);
   if (typeof v === "boolean") return v ? "true" : "false";
   if (v instanceof Date) return "'" + v.toISOString() + "'::timestamptz";
+  if (Buffer.isBuffer(v)) return "'\\x" + v.toString("hex") + "'::bytea";
   if (Array.isArray(v)) return v.length ? "ARRAY[" + v.map(lit).join(",") + "]" : "'{}'";
   if (typeof v === "object") return dq(JSON.stringify(v));
   return dq(String(v));

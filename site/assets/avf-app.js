@@ -27,7 +27,9 @@
   AVF.onLangChange = AVF.onLangChange || [];
   AVF.onLangChange.push(function () {
     // yeni dildeki içerik yumuşakça belirir (sayfa karartılmaz, yerleşim zıplamaz)
-    renderFooter(); route(true);
+    // Kullanıcı panelinde görünüm yeniden çizilmez: metinler yerinde çevrilir, girilen veriler ve açık bölümler kaybolmaz.
+    renderFooter();
+    if (location.pathname.indexOf("/panel") === 0 && AVF.session.user) renderChrome(); else route(true);
     document.body.classList.remove("lang-in"); void document.body.offsetWidth; document.body.classList.add("lang-in");
     setTimeout(function () { document.body.classList.remove("lang-in"); }, 600);
   });
@@ -99,13 +101,11 @@
       h("div", { class: "dsep" }),
       link("/blog", [AVF.icon("book"), h("span", { text: "Blog" })]),
       item(NAV.filter(function (i) { return i[0] === "/forum"; })[0]),
-      u && (u.role === "coach" || u.role === "admin") ? [h("div", { class: "dsep" }), h("a", { href: "/uzman" }, AVF.icon("users"), h("span", { text: "Uzman Paneli" }))] : null,
-      u ? h("a", { href: "#", onclick: function (e) { e.preventDefault(); logout(); } }, AVF.icon("out"), h("span", { text: "Çıkış yap" })) : null,
+      u ? h("a", { href: "#", onclick: function (e) { e.preventDefault(); logout(); } }, AVF.icon("out"), h("span", { text: "Güvenli Çıkış Yap" })) : null,
       h("div", { class: "dlang" }, langSwitch())));
-    // Sade üst çubuk: dil seçimi, (uzmansa) panel, (mobilde) forum, (üyeyse) bildirimler ve tek bir şeffaf hesap ikonu.
+    // Sade üst çubuk: dil seçimi, (mobilde) forum, (üyeyse) bildirimler ve tek bir şeffaf hesap ikonu.
     AVF.mount(tools,
       langSwitch(),
-      u && (u.role === "coach" || u.role === "admin") ? h("a", { class: "ibtn plain desk-only", href: "/uzman", "aria-label": "Uzman paneli", title: "Uzman paneli" }, AVF.icon("users")) : null,
       link("/forum", AVF.icon("msg"), { class: "ibtn plain mob-only", "aria-label": "Forum", title: "Forum" }),
       u ? bellMenu() : null,
       u ? link("/panel", AVF.icon("user"), { class: "ibtn plain acct", "aria-label": "Hesabım", title: "Hesabım" })
@@ -162,7 +162,7 @@
     });
   }
   function sessionGone(why, data) {
-    AVF.session.user = null; kinds = null; unread = 0; renderChrome();
+    AVF.session.user = null; kinds = null; unread = 0; if (why !== "expired" && AVF.clearDrafts) AVF.clearDrafts(); renderChrome();
     if (why === "locked") { go("/"); AVF.auth.locked(data); return; }
     if (why === "expired") AVF.toast("Oturumunuz sona erdi. Lütfen yeniden giriş yapın.", "err");
     if (location.pathname.indexOf("/panel") === 0) go("/"); else route();
@@ -171,6 +171,7 @@
   AVF.onLogin = function () {
     kinds = null; renderChrome(); refreshUnread();
     var next = AVF.afterLogin; AVF.afterLogin = null;
+    if (next && next.path === "/admin") { location.replace("/admin"); return; }   // yönetim alanı sunucuda ayrıca doğrulanır
     if (next && Date.now() - next.at < 10 * 60000) return go(next.path, true);
     if (location.pathname === "/" || location.pathname === "/giris" || location.pathname === "/kayit") go("/panel", true); else route();
   };
@@ -182,6 +183,7 @@
     if (!rerender) document.body.classList.remove("lang-swap");
     if (p === "/giris" || p === "/kayit" || p === "/sifremi-unuttum") { if (AVF.session.user) return go("/panel", true); homePage(); return AVF.auth.open(p === "/kayit" ? "register" : "login"); }
     if (p === "/") return homePage();
+    if (p === "/admin") { if (AVF.session.user) { location.replace("/admin"); return; } homePage(); AVF.afterLogin = { path: "/admin", at: Date.now() }; return AVF.auth.open("login"); }
     if (p === "/paketler") return AVF.packagesPage(view);
     if (p === "/sss") return AVF.pages.faq(view);
     if (p === "/hakkimizda") return AVF.pages.about(view);
@@ -258,16 +260,38 @@
         h("aside", { class: "side" },
           h("div", { class: "card ucard" }, h("span", { class: "tile" }, AVF.icon("shield")), h("div", null, h("b", { text: AVF.maskName(u.full_name) }), h("small", { text: u.email }), h("span", { class: "ok" }, "✓ E-posta doğrulandı"))), menuEl),
         content));
+    // Menü sırası: Planlarım (açılır), Siparişlerim, Destek Taleplerim, Kişisel Bilgiler, Bildirimler, Hesap Ayarları, Güvenli Çıkış Yap.
+    // Planlarım varsayılan olarak KAPALIDIR; üye açarsa tercihi hatırlanır. Masaüstünde alt başlıklar kendi kartının içinde,
+    // mobilde yatay kaydırılan menünün altında ikinci bir satır olarak açılır.
+    var mqMob = window.matchMedia("(max-width: 900px)");
+    function pmOpen() { try { return localStorage.getItem("avf_pm_open") === "1"; } catch (e) { return false; } }
+    function setPmOpen(v) { try { localStorage.setItem("avf_pm_open", v ? "1" : "0"); } catch (e) { /* depolama yok */ } }
     function paintMenu() {
       var granted = (kinds || []).map(function (k) { return k.kind; });
-      var plans = Object.keys(AVF.KIND).map(function (k) { return h("div", { class: "pm-sub" }, link("/panel/" + AVF.KIND[k].slug, [AVF.icon(AVF.KIND[k].icon), h("span", { text: AVF.KIND[k].label }), kinds && granted.indexOf(k) < 0 ? AVF.icon("lock", "pm-lock") : null], sub === AVF.KIND[k].slug ? { "aria-current": "page" } : {})); });
-      var items = [["", "list", "Planlarım"]];
-      var rest = [["siparisler", "card", "Siparişlerim"], ["profil", "id", "Kişisel Bilgilerim"], ["destek", "ticket", "Destek Taleplerim"], ["bildirimler", "bell", "Bildirimler"], ["hesap", "cog", "Hesap Ayarları"]];
-      AVF.mount(menuEl, items.concat([["__plans"]]).concat(rest).map(function (i) {
-        if (i[0] === "__plans") return h("div", { class: "pm-group" }, plans);
-        var a = link("/panel" + (i[0] ? "/" + i[0] : ""), [AVF.icon(i[1]), i[2], i[0] === "bildirimler" && unread ? h("span", { class: "badge", text: String(unread) }) : null]);
+      var onKind = Object.keys(AVF.KIND).some(function (k) { return AVF.KIND[k].slug === sub; });
+      var open = pmOpen() || onKind;
+      var group = h("div", { class: "pm-group", id: "pm-plans", role: "group", "aria-label": "Plan bölümleri" }, Object.keys(AVF.KIND).map(function (k) {
+        var a = link("/panel/" + AVF.KIND[k].slug, [AVF.icon(AVF.KIND[k].icon), h("span", { text: AVF.KIND[k].label }), kinds && granted.indexOf(k) < 0 ? AVF.icon("lock", "pm-lock") : null], { class: "pm-sub" });
+        if (sub === AVF.KIND[k].slug) a.setAttribute("aria-current", "page"); return a;
+      }));
+      var chev = h("button", { class: "pm-chev", type: "button", "aria-controls": "pm-plans", "aria-expanded": open ? "true" : "false", "aria-label": "Plan bölümlerini aç/kapat" }, AVF.icon("chev"));
+      var plansLink = link("/panel", [AVF.icon("list"), h("span", { text: "Planlarım" })], { class: "pm-main" });
+      if (sub === "") plansLink.setAttribute("aria-current", "page");
+      var head = h("div", { class: "pm-plans" + (open ? " open" : "") + (sub === "" ? " cur" : "") }, plansLink, chev);
+      function toggle(v) { open = v; setPmOpen(v); head.classList.toggle("open", v); wrapG.classList.toggle("open", v); chev.setAttribute("aria-expanded", v ? "true" : "false"); }
+      chev.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); toggle(!open); });
+      plansLink.addEventListener("click", function () { if (!open) toggle(true); });
+      var wrapG = h("div", { class: "pm-gwrap" + (open ? " open" : "") }, h("div", { class: "pm-gin" }, group));
+      var rest = [["siparisler", "card", "Siparişlerim"], ["destek", "ticket", "Destek Taleplerim"], ["profil", "id", "Kişisel Bilgiler"], ["bildirimler", "bell", "Bildirimler"], ["hesap", "cog", "Hesap Ayarları"]].map(function (i) {
+        var a = link("/panel/" + i[0], [AVF.icon(i[1]), h("span", { text: i[2] }), i[0] === "bildirimler" && unread ? h("span", { class: "badge", text: String(unread) }) : null]);
         if (i[0] === sub || (i[0] === "siparisler" && sub.indexOf("siparis/") === 0) || (i[0] === "destek" && sub.indexOf("destek/") === 0)) a.setAttribute("aria-current", "page"); return a;
-      }), h("button", { class: "pm-out", type: "button", onclick: logout }, AVF.icon("out"), "Çıkış yap"));
+      });
+      var row = h("div", { class: "pm-row" }, head, rest, h("button", { class: "pm-out", type: "button", onclick: logout }, AVF.icon("out"), h("span", { text: "Güvenli Çıkış Yap" })));
+      function place() { if (mqMob.matches) { if (wrapG.previousSibling !== row) menuEl.appendChild(wrapG); } else if (head.nextSibling !== wrapG) row.insertBefore(wrapG, head.nextSibling); }
+      AVF.mount(menuEl, row); place();
+      if (!menuEl._mq) { menuEl._mq = true; var pl = function () { paintMenu(); }; if (mqMob.addEventListener) mqMob.addEventListener("change", pl); else if (mqMob.addListener) mqMob.addListener(pl); }
+      // mobilde etkin sekme görünür alana kaydırılır
+      setTimeout(function () { var cur = row.querySelector("[aria-current]"); if (mqMob.matches && cur && row.scrollWidth > row.clientWidth) row.scrollLeft = Math.max(0, cur.offsetLeft - 16); }, 0);
     }
     function draw() {
       paintMenu();

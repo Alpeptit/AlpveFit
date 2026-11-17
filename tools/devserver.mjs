@@ -36,8 +36,8 @@ async function load(file, prefix) {
   prefixes.push([routes, prefix]);
 }
 await load("auth.js", "/api/auth"); await load("twoFactor.js", "/api"); await load("account.js", "/api"); await load("notifications.js", "/api");
-await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("support.js", "/api"); await load("admin.js", "/api/admin");
-const { hideAdminApi, panelUser } = await import(join(root, "src/utils/panelSession.js"));
+await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("uploads.js", "/api"); await load("support.js", "/api"); await load("admin.js", "/api/admin");
+const { hideAdminApi, panelUser, sessionUser } = await import(join(root, "src/utils/panelSession.js"));
 
 function findRoute(method, full) {
   for (const [routes, p] of prefixes) for (const r of routes) {
@@ -49,6 +49,7 @@ function findRoute(method, full) {
 }
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webp": "image/webp", ".jpg": "image/jpeg" };
 function sendFile(res, file, status = 200) { res.writeHead(status, { "content-type": MIME[extname(file)] || "application/octet-stream", "cache-control": "no-store" }); res.end(readFileSync(file)); }
+const rawBody = (req) => new Promise((ok) => { const c = []; let n = 0; req.on("data", (d) => { n += d.length; if (n <= 4 * 1024 * 1024 + 1) c.push(d); }); req.on("end", () => ok(Buffer.concat(c))); });
 const body = (req) => new Promise((ok) => { const c = []; req.on("data", (d) => c.push(d)); req.on("end", () => { try { ok(JSON.parse(Buffer.concat(c).toString() || "{}")); } catch { ok({}); } }); });
 
 http.createServer(async (rq, rs) => {
@@ -58,18 +59,18 @@ http.createServer(async (rq, rs) => {
     if (path === "/api/health") { rs.writeHead(200, { "content-type": "application/json" }); return rs.end('{"ok":true}'); }
     if (path === "/api/config") { rs.writeHead(200, { "content-type": "application/json" }); return rs.end('{"recaptchaSiteKey":""}'); }
     if (path.startsWith("/api/")) {
-      const method = rq.method; const r = findRoute(method, path); const data = method === "GET" ? {} : await body(rq);
+      const method = rq.method; const r = findRoute(method, path); const data = method === "GET" ? {} : /^application\/octet-stream/.test(rq.headers["content-type"] || "") ? await rawBody(rq) : await body(rq);
       if (!r) { rs.writeHead(404, { "content-type": "application/json" }); return rs.end('{"error":"Bulunamadı."}'); }
       const query = Object.fromEntries(url.searchParams);
       const req = { method, body: data, ip: "127.0.0.1", baseIp: "127.0.0.1", headers: rq.headers, originalUrl: rq.url, url: rq.url, path, query, params: r.params };
       const sent = { done: false }; const setCookies = [];
       const res = { statusCode: 200, headersSent: false,
         status(c) { this.statusCode = c; return this; },
-        setHeader(k, v) { if (k.toLowerCase() === "set-cookie") setCookies.push(...[].concat(v)); },
+        hdr: {}, setHeader(k, v) { if (k.toLowerCase() === "set-cookie") setCookies.push(...[].concat(v)); else this.hdr[k.toLowerCase()] = v; },
         append(k, v) { if (k.toLowerCase() === "set-cookie") setCookies.push(...[].concat(v)); },
         getHeader() { return undefined; }, set() { return this; },
         json(o) { if (sent.done) return this; sent.done = true; const h = { "content-type": "application/json", "cache-control": "no-store" }; if (setCookies.length) h["set-cookie"] = setCookies; rs.writeHead(this.statusCode, h); rs.end(JSON.stringify(o)); return this; },
-        end() { if (!sent.done) { sent.done = true; rs.writeHead(this.statusCode); rs.end(); } }, send(b) { return this.json(b); } };
+        end(d) { if (!sent.done) { sent.done = true; rs.writeHead(this.statusCode, this.hdr); rs.end(d); } }, send(b) { return this.json(b); } };
       const chain = path.startsWith("/api/admin") ? [hideAdminApi, ...r.handlers] : r.handlers;
       let i = 0; const next = async (err) => {
         if (err) { console.error("[hata]", err.message); return res.status(500).json({ error: "Sunucu tarafında bir hata oluştu." }); }
@@ -79,7 +80,7 @@ http.createServer(async (rq, rs) => {
       return next();
     }
     // ---- site ----
-    if (path === "/admin" || path === "/admin/") { const u = await panelUser({ headers: rq.headers }); if (!u) return sendFile(rs, join(root, "site/404.html"), 404); rs.writeHead(302, { location: "/uzman", "cache-control": "private, no-store" }); return rs.end(); }
+    if (path === "/admin" || path === "/admin/") { const u = await panelUser({ headers: rq.headers }); if (!u) return (await sessionUser({ headers: rq.headers })) ? sendFile(rs, join(root, "site/404.html"), 404) : sendFile(rs, join(root, "site/index.html")); rs.writeHead(302, { location: "/uzman", "cache-control": "private, no-store" }); return rs.end(); }
     if (path === "/uzman" || path.startsWith("/uzman/")) { const u = await panelUser({ headers: rq.headers }); if (!u) return sendFile(rs, join(root, "site/404.html"), 404); return sendFile(rs, join(root, "site-uzman/index.html")); }
     if (path.startsWith("/assets/uzman/")) { const u = await panelUser({ headers: rq.headers }); const f = join(root, "site-uzman/assets", path.slice(14)); if (!u || !existsSync(f)) { rs.writeHead(404); return rs.end("Not found"); } return sendFile(rs, f); }
     if (path.startsWith("/assets/")) { const f = join(root, "site", path); if (!f.startsWith(join(root, "site/assets")) || !existsSync(f) || !statSync(f).isFile()) { rs.writeHead(404); return rs.end("Not found"); } return sendFile(rs, f); }

@@ -38,11 +38,13 @@
     var acc = AVF.accordion({ icon: "id", title: "Ad Soyad", sub: AVF.maskName(user.full_name) });
     function start(p) {
       var inp = AVF.input("text", { value: "", maxlength: "60", autocomplete: "name", placeholder: "Yeni Adınız Soyadınız" }); var box = h("div"), live = h("p", { class: "hint live", "aria-live": "polite" }), btn = h("button", { class: "btn", type: "submit" }, AVF.icon("mail", "bico"), "Onay Kodu Gönder");
-      inp.addEventListener("input", function () { var m = nameIssue(inp.value); live.textContent = m; live.classList.toggle("bad", !!m); });
+      var ND = AVF.draft("acc_name"); inp.value = ND.get() || "";
+      function liveCheck() { var m = inp.value ? nameIssue(inp.value) : ""; live.textContent = m; live.classList.toggle("bad", !!m); }
+      inp.addEventListener("input", function () { liveCheck(); if (inp.value) ND.set(inp.value); else ND.clear(); }); liveCheck();
       AVF.mount(p, h("form", { novalidate: true, onsubmit: function (e) {
         e.preventDefault(); msg(box, ""); var iss = nameIssue(inp.value) || (inp.value.trim() ? "" : "Yeni ad soyadınızı yazın."); if (iss) return msg(box, iss, "err");
         AVF.busy(btn, true, "Gönderiliyor…");
-        AVF.api("POST", "/account/request-name-change", { newName: inp.value.trim() }).then(function () {
+        AVF.api("POST", "/account/request-name-change", { newName: inp.value.trim() }).then(function () { ND.clear();
           AVF.mount(p, codeStep({ purpose: "name_change", text: "Ad soyad değişikliğini onaylamak için e-postanıza gelen kodu girin.", cancel: function () { start(p); }, confirm: function (c) {
             return AVF.api("POST", "/account/confirm-name-change", { code: c }).then(function (r) { user.full_name = r.fullName; acc.setTitleSub(AVF.maskName(r.fullName)); refresh(); AVF.toast("Ad soyadınız güncellendi."); start(p); });
           } }));
@@ -58,9 +60,15 @@
     var acc = AVF.accordion({ icon: "mail", title: "E-posta Adresi", sub: user.email });
     function start(p) {
       var inp = AVF.input("email", { maxlength: "200", autocomplete: "email", autocapitalize: "none", placeholder: "Yeni E-Posta Adresiniz" }); var box = h("div"), btn = h("button", { class: "btn", type: "submit" }, AVF.icon("mail", "bico"), "Onay Kodu Gönder");
+      var ED = AVF.draft("acc_email"); inp.value = ED.get() || ""; inp.addEventListener("input", function () { if (inp.value) ED.set(inp.value); else ED.clear(); });
       AVF.mount(p, h("form", { novalidate: true, onsubmit: function (e) {
-        e.preventDefault(); msg(box, ""); AVF.busy(btn, true, "Gönderiliyor…");
-        AVF.api("POST", "/account/request-email-change", { newEmail: inp.value.trim() }).then(function () {
+        e.preventDefault(); msg(box, "");
+        var v = inp.value.trim();
+        if (!v) return msg(box, "Yeni e-posta adresinizi yazın.", "err");
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return msg(box, "Geçerli bir e-posta adresi girin.", "err");
+        if (v.toLowerCase() === String(user.email || "").toLowerCase()) return msg(box, "Yeni adres mevcut adresinizle aynı olamaz.", "err");
+        AVF.busy(btn, true, "Gönderiliyor…");
+        AVF.api("POST", "/account/request-email-change", { newEmail: v }).then(function () { ED.clear();
           AVF.mount(p, codeStep({ purpose: "email_change_old", text: "Önce MEVCUT e-posta adresinize gelen kodu girin.", cancel: function () { start(p); }, confirm: function (c) {
             return AVF.api("POST", "/account/confirm-email-change-old", { code: c }).then(function (r) {
               AVF.mount(p, codeStep({ purpose: "email_change", text: "Şimdi YENİ adresinize (" + r.maskedEmail + ") gelen kodu girin.", cancel: function () { start(p); }, confirm: function (c2) {
@@ -83,6 +91,8 @@
       var box = h("div"), btn = h("button", { class: "btn", type: "submit" }, AVF.icon("mail", "bico"), "Onay Kodu Gönder");
       AVF.mount(p, h("form", { novalidate: true, onsubmit: function (e) {
         e.preventDefault(); msg(box, "");
+        if (!o.input.value) return msg(box, "Mevcut şifrenizi girin.", "err");
+        if (!n.input.value) return msg(box, "Yeni şifrenizi girin.", "err");
         var pe = AVF.passwordError(n.input.value, user.full_name, user.username); if (pe) return msg(box, pe, "err");
         AVF.busy(btn, true, "Gönderiliyor…");
         AVF.api("POST", "/account/request-password-change", { oldPassword: o.input.value, newPassword: n.input.value }).then(function () {
@@ -190,7 +200,9 @@
     function start(p) {
       var pw = AVF.passwordInput({ autocomplete: "current-password", maxlength: "200" }), box = h("div"), btn = h("button", { class: "btn danger", type: "submit" }, "Kod Gönder");
       AVF.mount(p, h("form", { novalidate: true, onsubmit: function (e) {
-        e.preventDefault(); msg(box, ""); AVF.busy(btn, true, "Gönderiliyor…");
+        e.preventDefault(); msg(box, "");
+        if (!pw.input.value) return msg(box, "Hesabınızı silmek için şifrenizi girin.", "err");
+        AVF.busy(btn, true, "Gönderiliyor…");
         AVF.api("POST", "/me/request-delete", { password: pw.input.value }).then(function () {
           AVF.mount(p, codeStep({ purpose: "delete_account", button: "Hesabı Kalıcı Olarak Sil", text: "Bu işlem geri alınamaz. Onaylamak için e-postanıza gelen kodu girin.", cancel: function () { start(p); }, confirm: function (c) {
             return AVF.api("POST", "/me/confirm-delete", { code: c }).then(function (r) { AVF.toast(r.message); afterLogout(); });

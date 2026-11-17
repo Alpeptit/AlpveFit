@@ -319,20 +319,41 @@
     set(val, false); el.get = function () { return val; }; el.set = function (v) { set(v, false); };
     return el;
   };
-  // Gün / ay / yıl seçici. value: "YYYY-MM-DD" veya "". get() → "YYYY-MM-DD" veya "" (eksik/geçersizse "").
+  // Doğum tarihi: tek çerçevede GÜN / AY / YIL bölümleri; ay ve yıla göre gün sayısı ayarlanır; tamamlanınca okunaklı tarih ve yaş gösterilir.
+  // value: "YYYY-MM-DD" veya "". get() → "YYYY-MM-DD" veya "" (eksik/geçersizse ""), partial(): bir kısmı seçili mi, set(v).
   var MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-  AVF.dateSelect = function (value, minAge) {
-    var h = AVF.h, m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || ""), now = new Date(), maxY = now.getFullYear() - (minAge || 14);
-    function sel(id, ph, opts, cur) { var s = h("select", { class: "inp", id: id, "aria-label": ph }, h("option", { value: "" }, ph), opts.map(function (o) { return h("option", { value: o[0], selected: cur === o[0] }, o[1]); })); return s; }
-    var dOpts = [], yOpts = []; for (var d = 1; d <= 31; d++) dOpts.push([String(d), String(d)]); for (var y = maxY; y >= 1930; y--) yOpts.push([String(y), String(y)]);
-    var sd = sel("ds-d" + ++uid, "Gün", dOpts, m ? String(+m[3]) : ""), sm = sel("ds-m" + ++uid, "Ay", MONTHS.map(function (n, i) { return [String(i + 1), n]; }), m ? String(+m[2]) : ""), sy = sel("ds-y" + ++uid, "Yıl", yOpts, m ? String(+m[1]) : "");
-    var el = h("div", { class: "dsel" }, sd, sm, sy);
+  AVF.dateSelect = function (value, minAge, onChange) {
+    var h = AVF.h, now = new Date(), maxY = now.getFullYear() - (minAge || 14);
+    function seg(label, sel) { return h("label", { class: "ds-seg" }, h("span", { class: "ds-l", text: label }), sel, AVF.icon("chev", "ds-c")); }
+    var sd = h("select", { "aria-label": "Gün" }), sm = h("select", { "aria-label": "Ay" }), sy = h("select", { "aria-label": "Yıl" });
+    sm.appendChild(h("option", { value: "" }, "Ay")); MONTHS.forEach(function (n, i) { sm.appendChild(h("option", { value: String(i + 1) }, n)); });
+    sy.appendChild(h("option", { value: "" }, "Yıl")); for (var y = maxY; y >= 1930; y--) sy.appendChild(h("option", { value: String(y) }, String(y)));
+    function days() { var y2 = +sy.value || 2000, mo = +sm.value || 1; return new Date(Date.UTC(y2, mo, 0)).getUTCDate(); }
+    function fillDays() {
+      var cur = sd.value, n = sm.value ? days() : 31; AVF.mount(sd, h("option", { value: "" }, "Gün"));
+      for (var d = 1; d <= n; d++) sd.appendChild(h("option", { value: String(d) }, String(d)));
+      if (cur && +cur <= n) sd.value = cur;
+    }
+    var out = h("small", { class: "ds-out", "aria-live": "polite" });
+    var el = h("div", { class: "dsel-wrap" }, h("div", { class: "dsel" }, h("span", { class: "ds-ic" }, AVF.icon("calendar")), seg("Gün", sd), seg("Ay", sm), seg("Yıl", sy)), out);
+    function show() {
+      var v = el.get(); el.classList.toggle("done", !!v);
+      if (!v) { out.textContent = el.partial() ? "Gün, ay ve yıl seçimini tamamlayın." : ""; return; }
+      var p = v.split("-"), b = new Date(+p[0], +p[1] - 1, +p[2]), age = now.getFullYear() - b.getFullYear() - (now < new Date(now.getFullYear(), b.getMonth(), b.getDate()) ? 1 : 0);
+      out.textContent = (+p[2]) + " " + MONTHS[+p[1] - 1] + " " + p[0] + " · " + age + " yaş";
+    }
     el.get = function () {
       if (!sd.value || !sm.value || !sy.value) return ""; var y2 = +sy.value, mo = +sm.value, d2 = +sd.value, dt = new Date(Date.UTC(y2, mo - 1, d2));
       if (dt.getUTCMonth() !== mo - 1) return ""; return y2 + "-" + String(mo).padStart(2, "0") + "-" + String(d2).padStart(2, "0");
     };
     el.partial = function () { return !!(sd.value || sm.value || sy.value) && !el.get(); };
-    return el;
+    el.raw = function () { return [sd.value, sm.value, sy.value].join("|"); };
+    el.set = function (v) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ""), r = m ? [String(+m[3]), String(+m[2]), String(+m[1])] : String(v || "").split("|");
+      sm.value = r[1] || ""; sy.value = r[2] || ""; fillDays(); sd.value = r[0] || ""; show();
+    };
+    [sd, sm, sy].forEach(function (x) { x.addEventListener("change", function () { if (x !== sd) fillDays(); show(); if (onChange) onChange(); }); });
+    fillDays(); el.set(value || ""); return el;
   };
   // Şifre kuralları: yazdıkça her kural işaretlenir ve çubuk dolar. ctx() → { fullName, username }.
   AVF.passwordMeter = function (input, ctx) {
@@ -360,5 +381,174 @@
       ov.addEventListener("mousedown", function (e) { if (e.target === ov) close(false); });
       document.addEventListener("keydown", key); AVF.lockScroll(true); document.body.appendChild(ov); setTimeout(function () { no.focus(); }, 30);
     });
+  };
+  // ---------- panel formları: taslak koruma, yalnız sayı girişi, ölçü birimi, çalışma saati, dosya ekleri ----------
+  // Taslak: giriş/kayıt ekranındaki mantıkla aynı — sekme oturumu boyunca (sessionStorage) kullanıcıya özel saklanır; kaydedilince,
+  // çıkışta ya da 24 saat sonra silinir. Şifre gibi gizli alanlar ASLA taslağa yazılmaz.
+  AVF.draft = function (name) {
+    var u = AVF.session && AVF.session.user, key = "avf_d_" + (u ? u.id : "x") + "_" + name;
+    return {
+      get: function () { try { var d = JSON.parse(sessionStorage.getItem(key) || "null"); if (d && Date.now() - d.t < 86400000) return d.v; sessionStorage.removeItem(key); } catch (e) { /* depolama yok */ } return null; },
+      set: function (v) { try { sessionStorage.setItem(key, JSON.stringify({ t: Date.now(), v: v })); } catch (e) { /* depolama yok */ } },
+      clear: function () { try { sessionStorage.removeItem(key); } catch (e) { /* depolama yok */ } },
+    };
+  };
+  AVF.clearDrafts = function () { try { Object.keys(sessionStorage).forEach(function (k) { if (k.indexOf("avf_d_") === 0) sessionStorage.removeItem(k); }); } catch (e) { /* depolama yok */ } };
+
+  // Yalnız sayı: harf ve diğer karakterler yazılamaz/yapıştırılamaz; virgül noktaya çevrilir; en fazla `decimals` ondalık.
+  AVF.numInput = function (attrs, decimals) {
+    attrs = attrs || {}; attrs.inputmode = decimals ? "decimal" : "numeric"; attrs.autocomplete = "off";
+    var inp = AVF.input("text", attrs);
+    function clean(v) {
+      v = String(v || "").replace(/,/g, ".").replace(decimals ? /[^0-9.]/g : /[^0-9]/g, "");
+      if (decimals) { var i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "").slice(0, decimals); if (i === 0) v = "0" + v; }
+      return v.slice(0, 6);
+    }
+    inp.addEventListener("beforeinput", function (e) { if (e.data && e.data.length === 1 && /[^0-9.,]/.test(e.data)) e.preventDefault(); });   // tek tuş: harf hiç yazılmaz; yapıştırma/çoklu girişte temizlenir
+    inp.addEventListener("input", function () { var c = clean(inp.value); if (c !== inp.value) inp.value = c; });
+    inp.value = clean(inp.value); return inp;
+  };
+
+  // Boy (cm ⇄ inç) ve kilo (kg ⇄ lbs): değer sunucuya HER ZAMAN cm / kg olarak gider; birim tercihi bu cihazda hatırlanır.
+  var UNITS = {
+    height: { m: "cm", i: "inç", f: 2.54, dec: [0, 1], min: 100, max: 250, ph: ["Örn. 178", "Örn. 70"] },
+    weight: { m: "kg", i: "lbs", f: 0.45359237, dec: [1, 1], min: 30, max: 300, ph: ["Örn. 82.5", "Örn. 182"] },
+  };
+  AVF.measure = function (kind, metricValue, onChange) {
+    var h = AVF.h, U = UNITS[kind], unit = "m";
+    try { if (localStorage.getItem("avf_u_" + kind) === "i") unit = "i"; } catch (e) { /* yok */ }
+    var inp = AVF.numInput({ placeholder: U.ph[unit === "m" ? 0 : 1], "aria-label": kind === "height" ? "Boy" : "Kilo" }, 1);
+    var hint = h("small", { class: "ms-h", "aria-live": "polite" });
+    var bm = h("button", { type: "button", "data-u": "m", text: U.m }), bi = h("button", { type: "button", "data-u": "i", text: U.i });
+    var seg = h("div", { class: "useg", role: "group", "aria-label": "Birim" }, bm, bi);
+    function round(v, d) { var p = Math.pow(10, d); return Math.round(v * p) / p; }
+    function toMetric(v) { return unit === "m" ? v : v * U.f; }
+    function fromMetric(v) { return unit === "m" ? v : v / U.f; }
+    var el = h("div", { class: "measure" }, h("div", { class: "ms-row" }, inp, seg), hint);
+    el.getMetric = function () { var v = parseFloat(inp.value); if (!isFinite(v)) return ""; var m = toMetric(v); return kind === "height" ? Math.round(m) : round(m, 1); };
+    el.error = function () {
+      if (!inp.value) return ""; var m = toMetric(parseFloat(inp.value));
+      if (!(m >= U.min && m <= U.max)) return (kind === "height" ? "Boy " : "Kilo ") + (unit === "m" ? U.min + "–" + U.max + " " + U.m : round(U.min / U.f, 0) + "–" + round(U.max / U.f, 0) + " " + U.i) + " arasında olmalıdır.";
+      return "";
+    };
+    function paint() {
+      bm.setAttribute("aria-pressed", unit === "m" ? "true" : "false"); bi.setAttribute("aria-pressed", unit === "i" ? "true" : "false"); seg.setAttribute("data-on", unit);
+      inp.placeholder = AVF.t(U.ph[unit === "m" ? 0 : 1]);
+      var m = el.getMetric(), err = el.error();
+      if (err) { hint.textContent = err; hint.className = "ms-h bad"; return; }
+      hint.className = "ms-h";
+      if (m === "") { hint.textContent = ""; return; }
+      if (kind === "height") { var tin = m / 2.54, ft = Math.floor(tin / 12), inch = Math.round(tin - ft * 12); if (inch === 12) { ft++; inch = 0; } hint.textContent = unit === "m" ? "≈ " + ft + " ft " + inch + " in" : "≈ " + m + " cm"; }
+      else hint.textContent = unit === "m" ? "≈ " + round(m / U.f, 1) + " lbs" : "≈ " + m + " kg";
+    }
+    function setUnit(nu) {
+      if (nu === unit) return; var m = el.getMetric(); unit = nu;
+      try { localStorage.setItem("avf_u_" + kind, nu); } catch (e) { /* yok */ }
+      if (m !== "") inp.value = String(round(fromMetric(m), U.dec[nu === "m" ? 0 : 1]));
+      paint(); if (onChange) onChange();
+    }
+    bm.addEventListener("click", function () { setUnit("m"); }); bi.addEventListener("click", function () { setUnit("i"); });
+    inp.addEventListener("input", function () { paint(); if (onChange) onChange(); });
+    el.raw = function () { return { v: inp.value, u: unit }; };
+    el.setRaw = function (r) { if (!r) return; unit = r.u === "i" ? "i" : "m"; inp.value = r.v || ""; paint(); };
+    el.input = inp;
+    if (metricValue !== null && metricValue !== undefined && metricValue !== "") inp.value = String(round(fromMetric(Number(metricValue)), U.dec[unit === "m" ? 0 : 1]));
+    paint(); return el;
+  };
+
+  // Çalışma saati: düzen (sabit / vardiyalı / esnek / çalışmıyorum) + sabit düzende başlangıç ve bitiş saati (30 dakikalık).
+  AVF.workHours = function (value, onChange) {
+    var h = AVF.h, times = []; for (var i = 0; i < 48; i++) times.push(String(Math.floor(i / 2)).padStart(2, "0") + ":" + (i % 2 ? "30" : "00"));
+    function sel(label) { var s = h("select", { class: "inp", "aria-label": label }, h("option", { value: "" }, label)); times.forEach(function (t) { s.appendChild(h("option", { value: t }, t)); }); return s; }
+    var st = sel("Başlangıç"), en = sel("Bitiş"), msg = h("small", { class: "ms-h" });
+    var range = h("div", { class: "wh-range" }, h("span", { class: "tile" }, AVF.icon("clock")), st, h("span", { class: "wh-dash", text: "—" }), en);
+    var mode = AVF.choice({ label: "Çalışma düzeni", cols: 4, clearable: true, items: [{ value: "fixed", label: "Sabit saatler", icon: "clock" }, { value: "shift", label: "Vardiyalı", icon: "refresh" }, { value: "flexible", label: "Esnek", icon: "timer" }, { value: "none", label: "Çalışmıyorum", icon: "pause" }],
+      onChange: function () { paint(); if (onChange) onChange(); } });
+    var rw = h("div", { class: "wh-wrap" }, h("div", { class: "wh-in" }, range, msg));
+    var el = h("div", { class: "wh" }, mode, rw);
+    function paint() {
+      rw.classList.toggle("open", mode.get() === "fixed");
+      msg.textContent = mode.get() === "fixed" && st.value && en.value && st.value === en.value ? "Başlangıç ve bitiş saati aynı olamaz." : "";
+      msg.className = "ms-h" + (msg.textContent ? " bad" : "");
+    }
+    [st, en].forEach(function (x) { x.addEventListener("change", function () { paint(); if (onChange) onChange(); }); });
+    el.get = function () { var m = mode.get(); if (m !== "fixed") return m || ""; return st.value && en.value && st.value !== en.value ? st.value + "-" + en.value : ""; };
+    el.incomplete = function () { return mode.get() === "fixed" && !el.get(); };
+    el.set = function (v) {
+      v = v || ""; var r = /^(\d\d:\d\d)-(\d\d:\d\d)$/.exec(v);
+      if (r) { mode.set("fixed"); st.value = r[1]; en.value = r[2]; } else if (v.indexOf("fixed|") === 0) { var q = v.split("|"); mode.set("fixed"); st.value = q[1] || ""; en.value = q[2] || ""; } else { mode.set(v); st.value = ""; en.value = ""; }
+      paint();
+    };
+    el.raw = function () { return mode.get() === "fixed" ? "fixed|" + st.value + "|" + en.value : mode.get(); };
+    el.set(value); return el;
+  };
+  AVF.workText = function (v) {
+    if (!v) return ""; if (v === "shift") return "Vardiyalı"; if (v === "flexible") return "Esnek"; if (v === "none") return "Çalışmıyor";
+    return v.replace("-", " – ");
+  };
+
+  // Dosya ekleri — kurallar sunucuyla aynı: PNG, JPG, JPEG, PDF, XLSX, DOCX; dosya başına 4 MB; en fazla 4 dosya.
+  AVF.UPLOAD = { exts: ["png", "jpg", "jpeg", "pdf", "xlsx", "docx"], max: 4, bytes: 4 * 1024 * 1024,
+    mime: { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", pdf: "application/pdf", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" } };
+  AVF.UPLOAD.accept = AVF.UPLOAD.exts.map(function (e) { return "." + e; }).join(",") + ",image/png,image/jpeg,application/pdf," + AVF.UPLOAD.mime.xlsx + "," + AVF.UPLOAD.mime.docx;
+  AVF.fileSize = function (n) { return n >= 1048576 ? (Math.round(n / 104857.6) / 10) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; };
+  AVF.uploadFile = function (scope, file) {
+    var headers = { "Content-Type": "application/octet-stream", "x-file-name": encodeURIComponent(file.name), "x-file-type": file.type || "", "x-avf-lang": AVF.lang || "tr", Accept: "application/json" };
+    var c = AVF.cookie("avf_csrf"); if (c) headers["x-csrf-token"] = c;
+    return fetch("/api/uploads/" + scope, { method: "POST", credentials: "same-origin", headers: headers, body: file }).then(function (r) {
+      return r.text().then(function (t) { var d = null; try { d = t ? JSON.parse(t) : null; } catch (e) { d = null; } if (r.ok) return d; throw { status: r.status, data: d || {} }; });
+    }, function () { throw { status: 0, data: { error: "network" } }; });
+  };
+  // o: { scope, files: [mevcut], max, base ("/api/attachments/" | "/api/admin/attachments/"), readOnly, locked (metin), onChange }
+  AVF.fileBox = function (o) {
+    var h = AVF.h, U = AVF.UPLOAD, max = o.max || U.max, files = (o.files || []).slice(), base = o.base || "/api/attachments/";
+    var list = h("ul", { class: "fb-list" }), msg = h("div", { class: "fb-msg", role: "alert" });
+    var pick = h("input", { type: "file", accept: U.accept, multiple: "", hidden: "", tabindex: "-1" });
+    var count = h("span", { class: "fb-n" });
+    var addBtn = h("button", { class: "fb-add", type: "button" }, h("span", { class: "tile" }, AVF.icon("image")),
+      h("span", { class: "t" }, h("b", { text: "Görsel / dosya ekle" }), h("small", { text: "PNG, JPG, JPEG, PDF, XLSX, DOCX · en fazla 4 MB · en fazla " + max + " dosya" })), count);
+    var el = h("div", { class: "fbox" + (o.locked ? " off" : "") }, o.readOnly ? null : addBtn, o.readOnly ? null : pick, msg, list);
+    if (o.locked) addBtn.setAttribute("aria-disabled", "true");
+    function isImg(f) { return f.mime === "image/png" || f.mime === "image/jpeg"; }
+    function err(t) { msg.textContent = t || ""; msg.style.display = t ? "" : "none"; }
+    function paint() {
+      count.textContent = files.length + "/" + max;
+      addBtn.disabled = !!o.locked || files.length >= max;
+      AVF.mount(list, files.map(function (f) {
+        var thumb = f.pending ? h("span", { class: "fb-th load" }, h("span", { class: "spin" })) : isImg(f) ? h("img", { class: "fb-th", src: base + f.id, alt: "", loading: "lazy" }) : h("span", { class: "fb-th doc" }, AVF.icon("file"), h("em", { text: (f.filename.split(".").pop() || "").toUpperCase() }));
+        var name = f.pending ? h("span", { class: "fb-name", "data-notr": "", text: f.filename }) : h("a", { class: "fb-name", href: base + f.id, target: "_blank", rel: "noopener", "data-notr": "", text: f.filename });
+        return h("li", { class: "fb-item" + (f.pending ? " pending" : "") }, thumb, h("span", { class: "fb-t" }, name, h("small", { text: f.pending ? "Yükleniyor…" : AVF.fileSize(f.size_bytes) })),
+          o.readOnly || f.pending ? null : h("button", { class: "fb-x", type: "button", "aria-label": "Dosyayı kaldır", onclick: function () { remove(f); } }, AVF.icon("x")));
+      }));
+      if (o.onChange) o.onChange();
+    }
+    function remove(f) {
+      AVF.api("DELETE", "/attachments/" + f.id).then(function () { files = files.filter(function (x) { return x !== f; }); err(""); paint(); },
+        function (e) { if (e.status === 404) { files = files.filter(function (x) { return x !== f; }); paint(); } else err(AVF.errText(e)); });
+    }
+    function add(fileList) {
+      err(""); var arr = Array.prototype.slice.call(fileList || []);
+      if (!arr.length) return;
+      if (files.length + arr.length > max) { err("En fazla " + max + " dosya eklenebilir."); arr = arr.slice(0, Math.max(0, max - files.length)); }
+      arr.forEach(function (file) {
+        var ext = (/\.([a-z0-9]+)$/i.exec(file.name) || [])[1]; ext = ext ? ext.toLowerCase() : "";
+        if (U.exts.indexOf(ext) < 0) return err("Bu dosya türü desteklenmiyor. Yalnızca PNG, JPG, JPEG, PDF, XLSX, DOCX dosyaları eklenebilir.");
+        if (file.size > U.bytes) return err("Dosya en fazla 4 MB olabilir.");
+        var tmp = { pending: true, filename: file.name }; files.push(tmp); paint();
+        AVF.uploadFile(o.scope, file).then(function (r) { files[files.indexOf(tmp)] = r; paint(); }, function (e) { files = files.filter(function (x) { return x !== tmp; }); paint(); err(AVF.errText(e)); });
+      });
+    }
+    addBtn.addEventListener("click", function () { if (o.locked) { err(o.locked); return; } pick.click(); });
+    pick.addEventListener("change", function () { add(pick.files); pick.value = ""; });
+    if (!o.readOnly) {
+      el.addEventListener("dragover", function (e) { if (!o.locked) { e.preventDefault(); el.classList.add("drag"); } });
+      el.addEventListener("dragleave", function () { el.classList.remove("drag"); });
+      el.addEventListener("drop", function (e) { el.classList.remove("drag"); if (o.locked) return; e.preventDefault(); add(e.dataTransfer && e.dataTransfer.files); });
+    }
+    el.ids = function () { return files.filter(function (f) { return !f.pending; }).map(function (f) { return f.id; }); };
+    el.list = function () { return files.filter(function (f) { return !f.pending; }); };
+    el.busy = function () { return files.some(function (f) { return f.pending; }); };
+    el.reset = function () { files = []; err(""); paint(); };
+    err(""); paint(); return el;
   };
 })();

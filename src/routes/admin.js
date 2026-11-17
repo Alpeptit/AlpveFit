@@ -14,6 +14,7 @@ import { sendMail } from "../utils/mailer.js";
 import { planPublishedMail, ticketReplyMail, mailLang } from "../utils/emailTemplates.js";
 import { markOrderPaid } from "../services/orderFulfilment.js";
 import { PROFILE_COLS } from "./profile.js";
+import { FILE_COLS, sendAttachment, withAttachments } from "./uploads.js";
 
 export const adminRouter = withAsyncErrors(express.Router());
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -329,6 +330,20 @@ adminRouter.get("/clients/:id/profile", async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.json(rows[0] || null);
 });
+adminRouter.get("/clients/:id/files", async (req, res) => {
+  if (!ID_RE.test(req.params.id) || !(await canAccessMember(req, req.params.id))) return res.status(404).json({ error: "Üye bulunamadı." });
+  const { rows } = await pool.query(`SELECT ${FILE_COLS} FROM attachments WHERE user_id = $1 AND scope = 'profile' ORDER BY created_at`, [req.params.id]);
+  res.json(rows);
+});
+// Ek görüntüleme: kişisel bilgi eki → yönetici veya üyeye atanmış uzman; destek talebi eki → yalnız yönetici (talepleri yalnız yönetici görür).
+adminRouter.get("/attachments/:id", async (req, res) => {
+  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Dosya bulunamadı." });
+  const { rows } = await pool.query(`SELECT user_id, scope, message_id, filename, mime, data FROM attachments WHERE id = $1`, [req.params.id]);
+  const a = rows[0];
+  const ok = a && (a.scope === "profile" ? await canAccessMember(req, a.user_id) : req.adminRole === "admin" && a.message_id);
+  if (!ok) return res.status(404).json({ error: "Dosya bulunamadı." });
+  sendAttachment(res, a);
+});
 
 // ---------- siparişler (yalnız yönetici) ----------
 adminRouter.get("/orders", requireAdmin, async (req, res) => {
@@ -372,7 +387,7 @@ adminRouter.get("/tickets/:id", requireAdmin, async (req, res) => {
        FROM tickets t JOIN users u ON u.id = t.user_id WHERE t.id = $1`, [req.params.id]);
   if (!t.rows[0]) return res.status(404).json({ error: "Destek talebi bulunamadı." });
   const m = await pool.query(`SELECT id, from_role, body, created_at FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at ASC, id ASC`, [req.params.id]);
-  res.json({ ...t.rows[0], messages: m.rows });
+  res.json({ ...t.rows[0], messages: await withAttachments(m.rows) });
 });
 adminRouter.post("/tickets/:id/reply", requireAdmin, async (req, res) => {
   const m = req.body && req.body.message;

@@ -1,0 +1,130 @@
+// Dosya ekleri — destek talepleri ve kişisel bilgiler (sağlık/sakatlık) için. Kurallar Alpeptit ile aynı (bkz. utils/uploadTypes.js).
+//   • Yalnız giriş yapmış üye yükler (requireAuth: oturum + CSRF). Her istek TEK dosya taşır; gövde ham ikili veridir (en fazla 4 MB).
+//   • Tür iki katmanda doğrulanır: beyan edilen tür/uzantı + dosyanın gerçek imzası.
+//   • Üye başına saatlik yükleme sınırı vardır; kişisel bilgilerde toplam en fazla 4 dosya, bir destek mesajında en fazla 4 dosya.
+//   • Kişisel bilgilere (sağlık verisi) dosya eklemek için açık rıza önceden alınmış olmalıdır.
+//   • Dosyalar yalnız sahibine (ve /api/admin altında yetkili panel kullanıcısına) sunulur; tarayıcıda çalıştırılamaz biçimde
+//     (nosniff, sandbox CSP, görsel dışı türler indirme olarak) gönderilir.
+import express from "express";
+import { withAsyncErrors } from "../utils/asyncRoutes.js";
+import { pool } from "../db/pool.js";
+import { requireAuth } from "../middleware/auth.js";
+import { checkHourlyActionLimit } from "../utils/rateLimit.js";
+import { UPLOAD_MAX_BYTES, ATTACH_MAX, COUNT_ERROR, SIZE_ERROR, declaredTypeError, contentTypeError, cleanFilename, kindOf } from "../utils/uploadTypes.js";
+
+export const uploadsRouter = withAsyncErrors(express.Router());
+export const UPLOADS_PER_HOUR = 30;
+export const PENDING_MAX = 8;   // henüz bir mesaja bağlanmamış (bekleyen) ticket eki sınırı
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const FILE_COLS = `id, scope, filename, mime, size_bytes, created_at`;
+
+// Ham gövde okuyucu: yalnız application/octet-stream; sınır aşılırsa okuma hemen kesilir (bellek şişmez).
+function raw(req, res, next) {
+  if (Buffer.isBuffer(req.body)) return req.body.length > UPLOAD_MAX_BYTES ? res.status(400).json({ error: SIZE_ERROR }) : next();   // (yerel test sunucusu gövdeyi önceden okur)
+  if (!/^application\/octet-stream\b/i.test(String(req.headers["content-type"] || ""))) return res.status(400).json({ error: "Dosya bulunamadı." });
+  const chunks = []; let size = 0, done = false;
+  const finish = (fn) => { if (!done) { done = true; fn(); } };
+  req.on("data", (c) => {
+    size += c.length;
+    if (size > UPLOAD_MAX_BYTES) { finish(() => { res.status(400).json({ error: SIZE_ERROR }); req.pause(); }); return; }
+    if (!done) chunks.push(c);
+  });
+  req.on("end", () => finish(() => { req.body = Buffer.concat(chunks); next(); }));
+  req.on("error", () => finish(() => res.status(400).json({ error: "Dosya alınamadı." })));
+}
+
+uploadsRouter.post("/uploads/:scope", requireAuth, async (req, res, next) => {
+  if (req.params.scope !== "ticket" && req.params.scope !== "profile") return res.status(404).json({ error: "Bulunamadı." });
+  // Sınır, gövde belleğe alınmadan ÖNCE uygulanır.
+  if (!(await checkHourlyActionLimit(`upload:${req.user.sub}`, "attachment_upload", UPLOADS_PER_HOUR))) {
+    return res.status(429).json({ error: "Kısa sürede çok fazla dosya yüklendi. Lütfen bir süre sonra tekrar deneyin." });
+  }
+  const declaredLen = Number(req.headers["content-length"] || 0);
+  if (declaredLen > UPLOAD_MAX_BYTES) return res.status(400).json({ error: SIZE_ERROR });
+  next();
+}, raw, async (req, res) => {
+  const scope = req.params.scope;
+  let name = ""; try { name = decodeURIComponent(String(req.headers["x-file-name"] || "")); } catch { name = ""; }
+  const filename = cleanFilename(name);
+  const te = declaredTypeError(String(req.headers["x-file-type"] || ""), filename);
+  if (te) return res.status(400).json({ error: te });
+  const buf = req.body;
+  if (!Buffer.isBuffer(buf) || !buf.length) return res.status(400).json({ error: "Dosya bulunamadı." });
+  if (buf.length > UPLOAD_MAX_BYTES) return res.status(400).json({ error: SIZE_ERROR });
+  const ce = contentTypeError(buf, filename);
+  if (ce) return res.status(400).json({ error: ce });
+
+  if (scope === "profile") {
+    const c = await pool.query(`SELECT health_consent_at FROM member_profiles WHERE user_id = $1`, [req.user.sub]);
+    if (!c.rows[0] || !c.rows[0].health_consent_at) return res.status(400).json({ error: "Dosya eklemeden önce açık rızanızı onaylayıp bilgilerinizi kaydedin.", code: "consent_required" });
+    const n = await pool.query(`SELECT count(*)::int AS n FROM attachments WHERE user_id = $1 AND scope = 'profile'`, [req.user.sub]);
+    if (n.rows[0].n >= ATTACH_MAX) return res.status(400).json({ error: COUNT_ERROR });
+  } else {
+    // Bir günden eski, hiçbir mesaja bağlanmamış ekler temizlenir; bekleyen ek sayısı sınırlıdır.
+    await pool.query(`DELETE FROM attachments WHERE user_id = $1 AND scope = 'ticket' AND message_id IS NULL AND created_at < now() - interval '1 day'`, [req.user.sub]);
+    const n = await pool.query(`SELECT count(*)::int AS n FROM attachments WHERE user_id = $1 AND scope = 'ticket' AND message_id IS NULL`, [req.user.sub]);
+    if (n.rows[0].n >= PENDING_MAX) return res.status(400).json({ error: "Gönderilmemiş çok fazla dosya var. Lütfen önce mesajınızı gönderin veya dosyaları kaldırın." });
+  }
+  const { rows } = await pool.query(
+    `INSERT INTO attachments (user_id, scope, filename, mime, size_bytes, data) VALUES ($1, $2, $3, $4, $5, $6) RETURNING ${FILE_COLS}`,
+    [req.user.sub, scope, filename, kindOf(filename).mime, buf.length, buf]);
+  res.status(201).json(rows[0]);
+});
+
+uploadsRouter.get("/uploads/profile", requireAuth, async (req, res) => {
+  const { rows } = await pool.query(`SELECT ${FILE_COLS} FROM attachments WHERE user_id = $1 AND scope = 'profile' ORDER BY created_at`, [req.user.sub]);
+  res.json(rows);
+});
+
+/** Dosyayı güvenli başlıklarla gönderir (sahiplik/yetki çağıran tarafından doğrulanmış olmalı). */
+export function sendAttachment(res, a) {
+  // pg, bytea'yı Buffer olarak döndürür; başka bir sürücü onaltılık metin ("\\x…") döndürürse çevrilir.
+  const data = Buffer.isBuffer(a.data) ? a.data : Buffer.from(String(a.data || "").replace(/^\\x/, ""), "hex");
+  const image = a.mime === "image/png" || a.mime === "image/jpeg";
+  res.setHeader("Content-Type", a.mime);
+  res.setHeader("Content-Length", String(data.length));
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Content-Disposition", `${image ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(a.filename)}`);
+  res.end(data);
+}
+
+uploadsRouter.get("/attachments/:id", requireAuth, async (req, res) => {
+  if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: "Dosya bulunamadı." });
+  const { rows } = await pool.query(`SELECT filename, mime, data FROM attachments WHERE id = $1 AND user_id = $2`, [req.params.id, req.user.sub]);
+  if (!rows[0]) return res.status(404).json({ error: "Dosya bulunamadı." });
+  sendAttachment(res, rows[0]);
+});
+
+// Yalnız henüz bir mesaja bağlanmamış ticket eki veya kişisel bilgi eki silinebilir (gönderilmiş mesajın eki değişmez).
+uploadsRouter.delete("/attachments/:id", requireAuth, async (req, res) => {
+  if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: "Dosya bulunamadı." });
+  const { rowCount } = await pool.query(`DELETE FROM attachments WHERE id = $1 AND user_id = $2 AND message_id IS NULL RETURNING id`, [req.params.id, req.user.sub]);
+  if (!rowCount) return res.status(404).json({ error: "Dosya bulunamadı." });
+  res.json({ ok: true });
+});
+
+/** Mesaja eklenecek dosya kimliklerini doğrular: dizi, en fazla 4, hepsi bu üyenin bekleyen ticket eki. @returns {{ids}|{error}} */
+export async function checkTicketAttachments(userId, raw) {
+  if (raw === undefined || raw === null) return { ids: [] };
+  if (!Array.isArray(raw) || raw.some((x) => typeof x !== "string" || !UUID_RE.test(x))) return { error: "Geçersiz dosya eki." };
+  const ids = [...new Set(raw)];
+  if (ids.length > ATTACH_MAX) return { error: COUNT_ERROR };
+  if (!ids.length) return { ids };
+  const { rows } = await pool.query(
+    `SELECT count(*)::int AS n FROM attachments WHERE id = ANY($1::uuid[]) AND user_id = $2 AND scope = 'ticket' AND message_id IS NULL`, [ids, userId]);
+  if (rows[0].n !== ids.length) return { error: "Dosya eki bulunamadı; lütfen dosyayı yeniden ekleyin." };
+  return { ids };
+}
+export async function linkAttachments(db, userId, messageId, ids) {
+  if (!ids.length) return;
+  await db.query(`UPDATE attachments SET message_id = $1 WHERE id = ANY($2::uuid[]) AND user_id = $3 AND scope = 'ticket' AND message_id IS NULL`, [messageId, ids, userId]);
+}
+/** Mesaj listesine ekleri iliştirir (dosya verisi olmadan). */
+export async function withAttachments(messages) {
+  if (!messages.length) return messages;
+  const { rows } = await pool.query(`SELECT ${FILE_COLS}, message_id FROM attachments WHERE message_id = ANY($1::uuid[]) ORDER BY created_at`, [messages.map((m) => m.id)]);
+  return messages.map((m) => ({ ...m, attachments: rows.filter((a) => a.message_id === m.id).map(({ message_id, ...a }) => a) }));
+}

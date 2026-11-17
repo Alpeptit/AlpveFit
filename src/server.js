@@ -20,6 +20,7 @@ import { ordersRouter } from "./routes/orders.js";
 import { profileRouter } from "./routes/profile.js";
 import { blogRouter } from "./routes/blog.js";
 import { supportRouter } from "./routes/support.js";
+import { uploadsRouter } from "./routes/uploads.js";
 import { startDataRetentionJob } from "./services/dataRetention.js";
 import { normalizeOrigin } from "./utils/originCheck.js";
 import { clientIpMiddleware, originGuardMiddleware, cloudflareOnlyMiddleware, isCloudflareIp, viaCloudflare, edgePeerIp } from "./utils/clientIp.js";
@@ -215,6 +216,7 @@ app.use("/api", notificationsRouter); // /api/notifications
 app.use("/api", ordersRouter);        // /api/packages, /api/orders/* — paket siparişi (USDT TRC20)
 // Canlı destek ve destek talepleri: ayrı ve dar bir hız sınırı (yoklama + mesaj gönderimi). Genel sınırlar da geçerlidir.
 app.use("/api/tickets", rateLimit({ windowMs: 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false, message: { error: "Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin." } }));
+app.use("/api", uploadsRouter);       // /api/uploads/*, /api/attachments/* — dosya ekleri (4 MB, en fazla 4)
 app.use("/api", supportRouter);       // /api/tickets/* — destek talepleri
 app.use("/api", blogRouter);          // /api/blog — herkese açık blog (yazma: /api/admin/blog)
 app.use("/api", profileRouter);       // /api/profile — üyenin koçluk bilgileri

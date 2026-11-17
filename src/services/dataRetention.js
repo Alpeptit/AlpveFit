@@ -22,6 +22,7 @@ export async function cleanup() {
     r.orders = (await pool.query(`DELETE FROM orders WHERE status IN ('expired','cancelled') AND created_at < ${d}`)).rowCount;
     r.chats = (await pool.query(`DELETE FROM live_chats WHERE status = 'closed' AND last_message_at < ${d}`)).rowCount;
     r.offline = (await pool.query(`DELETE FROM support_offline_messages WHERE created_at < ${d}`)).rowCount;
+    r.pendingFiles = (await pool.query(`DELETE FROM attachments WHERE scope = 'ticket' AND message_id IS NULL AND created_at < now() - interval '1 day'`)).rowCount;
     r.tickets = (await pool.query(`DELETE FROM tickets WHERE status = 'closed' AND updated_at < ${d}`)).rowCount;
     r.plans = (await pool.query(`DELETE FROM plans WHERE status = 'archived' AND updated_at < ${d}`)).rowCount;
     return r;

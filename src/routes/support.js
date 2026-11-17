@@ -7,6 +7,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { sanitizeText } from "../utils/sanitize.js";
 import { messageError } from "../utils/validate.js";
 import { checkHourlyActionLimit } from "../utils/rateLimit.js";
+import { checkTicketAttachments, linkAttachments, withAttachments } from "./uploads.js";
 
 export const supportRouter = withAsyncErrors(express.Router());
 export const TICKETS_PER_HOUR = 5;
@@ -36,7 +37,7 @@ supportRouter.get("/tickets/:id", requireAuth, async (req, res) => {
   const t = await pool.query(`SELECT ${TICKET_COLS} FROM tickets WHERE id = $1 AND user_id = $2`, [req.params.id, req.user.sub]);
   if (!t.rows[0]) return res.status(404).json({ error: "Destek talebi bulunamadı." });
   const m = await pool.query(`SELECT id, from_role, body, created_at FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at ASC, id ASC`, [req.params.id]);
-  res.json({ ...t.rows[0], messages: m.rows });
+  res.json({ ...t.rows[0], messages: await withAttachments(m.rows) });
 });
 
 supportRouter.post("/tickets", requireAuth, async (req, res) => {
@@ -46,6 +47,8 @@ supportRouter.post("/tickets", requireAuth, async (req, res) => {
   if (!TICKET_SUBJECTS.includes(subject)) return res.status(400).json({ error: "Lütfen listeden bir konu seçin." });
   const me = messageError(message, "Mesaj zorunludur.");
   if (me) return res.status(400).json({ error: me });
+  const att = await checkTicketAttachments(req.user.sub, req.body.attachments);
+  if (att.error) return res.status(400).json({ error: att.error });
   if (!(await checkHourlyActionLimit(`ticket:${req.user.sub}`, "ticket_create", TICKETS_PER_HOUR))) {
     return res.status(429).json({ error: "Kısa sürede çok fazla destek talebi oluşturdunuz. Lütfen biraz sonra tekrar deneyin." });
   }
@@ -60,7 +63,8 @@ supportRouter.post("/tickets", requireAuth, async (req, res) => {
     ticket = rows[0];
   }
   if (!ticket) return res.status(500).json({ error: "Destek talebi oluşturulamadı, lütfen tekrar deneyin." });
-  await pool.query(`INSERT INTO ticket_messages (ticket_id, from_role, body) VALUES ($1, 'user', $2) RETURNING id`, [ticket.id, sanitizeText(message.trim())]);
+  const first = await pool.query(`INSERT INTO ticket_messages (ticket_id, from_role, body) VALUES ($1, 'user', $2) RETURNING id`, [ticket.id, sanitizeText(message.trim())]);
+  await linkAttachments(pool, req.user.sub, first.rows[0].id, att.ids);
   res.status(201).json(ticket);
 });
 
@@ -71,13 +75,16 @@ supportRouter.post("/tickets/:id/messages", requireAuth, async (req, res) => {
   const t = await pool.query(`SELECT id, status FROM tickets WHERE id = $1 AND user_id = $2`, [req.params.id, req.user.sub]);
   if (!t.rows[0]) return res.status(404).json({ error: "Destek talebi bulunamadı." });
   if (t.rows[0].status === "closed") return res.status(409).json({ error: "Bu destek talebi kapatılmış; yeni mesaj eklenemez. Gerekirse yeni bir talep oluşturabilirsiniz." });
+  const att = await checkTicketAttachments(req.user.sub, req.body.attachments);
+  if (att.error) return res.status(400).json({ error: att.error });
   const last = await pool.query(
     `SELECT 1 FROM ticket_messages WHERE ticket_id = $1 AND from_role = 'user' AND created_at > now() - interval '5 seconds'`, [req.params.id]);
   if (last.rows.length) { res.set("Retry-After", "5"); return res.status(429).json({ error: "Lütfen yeni mesaj göndermeden önce birkaç saniye bekleyin." }); }
   const { rows } = await pool.query(
     `INSERT INTO ticket_messages (ticket_id, from_role, body) VALUES ($1, 'user', $2) RETURNING id, from_role, body, created_at`, [req.params.id, sanitizeText(req.body.message.trim())]);
+  await linkAttachments(pool, req.user.sub, rows[0].id, att.ids);
   await pool.query(`UPDATE tickets SET status = 'open', updated_at = now() WHERE id = $1 RETURNING id`, [req.params.id]);
-  res.status(201).json(rows[0]);
+  res.status(201).json((await withAttachments(rows))[0]);
 });
 
 supportRouter.post("/tickets/:id/resolve", requireAuth, async (req, res) => {

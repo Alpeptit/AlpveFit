@@ -8,7 +8,7 @@ import express from "express";
 import { existsSync, readFileSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { panelUser } from "./utils/panelSession.js";
+import { panelUser, sessionUser } from "./utils/panelSession.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const SITE_DIR = process.env.SITE_DIR || join(here, "..", "site");
@@ -76,8 +76,12 @@ export function mountSite(app) {
   });
 
   // /admin: alışılmış adres — yalnız panel rolündeki oturumu /uzman'a yönlendirir; diğer herkese aynı genel 404 (alanın varlığı belli olmaz).
+  // Oturumu olmayan ziyaretçiye ise sitenin olağan giriş ekranı açılır (giriş sonrası yetkiliyse panele geçer, değilse aynı 404).
   app.get(["/admin", "/admin/"], async (req, res) => {
-    if (!(await panelUser(req))) return sendNotFound(res);
+    if (!(await panelUser(req))) {
+      if (await sessionUser(req)) return sendNotFound(res);
+      htmlHeaders(res); res.setHeader("Cache-Control", "no-store"); return res.sendFile(indexFile);
+    }
     res.setHeader("Cache-Control", "private, no-store");
     res.redirect(302, "/uzman");
   });

@@ -201,51 +201,93 @@
   var STEPS = [["0-2000", "0 – 2.000"], ["2000-4000", "2.000 – 4.000"], ["4000-6000", "4.000 – 6.000"], ["6000-8000", "6.000 – 8.000"], ["8000-10000", "8.000 – 10.000"], ["10000+", "10.000+"]];
   var GOALS = [["Yağ Yakımı", "flame"], ["Kas Kazanımı", "muscle"], ["Güç Artışı", "bolt"]];
   function psec(icon, title, sub, kids) { return h("section", { class: "card psec" }, h("div", { class: "psh" }, h("span", { class: "tile" }, AVF.icon(icon)), h("span", { class: "t" }, h("b", { text: title }), sub ? h("small", { text: sub }) : null)), h("div", { class: "psb" }, kids)); }
+  function iconSelect(icon, label, opts, value) {
+    var s = h("select", { class: "inp", "aria-label": label }, h("option", { value: "" }, "Seçiniz"), opts.map(function (o) { return h("option", { value: o }, o); }));
+    s.value = value || "";
+    return { el: h("div", { class: "isel" }, AVF.icon(icon, "isel-i"), s, AVF.icon("chev", "isel-c")), sel: s };
+  }
   AVF.profileView = function (el) {
-    AVF.mount(el, h("h2", { class: "ptitle", text: "Kişisel Bilgilerim" }), AVF.skeleton(2));
-    AVF.api("GET", "/profile").then(function (pr) {
-      var P = pr || {}, f = {};
-      function num(id, label, icon, val, attrs, ph) { f[id] = AVF.input("number", Object.assign({ value: val == null ? "" : val, inputmode: "decimal", placeholder: ph || "" }, attrs || {})); return AVF.field(label, f[id], { optional: true, icon: icon }); }
-      f.gender = AVF.choice({ label: "Cinsiyet", value: P.gender || "", clearable: true, items: [{ value: "female", label: "Kadın", icon: "female" }, { value: "male", label: "Erkek", icon: "male" }] });
-      f.birth = AVF.dateSelect(P.birth_date || "", 14);
-      f.blood = AVF.choice({ label: "Kan grubu", value: P.blood_type || "", clearable: true, cols: 4, items: BLOOD.map(function (b) { return { value: b, label: b, icon: "drop" }; }) });
-      f.goal = AVF.choice({ label: "Hedefiniz", value: P.goal || "", clearable: true, items: GOALS.map(function (g) { return { value: g[0], label: g[0], icon: g[1] }; }) });
-      f.steps = AVF.choice({ label: "Günlük ortalama adım sayısı", value: P.steps_range || "", clearable: true, cols: 3, items: STEPS.map(function (x) { return { value: x[0], label: x[1], icon: "steps" }; }) });
+    AVF.mount(el, h("h2", { class: "ptitle", text: "Kişisel Bilgiler" }), AVF.skeleton(2));
+    Promise.all([AVF.api("GET", "/profile"), AVF.api("GET", "/uploads/profile").then(null, function () { return []; })]).then(function (res) {
+      var pr = res[0], P = pr || {}, f = {}, D = AVF.draft("profile"), restoring = false;
+      function changed() { if (!restoring) D.set(snapshot()); }
+      f.gender = AVF.choice({ label: "Cinsiyet", value: P.gender || "", clearable: true, onChange: changed, items: [{ value: "female", label: "Kadın", icon: "female" }, { value: "male", label: "Erkek", icon: "male" }] });
+      f.birth = AVF.dateSelect(P.birth_date || "", 14, changed);
+      f.work = AVF.workHours(P.work_hours || "", changed);
+      f.height = AVF.measure("height", P.height_cm, changed);
+      f.weight = AVF.measure("weight", P.weight_kg, changed);
+      var bs = iconSelect("drop", "Kan grubu", BLOOD, P.blood_type); f.blood = bs.sel; f.blood.addEventListener("change", changed);
+      f.goal = AVF.choice({ label: "Hedefiniz", value: P.goal || "", clearable: true, onChange: changed, items: GOALS.map(function (g) { return { value: g[0], label: g[0], icon: g[1] }; }) });
+      f.steps = AVF.choice({ label: "Günlük ortalama adım sayısı", value: P.steps_range || "", clearable: true, cols: 3, onChange: changed, items: STEPS.map(function (x) { return { value: x[0], label: x[1], icon: "steps" }; }) });
       f.occupation = AVF.input("text", { value: P.occupation || "", maxlength: "80", autocomplete: "organization-title", placeholder: "Mesleğiniz" });
       f.notes = h("textarea", { class: "inp", id: "pf-notes", maxlength: "1000", rows: "4", placeholder: "Kronik hastalık, yaralanma, kullandığınız ilaçlar gibi koçunuzun bilmesi gereken bilgiler" }, P.health_notes || "");
-      var cnt = h("span", { class: "cnt", text: (P.health_notes || "").length + "/1000" }); f.notes.addEventListener("input", function () { cnt.textContent = f.notes.value.length + "/1000"; });
-      var consent = h("input", { type: "checkbox", id: "pf-consent" }), msg = h("div", { class: "note err", role: "alert", style: "display:none" }), save = h("button", { class: "btn", type: "button" }, AVF.icon("save", "bico"), "Kaydet");
+      var cnt = h("span", { class: "cnt", text: "0/1000" });
+      function count() { cnt.textContent = f.notes.value.length + "/1000"; }
+      f.occupation.addEventListener("input", changed); f.notes.addEventListener("input", function () { count(); changed(); });
       var consented = !!P.health_consent_at;
+      f.files = AVF.fileBox({ scope: "profile", files: res[1] || [], locked: consented ? "" : "Dosya eklemek için önce açık rızanızı onaylayıp bilgilerinizi kaydedin." });
+
+      function snapshot() {
+        return { gender: f.gender.get(), birth: f.birth.raw(), work: f.work.raw(), height: f.height.raw(), weight: f.weight.raw(), blood: f.blood.value, goal: f.goal.get(), steps: f.steps.get(), occupation: f.occupation.value, notes: f.notes.value, consent: consent.checked };
+      }
+      function apply(d) {
+        restoring = true;
+        f.gender.set(d.gender || ""); f.birth.set(d.birth || ""); f.work.set(d.work || ""); f.height.setRaw(d.height); f.weight.setRaw(d.weight);
+        f.blood.value = d.blood || ""; f.goal.set(d.goal || ""); f.steps.set(d.steps || ""); f.occupation.value = d.occupation || ""; f.notes.value = d.notes || ""; consent.checked = !!d.consent; count();
+        restoring = false;
+      }
+      function payload() {
+        return { heightCm: f.height.getMetric(), weightKg: f.weight.getMetric(), birthDate: f.birth.get(), gender: f.gender.get(), stepsRange: f.steps.get(), workHours: f.work.get(), bloodType: f.blood.value,
+          occupation: f.occupation.value.trim(), goal: f.goal.get(), healthNotes: f.notes.value.trim() };
+      }
+      var consent = h("input", { type: "checkbox", id: "pf-consent" }); consent.addEventListener("change", changed);
+      var msg = h("div", { class: "note err", role: "alert", style: "display:none" }), save = h("button", { class: "btn", type: "button" }, AVF.icon("save", "bico"), "Kaydet");
+      var restoredNote = h("div", { class: "note draftnote", style: "display:none" }, AVF.icon("refresh", "ico"), h("span", { text: "Kaydedilmemiş değişiklikleriniz geri yüklendi." }),
+        h("button", { class: "lnk", type: "button", onclick: function () { D.clear(); AVF.profileView(el); } }, "Değişiklikleri at"));
       var form = h("div", { class: "pgrid" },
         h("div", { class: "note" }, "Bu bilgileri paylaşmak isteğe bağlıdır; size uygun program hazırlanmasına yardımcı olur. Yalnızca siz ve koçunuz görebilirsiniz. Dilediğiniz zaman silebilirsiniz."),
+        restoredNote,
         psec("id", "Genel Bilgiler", "Cinsiyet, doğum tarihi ve meslek", [
           h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("users")), "Cinsiyet"), f.gender),
           h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("calendar")), "Doğum tarihi"), f.birth),
           AVF.field("Meslek", f.occupation, { optional: true, icon: "briefcase" })]),
-        psec("pulse", "Vücut Ölçüleri", "Boy, kilo ve kan grubu", [
-          h("div", { class: "fgrid" }, num("height", "Boy (cm)", "ruler", P.height_cm, { min: "100", max: "250", step: "1" }, "Örn. 178"), num("weight", "Kilo (kg)", "weight", P.weight_kg, { min: "30", max: "300", step: "0.1" }, "Örn. 82.5")),
-          h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("drop")), "Kan grubu"), f.blood)]),
+        psec("clock", "Çalışma Saati", "Programınız iş düzeninize göre planlanır", [f.work]),
+        psec("pulse", "Vücut Ölçüleri", "Boy, kilo ve kan grubu — birimi dilediğiniz gibi seçin", [
+          h("div", { class: "fgrid" },
+            h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("ruler")), "Boy"), f.height),
+            h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("weight")), "Kilo"), f.weight)),
+          h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("drop")), "Kan grubu"), bs.el)]),
         psec("target", "Hedefiniz", "Şu an için öncelikli hedefiniz", [f.goal]),
         psec("steps", "Günlük Ortalama Adım", "Bir günde yaklaşık kaç adım attığınız", [f.steps]),
-        psec("alert", "Sağlık ve Sakatlık Durumu", "Koçunuzun bilmesi gereken sağlık bilgileri", [
-          f.notes, h("div", { class: "row between", style: "margin-top:6px" }, cnt),
-          h("div", { class: "upl off" }, h("span", { class: "tile" }, AVF.icon("image")), h("span", { class: "t" }, h("b", { text: "Görsel ekle" }), h("small", { text: "Tahlil, röntgen veya yaralanma görseli ekleme yakında etkinleşecek." })), h("button", { class: "btn ghost sm", type: "button", disabled: true }, AVF.icon("clip", "bico"), "Dosya seç"))]),
+        psec("alert", "Sağlık ve Sakatlık Durumu", "Koçunuzun bilmesi gereken sağlık bilgileri ve görselleri", [f.notes, h("div", { class: "row between", style: "margin-top:6px" }, cnt), f.files]),
         consented ? h("p", { class: "hint", text: "Açık rızanız " + AVF.fmtDate(P.health_consent_at) + " tarihinde alındı." }) :
           h("label", { class: "chk", for: "pf-consent" }, consent, h("span", {}, ["Sağlık ve koçluk bilgilerimin, program hazırlanması amacıyla koçum tarafından işlenmesine ", h("a", { href: "/yasal/kvkk", target: "_blank", rel: "noopener" }, "KVKK Aydınlatma Metni"), " kapsamında açık rıza veriyorum."])),
         msg, h("div", { class: "row", style: "gap:10px;flex-wrap:wrap;margin-top:6px" }, save, pr ? h("button", { class: "btn ghost", type: "button", onclick: function () {
-          AVF.confirmDialog({ icon: "trash", danger: true, title: "Bilgileriniz silinsin mi?", text: "Tüm kişisel bilgileriniz silinecek ve açık rızanız geri alınacak.", confirm: "Evet, sil", cancel: "Vazgeç" }).then(function (y) {
-            if (!y) return; AVF.api("DELETE", "/profile").then(function () { AVF.toast("Bilgileriniz silindi."); AVF.profileView(el); }, function (e) { AVF.toast(AVF.errText(e), "err"); });
+          AVF.confirmDialog({ icon: "trash", danger: true, title: "Bilgileriniz silinsin mi?", text: "Tüm kişisel bilgileriniz ve eklediğiniz dosyalar silinecek, açık rızanız geri alınacak.", confirm: "Evet, sil", cancel: "Vazgeç" }).then(function (y) {
+            if (!y) return; AVF.api("DELETE", "/profile").then(function () { D.clear(); AVF.toast("Bilgileriniz silindi."); AVF.profileView(el); }, function (e) { AVF.toast(AVF.errText(e), "err"); });
           });
         } }, AVF.icon("trash", "bico"), "Bilgilerimi sil ve rızamı geri al") : null));
-      AVF.mount(el, h("h2", { class: "ptitle", text: "Kişisel Bilgilerim" }), form);
+      var base = JSON.stringify(payload());   // sunucudaki hâl (taslak uygulanmadan önce)
+      var d = D.get(); if (d) { apply(d); if (JSON.stringify(payload()) !== base) restoredNote.style.display = ""; else D.clear(); }
+      count();
+      AVF.mount(el, h("h2", { class: "ptitle", text: "Kişisel Bilgiler" }), form);
+      function fail(t) { msg.textContent = t; msg.style.display = ""; msg.scrollIntoView({ block: "center", behavior: "smooth" }); }
       save.addEventListener("click", function () {
         msg.style.display = "none";
-        if (f.birth.partial()) { msg.textContent = "Doğum tarihini gün, ay ve yıl olarak tamamlayın."; msg.style.display = ""; return; }
+        if (f.birth.partial()) return fail("Doğum tarihini gün, ay ve yıl olarak tamamlayın.");
+        var me = f.height.error() || f.weight.error(); if (me) return fail(me);
+        if (f.work.incomplete()) return fail("Çalışma saatiniz için başlangıç ve bitiş saatini seçin.");
+        if (f.files.busy()) return fail("Dosyalar yükleniyor; lütfen yükleme bitince kaydedin.");
+        var body = payload();
+        var any = Object.keys(body).some(function (k) { return body[k] !== "" && body[k] !== null; });
+        if (!any) return fail(pr ? "Kaydedilecek bilgi yok. Tüm bilgilerinizi kaldırmak için “Bilgilerimi sil” seçeneğini kullanın." : "Kaydetmek için en az bir bilgi girin.");
+        if (JSON.stringify(body) === base && consented) { D.clear(); restoredNote.style.display = "none"; return AVF.toast("Kaydedilecek bir değişiklik yok."); }
+        if (!consented && !consent.checked) return fail("Bu bilgileri kaydedebilmemiz için açık rızanızı onaylamanız gerekir.");
+        body.healthConsent = consented || consent.checked;
         AVF.busy(save, true, "Kaydediliyor…");
-        AVF.api("PUT", "/profile", { heightCm: f.height.value, weightKg: f.weight.value, birthDate: f.birth.get(), gender: f.gender.get(), stepsRange: f.steps.get(), bloodType: f.blood.get(),
-          occupation: f.occupation.value, goal: f.goal.get(), healthNotes: f.notes.value, healthConsent: consented || consent.checked }).then(function () { AVF.toast("Bilgileriniz kaydedildi."); AVF.profileView(el); },
-          function (e) { AVF.busy(save, false); msg.textContent = AVF.errText(e); msg.style.display = ""; });
+        AVF.api("PUT", "/profile", body).then(function () { D.clear(); AVF.toast("Bilgileriniz kaydedildi."); AVF.profileView(el); },
+          function (e) { AVF.busy(save, false); fail(AVF.errText(e)); });
       });
-    }, function (e) { AVF.mount(el, h("h2", { class: "ptitle", text: "Kişisel Bilgilerim" }), AVF.state("alert", "Bilgiler yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: function () { AVF.profileView(el); } }, "Tekrar dene"))); });
+    }, function (e) { AVF.mount(el, h("h2", { class: "ptitle", text: "Kişisel Bilgiler" }), AVF.state("alert", "Bilgiler yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: function () { AVF.profileView(el); } }, "Tekrar dene"))); });
   };
 })();
