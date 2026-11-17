@@ -11,7 +11,7 @@ import { PLAN_KINDS, KIND_LABELS, isPlanKind, canAuthorKind, normalizeKinds, FOR
 import { isNonEmptyString } from "../utils/validate.js";
 import { logAudit } from "../utils/auditLog.js";
 import { sendMail } from "../utils/mailer.js";
-import { planPublishedMail } from "../utils/emailTemplates.js";
+import { planPublishedMail, ticketReplyMail, mailLang } from "../utils/emailTemplates.js";
 import { markOrderPaid } from "../services/orderFulfilment.js";
 import { PROFILE_COLS } from "./profile.js";
 
@@ -386,6 +386,9 @@ adminRouter.post("/tickets/:id/reply", requireAdmin, async (req, res) => {
     `INSERT INTO ticket_messages (ticket_id, from_role, admin_id, body) VALUES ($1, 'support', $2, $3) RETURNING id, from_role, body, created_at`, [req.params.id, req.user.sub, cleanText(m)]);
   await pool.query(`UPDATE tickets SET status = 'answered', updated_at = now() WHERE id = $1 RETURNING id`, [req.params.id]);
   await pool.query(`INSERT INTO notifications (user_id, type, text) VALUES ($1, 'ticket', $2) RETURNING id`, [t.rows[0].user_id, `${t.rows[0].ticket_number} numaralı destek talebinize yanıt verildi.`]);
+  pool.query(`SELECT email, preferred_lang FROM users WHERE id = $1`, [t.rows[0].user_id])
+    .then(({ rows: u }) => u[0] && sendMail(u[0].email, ticketReplyMail(u[0].preferred_lang || mailLang(req), { ticketNumber: t.rows[0].ticket_number })))
+    .catch(() => {});   // bildirim e-postası gönderilemezse yanıt yine kaydedilmiş olur
   await logAudit(req.user.sub, "ticket_reply", "ticket", req.params.id, { ticketNumber: t.rows[0].ticket_number }, ip(req));
   res.status(201).json(rows[0]);
 });

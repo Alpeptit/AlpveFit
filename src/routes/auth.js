@@ -6,7 +6,7 @@ import { verifyTotpOnce } from "../utils/totpOnce.js";
 import { pool } from "../db/pool.js";
 import { hashPassword, verifyPassword, validatePassword, validateUsername, isSameAsCurrentPassword, SAME_PASSWORD_ERROR, hasWhitespace, PASSWORD_SPACE_ERROR } from "../utils/password.js";
 import { createVerificationCode, verifyCode, sendMail, createTicket, peekCode, consumeCodeId } from "../utils/mailer.js";
-import { codeMail, noticeMail, mailLang, resetMail, siteBase } from "../utils/emailTemplates.js";
+import { codeMail, noticeMail, mailLang, resetMail, siteBase, welcomeMail } from "../utils/emailTemplates.js";
 import { rememberLang } from "../utils/lang.js";
 import { verifyRecaptcha } from "../utils/recaptcha.js";
 import { checkBan, recordFailure, clearFailures, recordLoginPasswordFailure, checkAndIncrementResendCount, checkHourlyActionLimit, sendLocked, sendCodeFailure, isLockActive, clearTemporaryLock, clearLoginPasswordFailures, LOGIN_NOTIFY_MS } from "../utils/rateLimit.js";
@@ -157,6 +157,7 @@ authRouter.post("/register/verify", async (req, res) => {
   if (!user) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
   const { token_version, ...publicUser } = user; // istemciye iç detay sızdırılmaz
   issueAuthCookies(res, signToken(user));
+  sendMail(user.email, welcomeMail(mailLang(req), { name: String(user.full_name || "").split(" ")[0] })).catch(() => {});   // karşılama iletisi; gönderilemezse kayıt etkilenmez
   res.json({ user: publicUser });
 });
 

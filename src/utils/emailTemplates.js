@@ -1,8 +1,8 @@
-// AlpveFit e-posta şablonları (AlpveFit şablon yapısından türetildi; marka, renk ve içerik AlpveFit'e ait) (tek merkez).
-// • Koyu antrasit üst bant + lime ◆ ALPVEFIT, beyaz kart, lime vurgu, ortalanmış kod kutusu.
+// AlpveFit e-posta şablonları (tek merkez). Kimlik: siteyle aynı — antrasit siyah (#111113), sıcak kâğıt zemini, beyaz kart,
+// siyah "A" rozeti ve düz siyah düğme; vurgu rengi yok.
 // • E-posta istemcisi uyumluluğu: tablo düzeni, satır içi stil, harici yazı tipi/görsel/izleme pikseli YOK
 //   (görseller kapalıyken de eksiksiz görünür; alıcı hakkında hiçbir veri dışarı sızmaz).
-// • Her ileti TR/EN; dil isteği yapan tarayıcının dilinden (X-Alp-Lang) veya üyenin kayıtlı dilinden gelir.
+// • Her ileti TR/EN; dil, isteği yapan tarayıcının dilinden (X-Avf-Lang) veya üyenin kayıtlı dilinden gelir.
 // • Her şablon { subject, html, text } döner — düz metin sürümü spam filtrelerinde ve metin tabanlı istemcilerde okunur.
 // • Şablona giren TÜM değişken değerler HTML'e kaçışlanarak yazılır (ad, e-posta, plan türü, hazırlayan adı…).
 
@@ -24,20 +24,20 @@ export function siteBase() {
 }
 
 const C = {
-  ink: "#0f172a", body: "#334155", muted: "#64748b", line: "#e7e2dc", page: "#F5F7F2", dark: "#17201D",
-  orange: "#B8E84B", orangeSoft: "#F0F8DA", orangeLine: "#B8E84B", orangeText: "#1F6B5B",
+  ink: "#111113", body: "#26262A", muted: "#5E5E66", soft: "#8A8A92", line: "#E5E4DF", line2: "#D5D4CE", page: "#F6F6F3", card: "#FFFFFF",
+  tint: "#F6F6F3", strong: "#ECEBE7",
 };
-const FONT = "'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 const MONO = "'SFMono-Regular',Menlo,Consolas,'Liberation Mono',monospace";
 
 // ---------- yapı taşları (her biri { html, text }) ----------
 const p = (s) => ({ html: `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:${C.body}">${s}</p>`, text: strip(s) });
 const codeBox = (code, note) => ({
   html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:22px auto 8px"><tr>
-<td align="center" style="background:${C.orangeSoft};border:1px dashed ${C.orangeLine};border-radius:14px;padding:18px 30px">
+<td align="center" style="background:${C.tint};border:1px solid ${C.line2};border-radius:14px;padding:18px 30px">
 <div style="font-family:${MONO};font-size:34px;line-height:1.1;font-weight:800;letter-spacing:10px;color:${C.ink};padding-left:10px">${esc(code)}</div>
 </td></tr></table>
-<p style="margin:0 0 20px;text-align:center;font-size:12.5px;line-height:1.5;color:${C.orangeText};font-weight:600">${esc(note)}</p>`,
+<p style="margin:0 0 20px;text-align:center;font-size:12.5px;line-height:1.5;color:${C.muted};font-weight:600">${esc(note)}</p>`,
   text: `\n    ${code}\n    (${note})\n`,
 });
 const rows = (list) => {
@@ -49,38 +49,29 @@ const rows = (list) => {
     text: r.map(([k, v]) => `${k}: ${v}`).join("\n"),
   };
 };
-const items = (list, lang) => {
-  const r = (list || []).slice(0, 30);
-  if (!r.length) return { html: "", text: "" };
-  return {
-    html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px">${
-      r.map((x) => `<tr><td style="padding:6px 0;font-size:14px;color:${C.body}">${esc(x.name)}${x.batch ? ` <span style="color:${C.muted};font-size:12px">· ${esc(lang === "en" ? "Batch" : "Parti")} ${esc(x.batch)}</span>` : ""}</td><td align="right" style="padding:6px 0;font-size:14px;color:${C.ink};font-weight:700;white-space:nowrap">× ${esc(x.qty)}</td></tr>`).join("")
-    }</table>`,
-    text: r.map((x) => `- ${x.name} × ${x.qty}`).join("\n"),
-  };
-};
 const callout = (s, tone) => {
-  const t = tone === "danger" ? ["#fef2f2", "#ef4444", "#7f1d1d"] : tone === "ok" ? ["#f0fdf4", "#22c55e", "#14532d"] : ["#f8fafc", "#94a3b8", C.body];
-  return { html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 18px"><tr><td style="background:${t[0]};border-left:3px solid ${t[1]};border-radius:8px;padding:12px 14px;font-size:13.5px;line-height:1.6;color:${t[2]}">${s}</td></tr></table>`, text: strip(s) };
+  // Yalnız siyah/beyaz/gri: uyarı (danger) daha koyu zemin ve kalın siyah şeritle ayrılır; renk kullanılmaz.
+  const t = tone === "danger" ? [C.strong, C.ink, C.ink, 4, "700"] : [C.tint, C.ink, C.body, 3, "400"];
+  return { html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 18px"><tr><td style="background:${t[0]};border-left:${t[3]}px solid ${t[1]};border-radius:8px;padding:12px 14px;font-size:13.5px;line-height:1.6;color:${t[2]};font-weight:${t[4]}">${s}</td></tr></table>`, text: strip(s) };
 };
 const button = (label, href) => {
   if (!href) return { html: "", text: "" };
   return {
-    html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 22px"><tr><td align="center" bgcolor="${C.orange}" style="border-radius:12px">
-<a href="${esc(href)}" style="display:inline-block;padding:13px 24px;font-family:${FONT};font-size:14.5px;font-weight:800;color:#17201D;text-decoration:none;border-radius:12px">${esc(label)}</a></td></tr></table>`,
+    html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 22px"><tr><td align="center" bgcolor="${C.ink}" style="border-radius:12px">
+<a href="${esc(href)}" style="display:inline-block;padding:13px 26px;font-family:${FONT};font-size:14.5px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px">${esc(label)}</a></td></tr></table>`,
     text: `${label}: ${href}`,
   };
 };
 function strip(s) { return String(s).replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'"); }
 
 const FOOT = {
-  tr: { auto: "Bu e-posta AlpveFit hesabınızla ilgili bir işlem nedeniyle otomatik olarak gönderildi; lütfen yanıtlamayın. Yardım için sitemizdeki canlı desteği kullanabilirsiniz.",
+  tr: { auto: "Bu e-posta AlpveFit hesabınızla ilgili bir işlem nedeniyle otomatik olarak gönderildi; lütfen yanıtlamayın. Yardım için destek@alpvefit.com adresine yazabilir veya panelinizden destek talebi oluşturabilirsiniz.",
         never: "AlpveFit sizden hiçbir zaman şifrenizi, doğrulama kodunuzu veya kurtarma kodlarınızı istemez." },
-  en: { auto: "This email was sent automatically because of an action on your AlpveFit account; please do not reply. For help, use live support on our website.",
+  en: { auto: "This email was sent automatically because of an action on your AlpveFit account; please do not reply. For help, write to destek@alpvefit.com or open a support request from your panel.",
         never: "AlpveFit will never ask you for your password, verification code or recovery codes." },
 };
 
-/** Ortak çerçeve: üst bant, kart, alt bilgi. blocks = [{html,text}] */
+/** Ortak çerçeve: marka satırı, kart, alt bilgi. blocks = [{html,text}] */
 function layout(lang, { preheader, eyebrow, title, blocks, footer }) {
   const lg = L(lang), f = FOOT[lg], year = new Date().getUTCFullYear();
   const foot = footer || f.auto;
@@ -90,19 +81,21 @@ function layout(lang, { preheader, eyebrow, title, blocks, footer }) {
 <style>@media only screen and (max-width:480px){.ap-out{padding:16px 8px!important}.ap-px{padding-left:20px!important;padding-right:20px!important}.ap-h1{font-size:20px!important}}</style></head>
 <body style="margin:0;padding:0;background:${C.page};-webkit-text-size-adjust:100%">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(preheader || title)}&#8203;&#8199;&#8203;&#8199;&#8203;&#8199;&#8203;&#8199;</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.page}"><tr><td align="center" class="ap-out" style="padding:28px 14px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.page}"><tr><td align="center" class="ap-out" style="padding:32px 14px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;font-family:${FONT}">
-<tr><td class="ap-px" style="background:${C.dark};border-radius:16px 16px 0 0;padding:20px 28px">
-<span style="color:#B8E84B;font-size:16px;line-height:1">&#9670;</span>&nbsp;<span style="color:#F5F7F2;font-size:15px;font-weight:800;letter-spacing:.16em">ALPVEFIT</span></td></tr>
-<tr><td style="height:3px;line-height:3px;font-size:0;background:${C.orange}">&nbsp;</td></tr>
-<tr><td class="ap-px" style="background:#ffffff;padding:30px 28px 14px">
-${eyebrow ? `<div style="font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${C.orangeText};margin:0 0 10px">${esc(eyebrow)}</div>` : ""}
-<h1 class="ap-h1" style="margin:0 0 16px;font-size:22px;line-height:1.3;color:${C.ink};font-weight:800">${esc(title)}</h1>
+<tr><td style="padding:0 4px 16px">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td width="34" height="34" align="center" valign="middle" bgcolor="${C.ink}" style="width:34px;height:34px;border-radius:10px;background:${C.ink};color:#ffffff;font-family:${FONT};font-size:18px;font-weight:800;line-height:34px">A</td>
+<td style="padding-left:10px;font-family:${FONT};font-size:18px;font-weight:800;letter-spacing:-.01em;color:${C.ink}">AlpveFit</td>
+</tr></table></td></tr>
+<tr><td class="ap-px" style="background:${C.card};border:1px solid ${C.line};border-bottom:0;border-radius:18px 18px 0 0;padding:32px 30px 14px">
+${eyebrow ? `<div style="font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${C.soft};margin:0 0 10px">${esc(eyebrow)}</div>` : ""}
+<h1 class="ap-h1" style="margin:0 0 16px;font-size:23px;line-height:1.3;color:${C.ink};font-weight:800;letter-spacing:-.01em">${esc(title)}</h1>
 ${blocks.map((b) => b.html).join("\n")}
 </td></tr>
-<tr><td class="ap-px" style="background:#ffffff;border-radius:0 0 16px 16px;padding:0 28px 26px">
-<div style="border-top:1px solid ${C.line};padding-top:16px;font-size:12px;line-height:1.6;color:${C.muted}">${foot}<br><span style="color:#94a3b8">${esc(f.never)}</span></div></td></tr>
-<tr><td align="center" style="padding:16px 8px 0;font-size:11.5px;color:#94a3b8">&copy; ${year} AlpveFit · <a href="${BRAND_URL}" style="color:#94a3b8;text-decoration:underline">alpvefit.com</a></td></tr>
+<tr><td class="ap-px" style="background:${C.card};border:1px solid ${C.line};border-top:0;border-radius:0 0 18px 18px;padding:0 30px 26px">
+<div style="border-top:1px solid ${C.line};padding-top:16px;font-size:12px;line-height:1.6;color:${C.muted}">${foot}<br><span style="color:${C.soft}">${esc(f.never)}</span></div></td></tr>
+<tr><td align="center" style="padding:18px 8px 0;font-size:11.5px;color:${C.soft}">&copy; ${year} AlpveFit · <a href="${BRAND_URL}" style="color:${C.soft};text-decoration:underline">alpvefit.com</a></td></tr>
 </table></td></tr></table></body></html>`;
   const text = [`ALPVEFIT`, ``, title, ``, ...blocks.map((b) => b.text).filter(Boolean), ``, `—`, strip(foot), f.never, `\n${BRAND_URL}`].join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
   return { html, text };
@@ -115,8 +108,8 @@ const NOT_YOU = {
   en: "If you did not start this, ignore this email and do not share the code; we recommend changing your password.",
 };
 const NOT_YOU_DONE = {
-  tr: "Bu işlemi siz yapmadıysanız hemen şifrenizi değiştirin ve sitemizdeki canlı destek üzerinden bizimle iletişime geçin.",
-  en: "If this wasn't you, change your password immediately and contact us via live support on our website.",
+  tr: "Bu işlemi siz yapmadıysanız hemen şifrenizi değiştirin ve destek@alpvefit.com adresinden bizimle iletişime geçin.",
+  en: "If this wasn't you, change your password immediately and contact us at destek@alpvefit.com.",
 };
 
 // ---------- KODLU İLETİLER ----------
@@ -275,4 +268,33 @@ export function orderPaidMail(lang, o) {
   ];
   const { html, text } = layout(lg, { preheader: t, eyebrow: en ? "Order" : "Sipariş", title: t, blocks });
   return { subject: subj(en ? "Payment Confirmed" : "Ödeme Onaylandı"), html, text };
+}
+
+/** Hesap etkinleştirildi (kayıt doğrulaması tamamlandı). */
+export function welcomeMail(lang, o = {}) {
+  const lg = L(lang), en = lg === "en", base = siteBase();
+  const t = en ? "Welcome to AlpveFit" : "AlpveFit'e hoş geldiniz";
+  const blocks = [
+    p(esc(en ? `${o.name ? `Hi ${o.name}, your` : "Your"} account is ready. AlpveFit is a remote education and coaching platform: every program is prepared by us from scratch, entirely for you.`
+             : `${o.name ? `Merhaba ${o.name}, hesabınız` : "Hesabınız"} hazır. AlpveFit uzaktan eğitim ve koçluk platformudur: her program tarafımızca sıfırdan, tamamen size özel hazırlanır.`)),
+    rows([[en ? "1. Choose" : "1. Seçin", en ? "a package that fits your goal" : "Hedefinize uygun paketi"], [en ? "2. Pay" : "2. Ödeyin", en ? "securely on the website" : "Sitede güvenle"], [en ? "3. Receive" : "3. Teslim alın", en ? "your programs in your panel within 24 hours" : "Programlarınızı 24 saat içinde panelinizde"]]),
+    button(en ? "View packages" : "Paketleri incele", base ? `${base}/paketler` : ""),
+    callout(esc(en ? "Tip: turn on two-step verification (Google Authenticator) in My Account › Account Settings to keep your account safer." : "İpucu: hesabınızı daha güvende tutmak için Hesabım › Hesap Ayarları bölümünden iki adımlı doğrulamayı (Google Authenticator) açın.")),
+  ];
+  const { html, text } = layout(lg, { preheader: t, eyebrow: en ? "Account ready" : "Hesap hazır", title: t, blocks });
+  return { subject: subj(en ? "Welcome" : "Hoş Geldiniz"), html, text };
+}
+
+/** Destek talebine yanıt verildi. Yanıt metni e-postaya konmaz; yalnız bildirim ve panele bağlantı. */
+export function ticketReplyMail(lang, o) {
+  const lg = L(lang), en = lg === "en", base = siteBase();
+  const t = en ? "Your support request was answered" : "Destek talebinize yanıt verildi";
+  const blocks = [
+    p(esc(en ? "We replied to your support request. For your privacy, the reply is not included in this email; sign in to your panel to read it."
+             : "Destek talebinize yanıt verdik. Gizliliğiniz için yanıt bu e-postada yer almaz; okumak için panelinize giriş yapın.")),
+    rows([[en ? "Request" : "Talep", o.ticketNumber]]),
+    button(en ? "View my requests" : "Taleplerimi görüntüle", base ? `${base}/panel/destek` : ""),
+  ];
+  const { html, text } = layout(lg, { preheader: t, eyebrow: en ? "Support" : "Destek", title: t, blocks });
+  return { subject: subj(en ? "Support Request Answered" : "Destek Talebi Yanıtlandı"), html, text };
 }
