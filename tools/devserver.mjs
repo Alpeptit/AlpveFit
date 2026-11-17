@@ -79,6 +79,7 @@ http.createServer(async (rq, rs) => {
       return next();
     }
     // ---- site ----
+    if (path === "/admin" || path === "/admin/") { const u = await panelUser({ headers: rq.headers }); if (!u) return sendFile(rs, join(root, "site/404.html"), 404); rs.writeHead(302, { location: "/uzman", "cache-control": "private, no-store" }); return rs.end(); }
     if (path === "/uzman" || path.startsWith("/uzman/")) { const u = await panelUser({ headers: rq.headers }); if (!u) return sendFile(rs, join(root, "site/404.html"), 404); return sendFile(rs, join(root, "site-uzman/index.html")); }
     if (path.startsWith("/assets/uzman/")) { const u = await panelUser({ headers: rq.headers }); const f = join(root, "site-uzman/assets", path.slice(14)); if (!u || !existsSync(f)) { rs.writeHead(404); return rs.end("Not found"); } return sendFile(rs, f); }
     if (path.startsWith("/assets/")) { const f = join(root, "site", path); if (!f.startsWith(join(root, "site/assets")) || !existsSync(f) || !statSync(f).isFile()) { rs.writeHead(404); return rs.end("Not found"); } return sendFile(rs, f); }

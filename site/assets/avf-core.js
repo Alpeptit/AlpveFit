@@ -186,6 +186,28 @@
     return AVF.h("div", { class: "card state" }, AVF.h("span", { class: "tile" }, AVF.icon(icon)), AVF.h("h3", { text: title }), text ? AVF.h("p", { text: text }) : null, action || null);
   };
   AVF.skeleton = function (n) { var a = []; for (var i = 0; i < (n || 3); i++) a.push(AVF.h("div", { class: "skel" })); return AVF.h("div", { class: "stack", "aria-busy": "true", "aria-label": "Yükleniyor" }, a); };
+  // İmleç efekti (yalnız fareli masaüstü, hareket azaltma kapalıyken): ".fx" kart yükselir; imlecin altında yumuşak bir ışık
+  // ve kenarda imleci izleyen ince bir çizgi dolaşır. Olay yetkilendirmesiyle çalışır; kartlar yeniden çizilse de ek bağlama gerekmez.
+  (function () {
+    if (!window.matchMedia || !matchMedia("(hover:hover) and (pointer:fine)").matches || matchMedia("(prefers-reduced-motion:reduce)").matches) return;
+    var cur = null, last = null, raf = 0;
+    function off(el) { el.classList.remove("fx-on"); }
+    function paint() {
+      raf = 0; if (!cur || !last) return;
+      var r = cur.getBoundingClientRect(); if (!r.width || !r.height) return;
+      var x = Math.min(1, Math.max(0, (last.clientX - r.left) / r.width)), y = Math.min(1, Math.max(0, (last.clientY - r.top) / r.height));
+      cur.style.setProperty("--mx", (x * 100).toFixed(1) + "%"); cur.style.setProperty("--my", (y * 100).toFixed(1) + "%");
+    }
+    document.addEventListener("pointermove", function (e) {
+      if (e.pointerType && e.pointerType !== "mouse") return;
+      var el = e.target && e.target.closest ? e.target.closest(".fx") : null;
+      if (el !== cur) { if (cur) off(cur); cur = el; if (cur) cur.classList.add("fx-on"); }
+      if (!cur) return; last = e; if (!raf) raf = requestAnimationFrame(paint);
+    }, { passive: true });
+    document.addEventListener("pointerleave", function () { if (cur) off(cur); cur = null; });
+    window.addEventListener("blur", function () { if (cur) off(cur); cur = null; });
+  })();
+
   AVF.accordion = function (opts) {
     var wrap = AVF.h("div", { class: "card acc" + (opts.open ? " open" : "") });
     var id = "acc" + Math.random().toString(36).slice(2, 8);

@@ -214,8 +214,8 @@ app.use("/api", accountRouter);       // /api/account/* (ad/e-posta/şifre deği
 app.use("/api", notificationsRouter); // /api/notifications
 app.use("/api", ordersRouter);        // /api/packages, /api/orders/* — paket siparişi (USDT TRC20)
 // Canlı destek ve destek talepleri: ayrı ve dar bir hız sınırı (yoklama + mesaj gönderimi). Genel sınırlar da geçerlidir.
-app.use(["/api/live-chat", "/api/tickets"], rateLimit({ windowMs: 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false, message: { error: "Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin." } }));
-app.use("/api", supportRouter);       // /api/live-chat/*, /api/tickets/* — canlı destek ve destek talepleri
+app.use("/api/tickets", rateLimit({ windowMs: 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false, message: { error: "Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin." } }));
+app.use("/api", supportRouter);       // /api/tickets/* — destek talepleri
 app.use("/api", blogRouter);          // /api/blog — herkese açık blog (yazma: /api/admin/blog)
 app.use("/api", profileRouter);       // /api/profile — üyenin koçluk bilgileri
 

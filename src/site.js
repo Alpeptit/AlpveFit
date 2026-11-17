@@ -75,6 +75,13 @@ export function mountSite(app) {
     res.sendFile(expertPage);
   });
 
+  // /admin: alışılmış adres — yalnız panel rolündeki oturumu /uzman'a yönlendirir; diğer herkese aynı genel 404 (alanın varlığı belli olmaz).
+  app.get(["/admin", "/admin/"], async (req, res) => {
+    if (!(await panelUser(req))) return sendNotFound(res);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.redirect(302, "/uzman");
+  });
+
   // Tek sayfa uygulama: /panel, /panel/*, /giris vb. istemci tarafı yönlendirilir.
   const SPA = ["/", "/giris", "/kayit", "/sifremi-unuttum", "/paketler", "/sss", "/hakkimizda", "/blog", "/blog/*", "/araclar", "/araclar/*", "/forum", "/yasal/*", "/panel", "/panel/*"];
   app.get(SPA, (req, res) => { htmlHeaders(res); res.sendFile(indexFile); });

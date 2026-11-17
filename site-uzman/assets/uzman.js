@@ -63,21 +63,13 @@
     }, function (e) { AVF.mount(c, h("h2", { class: "ptitle", text: "Üyeler" }), AVF.state("alert", "Üyeler yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: render }, "Tekrar dene"))); });
   }
 
-  // ---------- DESTEK (yalnız yönetici): canlı destek görüşmeleri, çevrimdışı mesajlar, destek talepleri, çalışma saatleri ----------
-  var supTab = "canli", supSel = null, supTimer = null;
+  // ---------- DESTEK TALEPLERİ (yalnız yönetici) ----------
+  var supSel = null;
   function supportView(c) {
-    clearTimeout(supTimer);
-    var tabsEl = h("div", { class: "seg", role: "tablist", style: "margin-bottom:16px;max-width:620px" }), body = h("div");
-    var summary = h("p", { class: "hint", style: "margin:-6px 0 14px" });
-    AVF.mount(c, h("h2", { class: "ptitle", text: "Destek" }), summary, tabsEl, body);
-    [["canli", "Canlı destek"], ["cevrimdisi", "Çevrimdışı mesajlar"], ["ticket", "Destek talepleri"], ["saat", "Çalışma saatleri"]].forEach(function (t) {
-      tabsEl.appendChild(h("button", { type: "button", role: "tab", "aria-selected": String(supTab === t[0]), onclick: function () { supTab = t[0]; supSel = null; supportView(c); } }, t[1]));
-    });
-    api("GET", "/support/summary").then(function (s) { summary.textContent = "Açık görüşme: " + s.chats + " · Okunmamış mesaj: " + s.unread + " · Yeni çevrimdışı mesaj: " + s.offline + " · Yanıt bekleyen talep: " + s.tickets; }, function () {});
-    if (supTab === "canli") return chatsPane(body, c);
-    if (supTab === "cevrimdisi") return offlinePane(body);
-    if (supTab === "ticket") return ticketsPane(body);
-    return hoursPane(body);
+    var body = h("div"), summary = h("p", { class: "hint", style: "margin:-6px 0 14px" });
+    AVF.mount(c, h("h2", { class: "ptitle", text: "Destek talepleri" }), summary, body);
+    api("GET", "/support/summary").then(function (s) { summary.textContent = "Yanıt bekleyen talep: " + s.tickets; }, function () {});
+    return ticketsPane(body);
   }
   function thread(msgs, mineRole) {
     return h("div", { class: "tthread" }, msgs.map(function (m) {
@@ -88,49 +80,6 @@
   function replyForm(onSend) {
     var ta = h("textarea", { class: "inp", rows: "3", maxlength: "1444", placeholder: "Yanıtınızı yazın…", "aria-label": "Yanıt" }), eb = h("div"), b = h("button", { class: "btn sm", type: "submit" }, "Gönder");
     return h("form", { novalidate: true, style: "margin-top:12px", onsubmit: function (e) { e.preventDefault(); if (!ta.value.trim()) return; AVF.busy(b, true); onSend(ta.value.trim()).then(null, function (er) { AVF.busy(b, false); err(eb, er); }); } }, ta, eb, h("div", { class: "row", style: "margin-top:8px" }, b));
-  }
-  function chatsPane(box, c) {
-    if (supSel) {
-      var chat = supSel, tb = h("div", { class: "card", style: "padding:16px" }, AVF.skeleton(2));
-      AVF.mount(box, h("div", { class: "row between", style: "margin-bottom:12px" }, h("button", { class: "btn ghost sm", type: "button", onclick: function () { supSel = null; supportView(c); } }, "← Görüşmelere dön"),
-        chat.status === "open" ? h("button", { class: "btn ghost sm danger-t", type: "button", onclick: function () {
-          if (!confirm("Görüşme kapatılsın mı?")) return;
-          api("PATCH", "/live-chats/" + chat.id + "/close", { confirmed: true }).then(function () { AVF.toast("Görüşme kapatıldı."); supSel = null; supportView(c); }, function (e) { AVF.toast(AVF.errText(e), "err"); });
-        } }, "Görüşmeyi kapat") : null),
-        h("p", { class: "hint", "data-notr": "", text: (chat.name || "") + " · " + (chat.email || "") + (chat.is_member ? " · Üye" : " · Misafir") }), tb);
-      var load = function () {
-        api("GET", "/live-chats/" + chat.id + "/messages").then(function (d) {
-          if (supSel !== chat) return;
-          AVF.mount(tb, d.messages.length ? thread(d.messages) : h("p", { class: "hint", text: "Henüz mesaj yok." }),
-            d.status === "open" ? replyForm(function (v) { return api("POST", "/live-chats/" + chat.id + "/messages", { message: v }).then(load); }) : h("div", { class: "note", style: "margin-top:12px" }, "Görüşme kapatıldı."));
-          clearTimeout(supTimer); supTimer = setTimeout(function () { if (supSel === chat && document.body.contains(tb) && !tb.querySelector("textarea:focus")) load(); }, 5000);
-        }, function (e) { err(tb, e); });
-      };
-      return load();
-    }
-    var list = h("div", { class: "stack" }, AVF.skeleton(2)); AVF.mount(box, list);
-    api("GET", "/live-chats").then(function (rows) {
-      if (!rows.length) return AVF.mount(list, AVF.state("msg", "Açık görüşme yok", "Ziyaretçiler canlı destekten yazdığında burada görünür."));
-      AVF.mount(list, rows.map(function (r) {
-        return h("button", { class: "card ordrow", type: "button", style: "width:100%;text-align:left;border:1px solid var(--line)", onclick: function () { supSel = r; supportView(c); } },
-          h("span", { class: "tile" }, AVF.icon("msg")), h("span", { class: "t" }, h("b", { "data-notr": "", text: (r.name || "Ziyaretçi") + (r.is_member ? " (üye)" : "") }), h("small", { "data-notr": "", text: (r.last_message || "—").slice(0, 90) + " · " + AVF.fmtDateTime(r.last_message_at) })),
-          r.unread ? h("span", { class: "badge", style: "position:static", text: String(r.unread) }) : null, AVF.icon("chev", "chev"));
-      }));
-      clearTimeout(supTimer); supTimer = setTimeout(function () { if (tab === "destek" && supTab === "canli" && !supSel && document.body.contains(list)) supportView(c); }, 10000);
-    }, function (e) { err(list, e); });
-  }
-  function offlinePane(box) {
-    var list = h("div", { class: "stack" }, AVF.skeleton(2)); AVF.mount(box, list);
-    api("GET", "/offline-messages").then(function (rows) {
-      if (!rows.length) return AVF.mount(list, AVF.state("mail", "Çevrimdışı mesaj yok", "Destek çevrimdışıyken bırakılan mesajlar burada görünür."));
-      var ST = { new: "Yeni", answered: "Yanıtlandı", archived: "Arşivlendi" };
-      AVF.mount(list, rows.map(function (o) {
-        function mark(s) { return h("button", { class: "btn ghost sm", type: "button", onclick: function () { api("PATCH", "/offline-messages/" + o.id, { status: s }).then(function () { offlinePane(box); }, function (e) { AVF.toast(AVF.errText(e), "err"); }); } }, s === "answered" ? "Yanıtlandı" : "Arşivle"); }
-        return h("div", { class: "card", style: "padding:16px" }, h("div", { class: "row between" }, h("b", { "data-notr": "", text: o.name + " · " + o.email }), h("span", { class: "chip" + (o.status === "new" ? " dk" : ""), text: ST[o.status] })),
-          h("p", { "data-notr": "", style: "white-space:pre-wrap;margin:10px 0", text: o.body }), h("div", { class: "row" }, h("small", { class: "hint", text: AVF.fmtDateTime(o.created_at) }),
-            h("a", { class: "btn sm", href: "mailto:" + o.email + "?subject=" + encodeURIComponent("AlpveFit Destek") }, AVF.icon("mail", "bico"), "E-posta ile yanıtla"), o.status === "new" ? mark("answered") : null, o.status !== "archived" ? mark("archived") : null));
-      }));
-    }, function (e) { err(list, e); });
   }
   function ticketsPane(box) {
     if (supSel && supSel.ticket_number) {
@@ -158,19 +107,6 @@
       }));
     }, function (e) { err(list, e); });
   }
-  function hoursPane(box) {
-    AVF.mount(box, AVF.skeleton(1));
-    api("GET", "/support-status").then(function (s) {
-      var mode = h("select", { class: "inp", id: "sm" }, [["auto", "Otomatik (çalışma saatlerine göre)"], ["online", "Her zaman çevrimiçi"], ["offline", "Çevrimdışı"]].map(function (o) { return h("option", { value: o[0], text: o[1], selected: s.mode === o[0] }); }));
-      var oh = AVF.input("number", { min: "0", max: "23", value: String(s.hours.open) }), ch = AVF.input("number", { min: "1", max: "24", value: String(s.hours.close) }), eb = h("div"), b = h("button", { class: "btn", type: "submit" }, "Kaydet");
-      AVF.mount(box, h("form", { class: "card", style: "padding:20px;max-width:560px", novalidate: true, onsubmit: function (e) {
-        e.preventDefault(); AVF.busy(b, true);
-        api("PATCH", "/support-status", { mode: mode.value, openHour: Number(oh.value), closeHour: Number(ch.value) }).then(function () { AVF.busy(b, false); AVF.toast("Kaydedildi."); hoursPane(box); }, function (er) { AVF.busy(b, false); err(eb, er); });
-      } }, h("p", { class: "hint", text: "Şu an: " + (s.online ? "çevrimiçi" : "çevrimdışı") + " · Saatler Türkiye saatine göredir." }),
-        AVF.field("Durum", mode, { optional: true }), h("div", { class: "row" }, h("div", { style: "flex:1" }, AVF.field("Açılış saati", oh, { optional: true })), h("div", { style: "flex:1" }, AVF.field("Kapanış saati", ch, { optional: true }))), eb, b));
-    }, function (e) { err(box, e); });
-  }
-
   function memberView(c, m) {
     var head = h("div", { class: "row between", style: "margin-bottom:14px" }, h("div", null, h("h2", { class: "ptitle", style: "margin:0", text: m.full_name }), h("small", { style: "color:var(--muted)", text: m.user_code })),
       h("button", { class: "btn ghost sm", type: "button", onclick: function () { sel = null; render(); } }, "← Üyelere dön"));

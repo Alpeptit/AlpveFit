@@ -1,5 +1,5 @@
 /* AlpveFit maskotu — siyah-beyaz, kaslı mantarlar. Ana sayfada iki mantar karşılıklı "most muscular" pozu verir;
-   canlı destek avatarı aynı karakterin mutlu yüzlü başıdır.
+   destek talebi yanıtlarındaki avatar aynı karakterin mutlu yüzlü başıdır.
    Çizim sabit, güvenilir bir SVG metnidir (kullanıcı verisi içermez); DOMParser ile ayrıştırılıp belgeye eklenir.
    Hareket CSS ile yapılır (avf.css → .msc2-*): kaslar sıkılır, gövde öne eğilir, kısa bir titreme ve göz kırpma;
    iki mantar yarım tur arayla kasılır. Hareket azaltma tercihinde sabit durur. */
@@ -56,7 +56,7 @@
       '<g transform="translate(0 0) rotate(4 100 228)">' + one("msc2-a") + '</g>' +
       '<g transform="translate(400 0) scale(-1 1) rotate(4 100 228)">' + one("msc2-b") + '</g></svg>';
   }
-  // Canlı destek avatarı: mutlu yüzlü baş (siyah şapka, beyaz benekler).
+  // Destek talebi avatarı: mutlu yüzlü baş (siyah şapka, beyaz benekler).
   function mini() {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="22 20 156 156" class="msc-mini" aria-hidden="true">' +
       '<path d="M58 116c-4 22-2 38 6 52h72c8-14 10-30 6-52z" fill="' + STEM + '" stroke="' + INK + '" stroke-width="4" stroke-linejoin="round"/>' +

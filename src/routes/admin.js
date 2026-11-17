@@ -14,7 +14,6 @@ import { sendMail } from "../utils/mailer.js";
 import { planPublishedMail } from "../utils/emailTemplates.js";
 import { markOrderPaid } from "../services/orderFulfilment.js";
 import { PROFILE_COLS } from "./profile.js";
-import { computeSupportStatus, supportStatusPatchError } from "../utils/supportStatus.js";
 
 export const adminRouter = withAsyncErrors(express.Router());
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -351,89 +350,9 @@ adminRouter.post("/orders/:id/approve", requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ============ DESTEK — canlı destek, çevrimdışı mesajlar, destek talepleri (YALNIZ YÖNETİCİ) ============
-const SUPPORT_AGENT = "AlpveFit Destek";
-const CHAT_NOT_FOUND_MSG = "Görüşme bulunamadı.";
+// ============ DESTEK TALEPLERİ (YALNIZ YÖNETİCİ) ============
 adminRouter.get("/support/summary", requireAdmin, async (req, res) => {
-  const { rows } = await pool.query(
-    `SELECT (SELECT count(*) FROM live_chats WHERE status = 'open')::int AS chats,
-            (SELECT count(*) FROM live_chat_messages m JOIN live_chats c ON c.id = m.chat_id WHERE c.status = 'open' AND m.sender = 'visitor' AND m.read_at IS NULL)::int AS unread,
-            (SELECT count(*) FROM support_offline_messages WHERE status = 'new')::int AS offline,
-            (SELECT count(*) FROM tickets WHERE status = 'open')::int AS tickets`);
-  res.json(rows[0]);
-});
-adminRouter.get("/live-chats", requireAdmin, async (req, res) => {
-  const status = req.query.status === "closed" ? "closed" : "open";
-  const { rows } = await pool.query(
-    `SELECT c.id, c.is_member, c.status, c.created_at, c.last_message_at,
-            COALESCE(u.full_name, c.guest_name) AS name, COALESCE(u.email, c.guest_email) AS email,
-            (SELECT m.body FROM live_chat_messages m WHERE m.chat_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message,
-            (SELECT count(*) FROM live_chat_messages m WHERE m.chat_id = c.id AND m.sender = 'visitor' AND m.read_at IS NULL)::int AS unread
-       FROM live_chats c LEFT JOIN users u ON u.id = c.user_id
-      WHERE c.status = $1 ORDER BY c.last_message_at DESC LIMIT 200`, [status]);
-  res.json(rows);
-});
-adminRouter.get("/live-chats/:id/messages", requireAdmin, async (req, res) => {
-  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: CHAT_NOT_FOUND_MSG });
-  const chat = await pool.query(`SELECT id, status FROM live_chats WHERE id = $1`, [req.params.id]);
-  if (!chat.rows[0]) return res.status(404).json({ error: CHAT_NOT_FOUND_MSG });
-  const { rows } = await pool.query(`SELECT id, sender, agent_name, body, created_at FROM live_chat_messages WHERE chat_id = $1 ORDER BY created_at ASC, id ASC LIMIT 500`, [req.params.id]);
-  await pool.query(`UPDATE live_chat_messages SET read_at = now() WHERE chat_id = $1 AND sender = 'visitor' AND read_at IS NULL RETURNING id`, [req.params.id]);
-  res.json({ status: chat.rows[0].status, messages: rows });
-});
-adminRouter.post("/live-chats/:id/messages", requireAdmin, async (req, res) => {
-  const m = req.body && req.body.message;
-  if (typeof m !== "string" || !m.trim()) return bad(res, "Mesaj boş olamaz.");
-  if (m.length > 1444) return bad(res, "Mesaj en fazla 1444 karakter olabilir.");
-  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: CHAT_NOT_FOUND_MSG });
-  const chat = await pool.query(`SELECT id, status FROM live_chats WHERE id = $1`, [req.params.id]);
-  if (!chat.rows[0]) return res.status(404).json({ error: CHAT_NOT_FOUND_MSG });
-  if (chat.rows[0].status !== "open") return res.status(409).json({ error: "Bu görüşme kapatıldı." });
-  const { rows } = await pool.query(
-    `INSERT INTO live_chat_messages (chat_id, sender, admin_id, agent_name, body) VALUES ($1, 'admin', $2, $3, $4) RETURNING id, sender, agent_name, body, created_at`,
-    [req.params.id, req.user.sub, SUPPORT_AGENT, cleanText(m)]);
-  await pool.query(`UPDATE live_chats SET last_message_at = now() WHERE id = $1 RETURNING id`, [req.params.id]);
-  await logAudit(req.user.sub, "live_chat_reply", "live_chat", req.params.id, {}, ip(req));
-  res.status(201).json(rows[0]);
-});
-adminRouter.patch("/live-chats/:id/close", requireAdmin, async (req, res) => {
-  if (!req.body || req.body.confirmed !== true) return bad(res, "Görüşmeyi kapatmak için onay gerekir.", "confirm_required");
-  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: CHAT_NOT_FOUND_MSG });
-  const { rows } = await pool.query(`UPDATE live_chats SET status = 'closed', closed_by = $1 WHERE id = $2 AND status = 'open' RETURNING id`, [req.user.sub, req.params.id]);
-  if (!rows[0]) return res.status(404).json({ error: CHAT_NOT_FOUND_MSG });
-  await logAudit(req.user.sub, "live_chat_close", "live_chat", req.params.id, {}, ip(req));
-  res.json({ ok: true });
-});
-adminRouter.get("/support-status", requireAdmin, async (req, res) => {
-  const { rows } = await pool.query(`SELECT mode, open_hour, close_hour, updated_at FROM support_status WHERE id = 1`);
-  res.json({ ...computeSupportStatus(rows[0] || null), updatedAt: rows[0] ? rows[0].updated_at : null });
-});
-adminRouter.patch("/support-status", requireAdmin, async (req, res) => {
-  const e = supportStatusPatchError(req.body);
-  if (e) return res.status(e.status).json({ error: e.error });
-  const cur = (await pool.query(`SELECT mode, open_hour, close_hour FROM support_status WHERE id = 1`)).rows[0] || { mode: "auto", open_hour: 9, close_hour: 22 };
-  const next = { mode: req.body.mode ?? cur.mode, open_hour: req.body.openHour ?? cur.open_hour, close_hour: req.body.closeHour ?? cur.close_hour };
-  if (next.close_hour <= next.open_hour) return bad(res, "Kapanış saati açılış saatinden sonra olmalıdır.");
-  const { rows } = await pool.query(
-    `INSERT INTO support_status (id, mode, open_hour, close_hour, updated_by, updated_at) VALUES (1, $1, $2, $3, $4, now())
-     ON CONFLICT (id) DO UPDATE SET mode = EXCLUDED.mode, open_hour = EXCLUDED.open_hour, close_hour = EXCLUDED.close_hour, updated_by = EXCLUDED.updated_by, updated_at = now()
-     RETURNING mode, open_hour, close_hour`, [next.mode, next.open_hour, next.close_hour, req.user.sub]);
-  await logAudit(req.user.sub, "support_status_update", "support_status", null, { from: cur, to: next }, ip(req));
-  res.json(computeSupportStatus(rows[0]));
-});
-adminRouter.get("/offline-messages", requireAdmin, async (req, res) => {
-  const { rows } = await pool.query(
-    `SELECT id, user_id IS NOT NULL AS is_member, name, email, body, status, created_at, handled_at FROM support_offline_messages ORDER BY created_at DESC LIMIT 300`);
-  res.json(rows);
-});
-adminRouter.patch("/offline-messages/:id", requireAdmin, async (req, res) => {
-  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Mesaj bulunamadı." });
-  const status = req.body && req.body.status;
-  if (!["answered", "archived"].includes(status)) return bad(res, "Geçersiz durum.");
-  const { rows } = await pool.query(
-    `UPDATE support_offline_messages SET status = $1, handled_by = $2, handled_at = now() WHERE id = $3 RETURNING id, status`, [status, req.user.sub, req.params.id]);
-  if (!rows[0]) return res.status(404).json({ error: "Mesaj bulunamadı." });
-  await logAudit(req.user.sub, "offline_message_" + status, "support_offline_message", req.params.id, {}, ip(req));
+  const { rows } = await pool.query(`SELECT (SELECT count(*) FROM tickets WHERE status = 'open')::int AS tickets`);
   res.json(rows[0]);
 });
 adminRouter.get("/tickets", requireAdmin, async (req, res) => {

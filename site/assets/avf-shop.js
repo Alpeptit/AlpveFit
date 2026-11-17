@@ -36,7 +36,7 @@
     var box = h("div", { class: "wrap section" }, AVF.skeleton(3));
     AVF.mount(view,
       h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("span", { class: "eyebrow" }, AVF.icon("layers"), "Uzaktan Eğitim Sistemi"), h("h1", {}, "Paketler"),
-        h("p", {}, "Ödemeden sonra programlarınız 24 saat içinde tarafımızca hazırlanır ve panelinizde yayınlanır."))), box);
+        h("p", {}, "Ödemeden sonra programlarınız 24 saat içinde tarafımızca hazırlanır ve kullanıcı panelinizde yayınlanır."))), box);
     catalog().then(function (c) {
       AVF.mount(box, h("div", { class: "pkggrid" }, c.packages.map(function (p) { return pkgCard(p, c); })),
         h("div", { class: "pkgnotes" },
@@ -57,7 +57,7 @@
     p.options.forEach(function (o) { opts.appendChild(h("button", { type: "button", role: "radio", onclick: function () { sel = o; paint(); } }, weeksText(o.weeks))); });
     buy.addEventListener("click", function () { AVF.checkout(p, sel, c); });
     paint();
-    return h("article", { class: "card pkg" },
+    return h("article", { class: "card pkg fx" },
       h("div", { class: "pkg-head" }, h("span", { class: "tile" }, AVF.icon(copy.icon)), h("span", { class: "chip" }, copy.level)),
       h("h3", { text: p.label }), h("p", { class: "tagline" }, copy.tag),
       h("div", { class: "pkg-price" }, price, listP), opts,

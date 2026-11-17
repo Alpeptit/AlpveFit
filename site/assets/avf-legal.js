@@ -22,7 +22,7 @@
         ["Fiyat ve ödeme", [
           "Fiyatlar **Türk lirası (TRY)** cinsinden liste fiyatıdır. Ödeme, **kredi / banka kartı** ile sanal POS (ödeme kuruluşu) üzerinden alınır. Kart bilgileri AlpveFit sunucularına iletilmez ve **AlpveFit tarafından saklanmaz**.",
           "!lock|Ödeme sayfası ve site trafiği **256-bit SSL sertifikası** ile şifrelenir.",
-          "Siparişiniz oluşturulduğunda size bir **sipariş numarası** verilir; tüm işlemleriniz panelinizdeki **Siparişlerim** bölümünden izlenebilir. Ödeme penceresi, sipariş oluşturulduktan sonra **2 saattir**; süre dolduğunda sipariş geçersiz olur. Test aşamasında ödeme sahte (deneme) sanal POS ile yapılabilir; bu aşamada gerçek tahsilat yapılmaz.",
+          "Siparişiniz oluşturulduğunda size bir **sipariş numarası** verilir; tüm işlemleriniz panelinizdeki **Siparişlerim** bölümünden izlenebilir. Ödeme penceresi, sipariş oluşturulduktan sonra **2 saattir**; süre dolduğunda sipariş geçersiz olur.",
           "Kartın banka tarafından reddedilmesi veya 3D Secure doğrulamasının tamamlanmaması gibi nedenlerle ödeme alınamazsa sipariş ödenmemiş sayılır ve plan hazırlama süreci başlamaz."]],
         ["Cayma hakkı ve iade", [
           "Hizmet, kişiye özel hazırlanan ve **ödeme onayından hemen sonra ifasına başlanan** bir hizmettir. 6502 sayılı Kanun ve Mesafeli Sözleşmeler Yönetmeliği uyarınca bu tür hizmetlerde **cayma hakkı kullanılamaz**; Üye, siparişi onaylayarak bu konuda bilgilendirildiğini kabul eder.",
@@ -61,7 +61,7 @@
         ["Price and payment", [
           "Prices are list prices in **Turkish lira (TRY)**. Payment is taken by **credit / debit card** through a virtual POS (payment institution). Card details are not transmitted to AlpveFit servers and are **not stored by AlpveFit**.",
           "!lock|The payment page and all site traffic are encrypted with a **256-bit SSL certificate**.",
-          "When your order is created you receive an **order number**; you can track everything under **My Orders** in your panel. The payment window is **2 hours** after the order is created; once it expires the order becomes void. During the testing phase payment may be made through a fake (trial) virtual POS; no real charge is made at this stage.",
+          "When your order is created you receive an **order number**; you can track everything under **My Orders** in your panel. The payment window is **2 hours** after the order is created; once it expires the order becomes void.",
           "If the payment cannot be taken — for example because the bank declines the card or 3D Secure is not completed — the order is deemed unpaid and plan preparation does not start."]],
         ["Right of withdrawal and refunds", [
           "The service is prepared individually and **performance starts immediately after payment confirmation**. Under Law No. 6502 and the Distance Contracts Regulation, **the right of withdrawal does not apply** to such services; by confirming the order the Member acknowledges having been informed of this.",
@@ -95,7 +95,7 @@
           "• **Kimlik ve iletişim:** ad soyad, kullanıcı adı, e-posta adresi.",
           "• **Hesap ve güvenlik:** şifre özeti (şifreniz düz metin saklanmaz), şifreli iki aşamalı doğrulama bilgileri, giriş kayıtları (IP adresi, cihaz bilgisi, zaman).",
           "• **İşlem:** sipariş, paket, tutar ve ödeme kuruluşundaki işlem referansı. **Kart numarası ve güvenlik kodu işlenmez.**",
-          "• **Destek:** canlı destek ve destek talebi yazışmaları.",
+          "• **Destek:** destek talebi yazışmaları ve e-posta iletişimi.",
           "• **Sağlık ve koçluk bilgileri (özel nitelikli veri):** boy, kilo, doğum yılı, kan grubu, günlük adım sayısı, hedef, sağlık notları ve size hazırlanan planlar. Bu bilgileri paylaşmak **isteğe bağlıdır**."]],
         ["İşleme amaçları ve hukuki sebepler", [
           "• Üyelik, hesap güvenliği ve hizmetin sunulması — **sözleşmenin ifası** (m.5/2-c) ve **meşru menfaat** (m.5/2-f).",
@@ -121,7 +121,7 @@
           "• **Identity and contact:** full name, username, e-mail address.",
           "• **Account and security:** password hash (never stored in plain text), encrypted two-step verification data, login records (IP address, device, time).",
           "• **Transaction:** order, package, amount and the payment institution’s transaction reference. **Card number and security code are not processed.**",
-          "• **Support:** live support and support ticket conversations.",
+          "• **Support:** support ticket conversations and email correspondence.",
           "• **Health and coaching information (special category data):** height, weight, year of birth, blood type, daily steps, goal, health notes and the plans prepared for you. Sharing this information is **optional**."]],
         ["Purposes and legal bases", [
           "• Membership, account security and delivering the service — **performance of a contract** (Art. 5/2-c) and **legitimate interest** (Art. 5/2-f).",
