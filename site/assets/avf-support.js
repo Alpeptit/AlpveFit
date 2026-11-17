@@ -32,7 +32,7 @@
     bodyEl = h("div", { class: "chat-body" });
     panel = h("div", { class: "chat-panel", role: "dialog", "aria-modal": "false", "aria-labelledby": "chat-title", hidden: true },
       h("div", { class: "chat-head" }, avatar("lg"),
-        h("div", { class: "chat-ttl" }, h("b", { id: "chat-title", text: "Canlı Destek" }), h("span", { class: "sub", text: "AlpveFit destek ekibi" }), h("span", { class: "stslot" })),
+        h("div", { class: "chat-ttl" }, h("b", { id: "chat-title", text: "Canlı Destek" }), h("span", { class: "sub", text: "Birebir koçluk desteği" }), h("span", { class: "stslot" })),
         h("button", { class: "chat-x", type: "button", "aria-label": "Canlı desteği kapat", onclick: close }, AVF.icon("x"))),
       bodyEl);
     document.body.appendChild(panel); document.body.appendChild(launcher);
@@ -86,7 +86,7 @@
   function startMemberView() {
     var btn = h("button", { class: "btn block", type: "button" }, AVF.icon("chat", "bico"), "Görüşmeyi başlat"), err = errBox();
     btn.addEventListener("click", function () { start({}, btn, err); });
-    return h("div", { class: "chat-pad" }, bubble("Merhaba! Üye hesabınızla bağlanabilirsiniz. Görüşmeyi başlatın, destek ekibimiz yanıtlasın."), err, btn);
+    return h("div", { class: "chat-pad" }, bubble("Merhaba! Üye hesabınızla bağlanabilirsiniz. Görüşmeyi başlatın, size en kısa sürede yanıt verelim."), err, btn);
   }
   function guestView() {
     var name = AVF.input("text", { placeholder: "Adınız", autocomplete: "name", maxlength: "60" });
@@ -114,7 +114,7 @@
   function convView() {
     var msgs = (st.chat && st.chat.messages) || [];
     var list = h("div", { class: "chat-list", "aria-live": "polite" });
-    if (!msgs.length) list.appendChild(bubble(st.ref.member ? "Merhaba! Üye hesabınızla bağlandınız. Mesajınızı yazın, destek ekibimiz yanıtlayacaktır." : "Merhaba! Size nasıl yardımcı olabiliriz? Mesajınızı yazın, destek ekibimiz yanıtlayacaktır."));
+    if (!msgs.length) list.appendChild(bubble(st.ref.member ? "Merhaba! Üye hesabınızla bağlandınız. Mesajınızı yazın, en kısa sürede yanıtlayalım." : "Merhaba! Size nasıl yardımcı olabiliriz? Mesajınızı yazın, en kısa sürede yanıtlayalım."));
     var last = null;
     msgs.forEach(function (m) {
       var mine = m.sender === "visitor", showAgent = !mine && m.agent_name !== last; if (!mine) last = m.agent_name;
@@ -143,7 +143,7 @@
   }
   function offlineView(u) {
     if (st.offSent) return h("div", { class: "chat-pad center" }, h("span", { class: "tile ok" }, AVF.icon("check")), h("b", { text: "Mesajınız alındı" }),
-      h("p", { class: "muted", text: "Destek ekibimiz çalışma saatleri içinde e-posta ile dönüş yapacak." }), h("button", { class: "btn ghost block", type: "button", onclick: close }, "Kapat"));
+      h("p", { class: "muted", text: "Çalışma saatleri içinde e-posta ile size dönüş yapılacak." }), h("button", { class: "btn ghost block", type: "button", onclick: close }, "Kapat"));
     var name = u ? null : AVF.input("text", { placeholder: "Adınız", autocomplete: "name", maxlength: "60" });
     var mail = u ? null : AVF.input("email", { placeholder: "ornek@mail.com", autocomplete: "email", maxlength: "254" });
     var ta = h("textarea", { class: "inp", rows: "4", maxlength: String(MAXLEN), placeholder: "Size nasıl yardımcı olabiliriz?" });

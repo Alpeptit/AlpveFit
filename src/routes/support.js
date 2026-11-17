@@ -73,7 +73,7 @@ supportRouter.post("/live-chat/offline-message", optionalAuth, async (req, res) 
   const { rows } = await pool.query(
     `INSERT INTO support_offline_messages (user_id, name, email, body, ip_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`,
     [userId, name.length >= 2 ? name : "Üye", email, sanitizeText(body.message.trim()), ih]);
-  res.status(201).json({ id: rows[0].id, message: "Mesajınız alındı. Destek ekibimiz en kısa sürede e-posta ile dönüş yapacak." });
+  res.status(201).json({ id: rows[0].id, message: "Mesajınız alındı. En kısa sürede e-posta ile size dönüş yapılacak." });
 });
 
 // Görüşme başlat: üyenin açık görüşmesi varsa o döner (üye başına tek açık görüşme). Çevrimdışıyken yeni görüşme açılmaz.

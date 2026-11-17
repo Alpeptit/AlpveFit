@@ -75,9 +75,9 @@ function strip(s) { return String(s).replace(/<br\s*\/?>/gi, "\n").replace(/<[^>
 
 const FOOT = {
   tr: { auto: "Bu e-posta AlpveFit hesabınızla ilgili bir işlem nedeniyle otomatik olarak gönderildi; lütfen yanıtlamayın. Yardım için sitemizdeki canlı desteği kullanabilirsiniz.",
-        never: "AlpveFit ekibi sizden hiçbir zaman şifrenizi, doğrulama kodunuzu veya kurtarma kodlarınızı istemez." },
+        never: "AlpveFit sizden hiçbir zaman şifrenizi, doğrulama kodunuzu veya kurtarma kodlarınızı istemez." },
   en: { auto: "This email was sent automatically because of an action on your AlpveFit account; please do not reply. For help, use live support on our website.",
-        never: "The AlpveFit team will never ask you for your password, verification code or recovery codes." },
+        never: "AlpveFit will never ask you for your password, verification code or recovery codes." },
 };
 
 /** Ortak çerçeve: üst bant, kart, alt bilgi. blocks = [{html,text}] */
@@ -268,8 +268,8 @@ export function orderPaidMail(lang, o) {
   const lg = L(lang), en = lg === "en", base = siteBase();
   const t = en ? "Your payment is confirmed" : "Ödemeniz onaylandı";
   const blocks = [
-    p(esc(en ? "Thank you. Your payment was received and confirmed. Your nutrition, training and supplement programs are prepared by our experts within 24 hours; you will be notified when each plan is published."
-             : "Teşekkür ederiz. Ödemeniz alındı ve onaylandı. Beslenme, antrenman ve takviye programlarınız uzmanlarımız tarafından 24 saat içinde hazırlanır; her plan yayınlandığında bildirim alırsınız.")),
+    p(esc(en ? "Thank you. Your payment was received and confirmed. Your nutrition, training and supplement programs are prepared by your coach within 24 hours; you will be notified when each plan is published."
+             : "Teşekkür ederiz. Ödemeniz alındı ve onaylandı. Beslenme, antrenman ve takviye programlarınız koçunuz tarafından 24 saat içinde hazırlanır; her plan yayınlandığında bildirim alırsınız.")),
     rows([[en ? "Order" : "Sipariş", o.orderNumber], [en ? "Plans ready by" : "Planların hazır olacağı zaman", o.dueAt ? fmtDate(o.dueAt, lg) : ""]]),
     button(en ? "Go to my panel" : "Panelime git", base ? `${base}/panel` : ""),
   ];

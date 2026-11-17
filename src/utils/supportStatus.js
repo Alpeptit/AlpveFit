@@ -1,7 +1,7 @@
 // utils/supportStatus.js — Canlı destek çevrimiçi/çevrimdışı kararı (SAF; veritabanına dokunmaz, test edilebilir).
 // Saatler Türkiye saatine göredir (Europe/Istanbul, UTC+3, yaz saati uygulaması yok).
 export const SUPPORT_TZ = "Europe/Istanbul";
-export const SUPPORT_OFFLINE = "Destek ekibimiz şu anda çevrimdışı. Mesajınızı bırakın; en kısa sürede e-posta ile dönüş yapalım.";
+export const SUPPORT_OFFLINE = "Canlı destek şu anda çevrimdışı. Mesajınızı bırakın; en kısa sürede e-posta ile dönüş yapalım.";
 const MODES = ["auto", "online", "offline"];
 
 /** Verilen andaki İstanbul saati (0–23) ve dakikası. */

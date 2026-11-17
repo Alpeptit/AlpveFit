@@ -12,8 +12,8 @@
   // Paket kartları: üç pakette de AYNI kategoriler ve AYNI satırlar aynı sırada yer alır (simetrik karşılaştırma).
   var PKG_COPY = {
     starter: { tag: "Temelden başlayanlar için", level: "Başlangıç", icon: "dumb" },
-    advanced: { tag: "Deneyimli sporcular için", level: "İleri seviye", icon: "flask" },
-    competitor: { tag: "Sahneye ve yarışmaya hazırlık", level: "Yarışma", icon: "award" },
+    advanced: { tag: "Deneyimli sporcular için", level: "İleri Seviye", icon: "flask" },
+    competitor: { tag: "Sahneye ve yarışmaya hazırlık", level: "Yarışma Hazırlığı", icon: "award" },
   };
   var PKG_CATS = [
     ["list", "Program", [["Kişiye özel beslenme programı", function () { return true; }], ["Kişiye özel antrenman programı", function () { return true; }], ["Vitamin / mineral / takviye planı", function () { return true; }]]],
@@ -36,11 +36,12 @@
     var box = h("div", { class: "wrap section" }, AVF.skeleton(3));
     AVF.mount(view,
       h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("span", { class: "eyebrow" }, AVF.icon("layers"), "Uzaktan Eğitim Sistemi"), h("h1", {}, "Paketler"),
-        h("p", {}, "Ödemeden sonra programlarınız 24 saat içinde uzmanlarımızca hazırlanır ve panelinizde yayınlanır."))), box);
+        h("p", {}, "Ödemeden sonra programlarınız 24 saat içinde koçunuz tarafından hazırlanır ve panelinizde yayınlanır."))), box);
     catalog().then(function (c) {
       AVF.mount(box, h("div", { class: "pkggrid" }, c.packages.map(function (p) { return pkgCard(p, c); })),
         h("div", { class: "pkgnotes" },
-          h("div", { class: "pnote" }, AVF.icon("card"), h("span", {}, "Ödeme kredi / banka kartı ile sanal POS üzerinden alınır. Kart bilgileriniz AlpveFit sunucularında saklanmaz.")),
+          h("div", { class: "pnote" }, AVF.icon("card"), h("div", {}, h("span", {}, "Ödeme kredi / banka kartı ile sanal POS üzerinden alınır. Kart bilgileriniz AlpveFit sunucularında saklanmaz."),
+            h("span", { class: "ssl-line" }, AVF.icon("lock"), "256-bit SSL sertifikası ile korunan güvenli bağlantı"))),
           null));
     }, function (e) { AVF.mount(box, AVF.state("alert", "Paketler yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: function () { AVF.packagesPage(view); } }, "Tekrar dene"))); });
   };
@@ -71,7 +72,7 @@
   AVF.checkout = function (p, opt, c) {
     if (!AVF.session.user) { AVF.toast("Satın almak için giriş yapın veya kayıt olun."); return AVF.auth.open("login"); }
     var ov, prev = document.activeElement;
-    function close() { document.removeEventListener("keydown", key, true); if (ov && ov.parentNode) ov.parentNode.removeChild(ov); try { prev && prev.focus(); } catch (e) { /* yok say */ } }
+    function close() { document.removeEventListener("keydown", key, true); if (ov && ov.parentNode) { ov.parentNode.removeChild(ov); AVF.lockScroll(false); } try { prev && prev.focus(); } catch (e) { /* yok say */ } }
     function key(e) { if (e.key === "Escape") close(); }
     var chk1 = h("input", { type: "checkbox", id: "ck1" }), chk2 = h("input", { type: "checkbox", id: "ck2" }), chk3 = h("input", { type: "checkbox", id: "ck3" });
     var payOn = !!(c && c.payment && c.payment.enabled);
@@ -90,7 +91,7 @@
       p.pharmacology ? lbl(chk2, ["", lnk("kullanim-kosullari", "Hizmet Şartları"), "’ndaki sağlık ve farmakoloji hükümlerini okudum. Farmakoloji içeriğinin isteğe bağlı olduğunu, bana zorunlu kılınmadığını; kullanıp kullanmayacağıma kendi irademle karar vereceğimi ve sonuçlarının bana ait olduğunu kabul ediyorum."]) : null,
       lbl(chk3, [lnk("kvkk", "KVKK Aydınlatma Metni"), "’ni okudum."]), err, go);
     ov = h("div", { class: "ov", onmousedown: function (e) { if (e.target === ov) close(); } }, dlg);
-    document.body.appendChild(ov); document.addEventListener("keydown", key, true); go.focus();
+    document.body.appendChild(ov); AVF.lockScroll(true); document.addEventListener("keydown", key, true);
     go.addEventListener("click", function () {
       err.style.display = "none";
       if (!chk1.checked || (p.pharmacology && !chk2.checked) || !chk3.checked) { err.textContent = "Devam etmek için tüm onay kutularını işaretlemeniz gerekir."; err.style.display = ""; return; }
@@ -130,7 +131,7 @@
         h("div", {}, h("span", {}, "Ödeme"), h("b", { text: "Kredi / banka kartı" }))));
       var body = [];
       if (o.status === "paid") {
-        body.push(h("div", { class: "note" }, h("b", {}, "Ödemeniz onaylandı. "), "Planlarınız " + AVF.fmtDate(o.plans_due_at) + " tarihine kadar uzmanlarımızca hazırlanır; her plan yayınlandığında bildirim alırsınız."),
+        body.push(h("div", { class: "note" }, h("b", {}, "Ödemeniz onaylandı. "), "Planlarınız " + AVF.fmtDate(o.plans_due_at) + " tarihine kadar koçunuz tarafından hazırlanır; her plan yayınlandığında bildirim alırsınız."),
           h("a", { class: "btn", href: "/panel", "data-link": "" }, "Planlarıma git"));
       } else if (o.status === "expired" || o.status === "cancelled") {
         body.push(h("div", { class: "note warn" }, o.status === "expired" ? "Bu siparişin ödeme süresi doldu. Ödeme bilgileri artık geçerli değildir; bu adrese ödeme yapmayın." : "Bu sipariş iptal edildi. Ödeme bilgileri artık geçerli değildir."),
@@ -207,15 +208,15 @@
       var consent = h("input", { type: "checkbox", id: "pf-consent" }), msg = h("div", { class: "note err", role: "alert", style: "display:none" }), save = h("button", { class: "btn", type: "button" }, "Kaydet");
       var consented = !!P.health_consent_at;
       var form = h("div", { class: "card", style: "padding:20px" },
-        h("div", { class: "note" }, "Bu bilgileri paylaşmak isteğe bağlıdır; size uygun program hazırlanmasına yardımcı olur. Yalnızca size atanan uzman(lar) ve yöneticiler görür. Dilediğiniz zaman silebilirsiniz."),
+        h("div", { class: "note" }, "Bu bilgileri paylaşmak isteğe bağlıdır; size uygun program hazırlanmasına yardımcı olur. Yalnızca siz ve koçunuz görebilirsiniz. Dilediğiniz zaman silebilirsiniz."),
         h("div", { class: "fgrid" },
           num("height", "Boy (cm)", P.height_cm, { min: "100", max: "250", step: "1" }), num("weight", "Kilo (kg)", P.weight_kg, { min: "30", max: "300", step: "0.1" }),
           num("birth", "Doğum yılı", P.birth_year, { min: "1930", max: String(new Date().getFullYear() - 14), step: "1" }), num("steps", "Günlük ortalama adım sayısı", P.daily_steps, { min: "0", max: "100000", step: "100" }),
           num("days", "Haftalık antrenman günü", P.training_days, { min: "0", max: "7", step: "1" }),
           AVF.field("Kan grubu", f.blood, { optional: true }), AVF.field("Meslek", f.occupation, { optional: true })),
-        AVF.field("Hedefiniz", f.goal, { optional: true }), AVF.field("Sağlık / sakatlık notları (varsa)", f.notes, { optional: true, hint: "Kronik hastalık, yaralanma, kullandığınız ilaçlar gibi uzmanın bilmesi gereken bilgiler." }),
+        AVF.field("Hedefiniz", f.goal, { optional: true }), AVF.field("Sağlık / sakatlık notları (varsa)", f.notes, { optional: true, hint: "Kronik hastalık, yaralanma, kullandığınız ilaçlar gibi koçunuzun bilmesi gereken bilgiler." }),
         consented ? h("p", { class: "hint", text: "Açık rızanız " + AVF.fmtDate(P.health_consent_at) + " tarihinde alındı." }) :
-          h("label", { class: "chk", for: "pf-consent" }, consent, h("span", {}, ["Sağlık ve koçluk bilgilerimin, program hazırlanması amacıyla atanan uzmanlar tarafından işlenmesine ", h("a", { href: "/yasal/kvkk", target: "_blank", rel: "noopener" }, "KVKK Aydınlatma Metni"), " kapsamında açık rıza veriyorum."])),
+          h("label", { class: "chk", for: "pf-consent" }, consent, h("span", {}, ["Sağlık ve koçluk bilgilerimin, program hazırlanması amacıyla koçum tarafından işlenmesine ", h("a", { href: "/yasal/kvkk", target: "_blank", rel: "noopener" }, "KVKK Aydınlatma Metni"), " kapsamında açık rıza veriyorum."])),
         msg, h("div", { class: "row", style: "gap:10px;flex-wrap:wrap;margin-top:6px" }, save, pr ? h("button", { class: "btn ghost", type: "button", onclick: function () {
           if (!confirm(AVF.t("Tüm kişisel bilgileriniz silinecek ve açık rızanız geri alınacak. Devam edilsin mi?"))) return;
           AVF.api("DELETE", "/profile").then(function () { AVF.toast("Bilgileriniz silindi."); AVF.profileView(el); }, function (e) { AVF.toast(AVF.errText(e), "err"); });

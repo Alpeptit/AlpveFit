@@ -5,6 +5,11 @@
 
   // ---------- simgeler (yalnız sabit, güvenilir SVG yolları) ----------
   var P = {
+    ruler: "M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2", utensils: "M7 3v8a2 2 0 002 2v8M5 3v5a2 2 0 004 0V3M17 21V3c-2 1-3 4-3 8h3",
+    bolt: "M13 2L4 14h7l-1 8 9-12h-7z", percent: "M19 5L5 19M7 9a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z",
+    drop: "M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z", heart: "M12 20s-7-4.4-9-9a5 5 0 019-3 5 5 0 019 3c-2 4.6-9 9-9 9z",
+    timer: "M12 21a8 8 0 100-16 8 8 0 000 16zM12 9v4l2 2M9 2h6", body: "M12 7a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM5 10l7-1 7 1M12 9v6M9 22l3-7 3 7",
+    egg: "M12 3c3.5 0 6 6 6 10a6 6 0 01-12 0c0-4 2.5-10 6-10z", play: "M7 4l13 8-13 8z", pause: "M7 4h4v16H7zM13 4h4v16h-4z",
     userplus: "M10 12a4 4 0 100-8 4 4 0 000 8zM3 21a7 7 0 0114 0M19 8v6M16 11h6",
     wrench: "M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z", clock: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2",
     building: "M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16M16 9h2a2 2 0 012 2v10M3 21h18M8 7h4M8 11h4M8 15h4", compass: "M12 21a9 9 0 100-18 9 9 0 000 18zM15.5 8.5l-2 5-5 2 2-5z",
@@ -224,6 +229,22 @@
     var parts = [username].concat(String(fullName || "").split(" ")).filter(function (p) { return p && p.trim().length >= 3; });
     if (parts.some(function (p) { p = p.trim().toLowerCase(); return low.indexOf(p) >= 0 || p.indexOf(low) >= 0; })) return "Şifreniz kullanıcı adınız veya adınızla bağlantılı olamaz.";
     return "";
+  };
+  // Açılır pencerelerde arka plan kaymaz: sayfa konumu sabitlenir (iOS dahil), masaüstünde kaydırma çubuğu genişliği korunur.
+  var lockN = 0, lockY = 0;
+  AVF.lockScroll = function (on) {
+    var b = document.body, de = document.documentElement;
+    if (on) {
+      if (lockN++ > 0) return;
+      lockY = window.scrollY || 0; var sw = window.innerWidth - de.clientWidth;
+      b.style.position = "fixed"; b.style.top = -lockY + "px"; b.style.left = "0"; b.style.right = "0"; b.style.width = "100%";
+      if (sw > 0) b.style.paddingRight = sw + "px";
+      de.classList.add("locked");
+    } else {
+      if (lockN === 0 || --lockN > 0) return;
+      b.style.position = b.style.top = b.style.left = b.style.right = b.style.width = b.style.paddingRight = "";
+      de.classList.remove("locked"); de.style.scrollBehavior = "auto"; window.scrollTo(0, lockY); de.style.scrollBehavior = "";
+    }
   };
   AVF.busy = function (btn, on, label) {
     btn.disabled = !!on;

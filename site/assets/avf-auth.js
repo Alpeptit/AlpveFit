@@ -10,7 +10,7 @@
     if (!ov) return;
     document.removeEventListener("keydown", onKey, true);
     ov.parentNode && ov.parentNode.removeChild(ov); ov = dlg = body = null; S = {}; onDone = null;
-    document.body.style.overflow = "";
+    AVF.lockScroll(false);
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   }
   function onKey(e) {
@@ -29,12 +29,21 @@
       AVF.logo(false),
       h("button", { class: "x", type: "button", "aria-label": "Kapat", onclick: close }, AVF.icon("x")), body);
     ov = h("div", { class: "ov", onmousedown: function (e) { if (e.target === ov) close(); } }, dlg);
-    document.body.appendChild(ov); document.body.style.overflow = "hidden";
+    document.body.appendChild(ov); AVF.lockScroll(true);
     document.addEventListener("keydown", onKey, true);
   }
   // Pencere açılınca giriş alanına OTOMATİK odaklanılmaz (mobilde klavye kendiliğinden açılmasın); odak pencerenin kendisine
   // verilir — ekran okuyucu başlığı okur, kullanıcı alana dokunduğunda yazmaya başlar.
   function softFocus() { if (!dlg) return; if (!dlg.hasAttribute("tabindex")) dlg.setAttribute("tabindex", "-1"); try { dlg.focus({ preventScroll: true }); } catch (e) { dlg.focus(); } }
+  // Şifre kuralları: yazdıkça her kural işaretlenir (sunucu da aynı kuralları denetler).
+  function pwRules(inp) {
+    var R2 = [["En az 8 karakter", function (v) { return v.length >= 8; }], ["Boşluk içermez", function (v) { return v.length > 0 && !/\s/.test(v); }], ["En az 1 harf", function (v) { return /[a-zA-Z]/.test(v); }],
+      ["En az 1 noktalama işareti (! . _ - vb.)", function (v) { return /[!"#$%&'()*+,\-./:;<=>?@[\]^_`{|}~]/.test(v); }], ["Ardışık sayı içermez (123)", function (v) { var d = (v.match(/\d+/g) || []).join(""); for (var i = 0; i + 2 < d.length; i++) { var a = +d[i], b = +d[i + 1], c = +d[i + 2]; if ((b - a === 1 && c - b === 1) || (a - b === 1 && b - c === 1)) return false; } return v.length > 0; }]];
+    var lis = R2.map(function (r) { return h("li", {}, h("i", { "aria-hidden": "true" }), h("span", { text: r[0] })); });
+    function paint() { var v = inp.value; R2.forEach(function (r, i) { lis[i].classList.toggle("ok", r[1](v)); }); }
+    inp.addEventListener("input", paint);
+    return h("ul", { class: "pwrules", "aria-label": "Şifre kuralları" }, lis);
+  }
   function view(title, sub) { var t = h("h2", { id: "auth-title", text: title }); AVF.mount(body, t, sub ? h("p", { class: "sub", text: sub }) : null); return body; }
   function ssl() { return h("div", { class: "ssl" }, AVF.icon("lock"), "256-bit SSL ile korunan güvenli bağlantı"); }
   function err(box, msg) { AVF.mount(box, msg ? h("p", { class: "err", role: "alert", text: msg }) : null); }
@@ -106,9 +115,10 @@
           function (e2) { if (e2.data && e2.data.userId) { S.userId = e2.data.userId; } fail(box, e2, btn); });
     } },
       AVF.field("Ad Soyad", name, { icon: "id" }), AVF.field("Kullanıcı Adı", user, { icon: "user" }), AVF.field("E-posta", mail, { icon: "mail" }),
-      AVF.field("Şifre", pw, { icon: "lock", hint: "En az 8 karakter; en az 1 harf ve 1 noktalama işareti; boşluk ve ardışık sayı (123) olmaz." }),
-      h("label", { class: "check" }, k1, h("span", null, h("a", { href: "/yasal/kvkk", target: "_blank", rel: "noopener" }, "KVKK Aydınlatma Metni"), " ve ", h("a", { href: "/yasal/gizlilik-cerez", target: "_blank", rel: "noopener" }, "Gizlilik ve Çerez Politikası"), "’nı okudum.")),
-      h("label", { class: "check" }, k2, h("span", null, h("a", { href: "/yasal/kullanim-kosullari", target: "_blank", rel: "noopener" }, "Hizmet Şartları"), " ile ", h("a", { href: "/yasal/sorumluluk-reddi", target: "_blank", rel: "noopener" }, "Sağlık ve Farmakoloji Sorumluluk Beyanı"), "’nı okudum ve kabul ediyorum.")),
+      AVF.field("Şifre", pw, { icon: "lock" }),
+      pwRules(pw.input),
+      h("label", { class: "consent" }, AVF.icon("shield"), h("span", null, h("a", { href: "/yasal/kvkk", target: "_blank", rel: "noopener" }, "KVKK Aydınlatma Metni"), " ve ", h("a", { href: "/yasal/gizlilik-cerez", target: "_blank", rel: "noopener" }, "Gizlilik ve Çerez Politikası"), "’nı okudum ve anladığımı onaylıyorum."), k1),
+      h("label", { class: "consent" }, AVF.icon("file"), h("span", null, h("a", { href: "/yasal/kullanim-kosullari", target: "_blank", rel: "noopener" }, "Hizmet Şartları ve Mesafeli Satış Sözleşmesi"), "’ni okudum ve kabul ediyorum."), k2),
       captchaNote(), box, btn,
       h("p", { class: "center", style: "margin:14px 0 0" }, "Zaten hesabın var mı? ", h("button", { type: "button", class: "lnk", onclick: function () { login(); } }, "Giriş Yap")), ssl());
     v.insertBefore(seg("register"), v.children[2] || null); v.appendChild(form); softFocus();
