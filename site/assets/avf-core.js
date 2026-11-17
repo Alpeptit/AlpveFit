@@ -212,15 +212,31 @@
     window.addEventListener("blur", function () { if (cur) off(cur); cur = null; });
   })();
 
+  // Akordeon: yükseklik JavaScript ile ölçülerek yumuşak (ease-in-out) açılır/kapanır; içerik aynı anda hafifçe belirir.
+  // Tarayıcıdan bağımsız, her cihazda aynı akıcılıkta çalışır. İçerik "panel"e yazılır.
+  var ACC_MS = 420;
+  function accSet(wrap, open) {
+    var outer = wrap._outer; if (!outer) return;
+    clearTimeout(outer._t);
+    var from = outer.getBoundingClientRect().height;
+    wrap.classList.toggle("open", open);
+    var b = wrap.querySelector("button[aria-expanded]"); if (b) b.setAttribute("aria-expanded", open ? "true" : "false");
+    var to = open ? outer.scrollHeight : 0;
+    outer.style.height = from + "px"; void outer.offsetHeight;
+    outer.style.height = to + "px";
+    outer._t = setTimeout(function () { outer.style.height = wrap.classList.contains("open") ? "auto" : "0px"; }, ACC_MS + 30);
+  }
   AVF.accordion = function (opts) {
     var wrap = AVF.h("div", { class: "card acc" + (opts.open ? " open" : "") });
     var id = "acc" + Math.random().toString(36).slice(2, 8);
-    // Yumuşak açılış: dış kap (grid 0fr → 1fr) yüksekliği, iç dolgu (pad) saydamlığı canlandırır. İçerik "panel"e yazılır.
-    var panel = AVF.h("div", { class: "pad" }), outer = AVF.h("div", { class: "panel-o", id: id, role: "region" }, AVF.h("div", { class: "panel" }, panel));
+    var panel = AVF.h("div", { class: "pad" }), outer = AVF.h("div", { class: "panel-o", id: id, role: "region", style: "height:" + (opts.open ? "auto" : "0px") }, AVF.h("div", { class: "panel" }, panel));
+    wrap._outer = outer;
     var btn = AVF.h("button", { type: "button", "aria-expanded": opts.open ? "true" : "false", "aria-controls": id, onclick: function () {
-      var o = wrap.classList.toggle("open"); btn.setAttribute("aria-expanded", o ? "true" : "false"); if (o && opts.onOpen) opts.onOpen(panel);
-      // Grup (ör. SSS): bir öğe açılınca diğerleri kapanır.
-      if (o && opts.group) opts.group.forEach(function (w) { if (w !== wrap && w.classList.contains("open")) { w.classList.remove("open"); var b = w.querySelector("button[aria-expanded]"); if (b) b.setAttribute("aria-expanded", "false"); } });
+      var o = !wrap.classList.contains("open");
+      if (o && opts.onOpen) opts.onOpen(panel);
+      // Grup (ör. SSS): bir öğe açılınca diğerleri aynı anda yumuşakça kapanır.
+      if (o && opts.group) opts.group.forEach(function (w) { if (w !== wrap && w.classList.contains("open")) accSet(w, false); });
+      accSet(wrap, o);
     } }, AVF.h("span", { class: "tile" + (opts.teal ? " teal" : "") }, AVF.icon(opts.icon || "list")),
       AVF.h("span", { class: "t" }, AVF.h("b", { text: opts.title }), opts.sub ? AVF.h("small", { text: opts.sub }) : null), AVF.icon("chev", "chev"));
     wrap.appendChild(btn); wrap.appendChild(outer);

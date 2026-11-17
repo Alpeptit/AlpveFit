@@ -53,10 +53,7 @@
   // ---------- Hakkımızda ----------
   AVF.pages.about = function (view) {
     function pillar(icon, t, s) { return h("div", { class: "card feat" }, h("span", { class: "tile" }, AVF.icon(icon)), h("h3", { text: t }), h("p", { text: s })); }
-    function step(n, icon, t, s, ready) {
-      return h("div", { class: "astep" + (ready ? " ready" : "") }, h("span", { class: "astep-n", "data-notr": "", text: n }), h("span", { class: "tile" }, AVF.icon(icon)),
-        ready ? h("span", { class: "ready-badge" }, h("b", { "data-notr": "", text: "24" }), h("span", { text: "saat" })) : null, h("h3", { text: t }), h("p", { text: s }));
-    }
+    function step(n, icon, t, s) { return h("div", { class: "astep" }, h("span", { class: "astep-n", "data-notr": "", text: n }), h("span", { class: "tile" }, AVF.icon(icon)), h("h3", { text: t }), h("p", { text: s })); }
     page(view, "Hakkımızda", "Hakkımızda", "AlpveFit; hedeflerinize ulaşmanız için doğrudan bizimle birebir çalıştığınız, bağımsız bir uzaktan eğitim ve koçluk platformudur.",
       h("div", { class: "stack lg" },
         h("div", { class: "card prose mission" },
@@ -68,7 +65,7 @@
             step("01", "userplus", "Kayıt Olun", "Modern ve sade arayüzümüz üzerinden saniyeler içinde sisteme kayıt olun."),
             step("02", "id", "Bilgilerinizi Paylaşın", "Boy, kilo, yaş, günlük rutininiz, sağlık durumunuz, alerjileriniz ve bütçeniz gibi detayları bize bildirin."),
             step("03", "tag", "Paketinizi Seçin", "Hedeflerinize en uygun olan Başlangıç, İleri Seviye veya Yarışmacı paketinden birini seçin."),
-            step("04", "clock", "Programınız Hazır!", "Ödemenizin ardından yapılan detaylı analizle tamamen size özel hazırlanan programınız, en geç 24 saat içinde hazır!", true))),
+            step("04", "clock", "Programınız Hazır!", "Ödemenizin ardından yapılan detaylı analizle tamamen size özel hazırlanan programınız, en geç 24 saat içinde hazır!"))),
         h("div", {}, h("div", { class: "shead" }, h("span", { class: "kicker" }, AVF.icon("shield"), "Değerlerimiz"), h("h2", { class: "sec", text: "İlkelerimiz" })),
           h("div", { class: "grid3" },
             pillar("target", "Değişim Odaklılık", "Hedeflerinize ulaşmanız için gereken tüm özeni gösteriyor, fiziksel ve mental dönüşümünüzü en temel önceliğimiz olarak görüyoruz."),

@@ -571,13 +571,10 @@ a.postcard{position:relative}
 .faq-a strong{color:var(--ink);font-weight:600}
 .faq-a{margin:0;padding-top:12px;color:var(--muted);line-height:1.7;font-size:15.5px}
 /* akordeon: yumuşak ve temiz açılış (yükseklik + saydamlık), kapalıyken içerik erişilemez */
-.acc .panel-o{display:grid;grid-template-rows:0fr;visibility:hidden;transition:grid-template-rows .42s cubic-bezier(.22,1,.36,1),visibility 0s linear .42s}
-.acc.open .panel-o{grid-template-rows:1fr;visibility:visible;transition:grid-template-rows .42s cubic-bezier(.22,1,.36,1),visibility 0s}
 .acc .panel-o>.panel{display:block;overflow:hidden;min-height:0;padding:0;border-top:0}
 .acc .pad{padding:4px 18px 20px;border-top:1px solid var(--line);opacity:0;transform:translateY(-6px);transition:opacity .3s ease,transform .42s cubic-bezier(.22,1,.36,1)}
 .acc.open .pad{opacity:1;transform:none;transition-delay:.06s}
 .acc>button{transition:background .2s}
-@media (prefers-reduced-motion:reduce){.acc .panel-o,.acc .pad{transition:none}}
 
 /* ---- hakkımızda ---- */
 .stack.lg{gap:20px}
@@ -899,13 +896,13 @@ html.locked{overflow:hidden}
 .dlg .rc{border-radius:14px;background:var(--paper)}
 .dlg .btn.block{min-height:52px;border-radius:14px;font-size:16px}
 @media (max-width:900px){
-  .ov{align-items:flex-end;padding:0}
-  .dlg{max-width:none;border-radius:24px 24px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom));max-height:92vh;animation:sheet .38s cubic-bezier(.22,1,.36,1) both}
-  .dlg:before{content:"";display:block;width:42px;height:5px;border-radius:99px;background:#D9D8D2;margin:-8px auto 14px}
+  /* Mobilde de pencere ekranın tam ortasında açılır (alttan kayan sayfa değil) */
+  .ov{align-items:center;justify-content:center;padding:16px}
+  .dlg{max-width:460px;width:100%;border-radius:24px;padding:22px 20px;max-height:calc(100dvh - 32px);animation:dlgin .32s cubic-bezier(.22,1,.36,1) both}
   .dlg .x{top:16px;right:16px}
   .dlg h2{font-size:23px}
 }
-@keyframes sheet{from{transform:translateY(40px);opacity:.6}}
+@keyframes dlgin{from{transform:scale(.96);opacity:0}}
 input,select,textarea{font-size:16px}
 
 /* ================= Sade üst çubuk (v7): kapsülsüz menü, metin dil seçici, tek hesap ikonu ================= */
@@ -958,13 +955,8 @@ input,select,textarea{font-size:16px}
 .faq .acc>button:hover{background:#FAFAF8}
 .faq .acc .chev{width:32px;height:32px;padding:8px;border-radius:50%;background:var(--paper2);color:var(--ink);flex:none;transition:transform .4s ease-in-out}
 .faq .acc.open .chev{transform:rotate(180deg)}
-.acc .panel-o{transition:grid-template-rows .4s ease-in-out,visibility 0s linear .4s}
-.acc.open .panel-o{transition:grid-template-rows .4s ease-in-out,visibility 0s}
-.acc .pad{opacity:0;transform:none;filter:none;transition:opacity .3s ease-in-out}
-.acc.open .pad{opacity:1;transition:opacity .4s ease-in-out .05s}
 .faq .pad{border-top-color:transparent;padding:0 20px 22px 74px}
 @media (max-width:600px){.faq .pad{padding:0 18px 20px}}
-@media (prefers-reduced-motion:reduce){.acc .pad,.acc .panel-o,.faq .acc .chev{transition:none;filter:none}}
 
 /* ================= Blog (v9) ================= */
 .blog-sec{padding-top:40px;padding-bottom:80px}
@@ -1024,24 +1016,16 @@ input,select,textarea{font-size:16px}
 @media (max-width:640px){.bgrid{grid-template-columns:minmax(0,1fr);gap:14px}.bpost-body{font-size:16px}.bpost-body h2{font-size:22px}.bcover.big{aspect-ratio:16/10;border-radius:18px;margin-bottom:26px}.bpost-h .lead{font-size:16.5px}.bcall{padding:16px}.blog-sec{padding-top:26px}}
 @media (prefers-reduced-motion:reduce){.bcard{animation:none}.bcover-svg{transition:none}}
 
-/* ================= v9: odak vurgusu (başlık ve kartlar; masaüstünde hover, mobilde dokunma) ================= */
-:root{--acc:#12A06A;--acc-soft:#E6F6EF;--acc-line:#BFE6D3}
-.shead .kicker{transition:color .3s,border-color .3s,background .3s,box-shadow .3s}
-.shead .kicker .ico{transition:color .3s,transform .5s cubic-bezier(.22,1,.36,1)}
-.shead .sec{transition:color .3s}
-.shead:hover .kicker,.shead.tap .kicker{border-color:var(--acc-line);background:var(--acc-soft);box-shadow:0 0 0 4px rgba(18,160,106,.08)}
-.shead:hover .kicker .ico,.shead.tap .kicker .ico{color:var(--acc);transform:rotate(-8deg) scale(1.12)}
-.section.dark .shead:hover .kicker,.section.dark .shead.tap .kicker{background:rgba(18,160,106,.16);border-color:rgba(18,160,106,.45)}
-.section.dark .shead:hover .kicker .ico,.section.dark .shead.tap .kicker .ico{color:#4FD69C}
-.feat .tile,.astep .tile{transition:background .35s,color .35s,transform .5s cubic-bezier(.22,1,.36,1),box-shadow .35s}
-.feat h3,.astep h3{transition:color .3s}
-.feat:hover .tile,.feat.tap .tile,.astep:hover .tile,.astep.tap .tile{background:var(--acc);color:#fff;transform:scale(1.06) rotate(-4deg);box-shadow:0 10px 24px -8px rgba(18,160,106,.55)}
-.feat:hover h3,.feat.tap h3,.astep:hover h3,.astep.tap h3{color:var(--acc)}
-.astep{transition:transform .5s cubic-bezier(.22,1,.36,1),box-shadow .5s,border-color .3s}
-.astep:hover,.astep.tap{border-color:var(--acc-line);box-shadow:0 24px 48px -26px rgba(17,17,19,.28)}
-.astep:hover .astep-n,.astep.tap .astep-n{color:var(--acc)}
-.feat.tap,.astep.tap{transform:translateY(-3px)}
-@media (hover:hover){.astep:hover{transform:translateY(-6px)}}
+/* ================= v10: odak vurgusu — sade, tek renk (masaüstünde hover, mobilde dokunma) ================= */
+.shead .kicker{transition:color .3s ease-in-out,border-color .3s ease-in-out,background .3s ease-in-out}
+.shead .kicker .ico{transition:color .3s ease-in-out}
+.shead:hover .kicker,.shead.tap .kicker{background:var(--ink);border-color:var(--ink);color:#fff}
+.section.dark .shead:hover .kicker,.section.dark .shead.tap .kicker{background:#fff;border-color:#fff;color:var(--ink)}
+.feat,.astep,.feat:hover,.astep:hover{transform:none!important}
+.feat,.astep{transition:border-color .3s ease-in-out,box-shadow .3s ease-in-out}
+.feat:hover,.feat.tap,.astep:hover,.astep.tap{border-color:var(--line2);box-shadow:0 10px 26px -18px rgba(17,17,19,.28)}
+.feat .tile,.astep .tile{transition:background .3s ease-in-out,color .3s ease-in-out,box-shadow .3s ease-in-out}
+.feat:hover .tile,.feat.tap .tile,.astep:hover .tile,.astep.tap .tile{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
 /* menü bağlantıları: alttan büyüyen çizgi */
 .nav a{position:relative}
 .nav a:after{content:"";position:absolute;left:12px;right:12px;bottom:2px;height:2px;border-radius:2px;background:var(--ink);transform:scaleX(0);transform-origin:center;transition:transform .35s cubic-bezier(.22,1,.36,1)}
@@ -1050,17 +1034,6 @@ input,select,textarea{font-size:16px}
 .nav a:hover .ico{transform:translateY(-1px)}
 .nav a .ico{transition:color .2s,transform .3s cubic-bezier(.22,1,.36,1)}
 @media (prefers-reduced-motion:reduce){.shead .kicker .ico,.feat .tile,.astep .tile,.astep,.nav a:after{transition:none}}
-/* Hakkımızda: "Programınız Hazır!" kutusu */
-.astep.ready{background:#111113;border-color:#111113;color:#fff;overflow:hidden}
-.astep.ready:before{content:"";position:absolute;right:-40px;bottom:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(18,160,106,.35),transparent 70%);pointer-events:none}
-.astep.ready .tile{background:var(--acc);color:#fff;box-shadow:0 10px 24px -8px rgba(18,160,106,.6)}
-.astep.ready h3{color:#fff;font-size:21px;letter-spacing:-.02em}
-.astep.ready p{color:rgba(255,255,255,.78);position:relative}
-.astep.ready .astep-n{color:rgba(255,255,255,.4)}
-.ready-badge{position:absolute;top:18px;right:52px;display:inline-flex;align-items:baseline;gap:4px;padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.1);font-size:12px;color:rgba(255,255,255,.75)}
-.ready-badge b{font-family:var(--display);font-size:16px;color:#fff}
-.astep.ready:hover h3,.astep.ready.tap h3{color:#4FD69C}
-.astep.ready:hover,.astep.ready.tap{border-color:#111113}
 /* Araçlar: birim seçimi ve "Hesapla" yükleme çizgisi */
 .tfl.head.row-u{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .tunit{display:inline-flex;gap:2px;padding:3px;border-radius:10px;background:var(--paper2);text-transform:none;letter-spacing:0}
@@ -1074,7 +1047,6 @@ input,select,textarea{font-size:16px}
 .tbtn:after{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;background:rgba(255,255,255,.9);transform:scaleX(0);transform-origin:left;opacity:0}
 .tbtn.busy:after{opacity:1;animation:tprog .65s cubic-bezier(.65,0,.35,1) forwards}
 .tbtn.busy{cursor:progress}
-@media (prefers-reduced-motion:reduce){.tres-p.loading:after,.tbtn.busy:after{animation:none;transform:scaleX(1)}}
 /* Alt alan: sosyal medya */
 .fsocial{display:inline-flex;align-items:center;gap:12px;margin-top:22px;padding:6px 16px 6px 6px;border-radius:99px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)}
 .fs-icons{display:flex;gap:4px}
@@ -1083,3 +1055,21 @@ input,select,textarea{font-size:16px}
 .fs-i:hover,.fs-i:focus-visible{background:#fff;color:#111113;transform:translateY(-2px)}
 .fs-i:active{transform:scale(.94)}
 .fs-h{font:600 15px/1 "Inter",sans-serif;color:#fff;letter-spacing:-.01em}
+
+/* ================= v10: akordeon (JS ile ölçülen yumuşak yükseklik) ================= */
+.acc .panel-o{display:block;overflow:hidden;visibility:hidden;transition:height .42s cubic-bezier(.45,0,.25,1),visibility 0s linear .42s}
+.acc.open .panel-o{visibility:visible;transition:height .42s cubic-bezier(.45,0,.25,1),visibility 0s}
+.acc .panel-o>.panel{display:block;overflow:visible;min-height:0;padding:0;border-top:0}
+.acc .pad{opacity:0;transform:translateY(-4px);filter:none;transition:opacity .28s cubic-bezier(.45,0,.25,1),transform .42s cubic-bezier(.45,0,.25,1)}
+.acc.open .pad{opacity:1;transform:none;transition:opacity .42s cubic-bezier(.45,0,.25,1) .06s,transform .42s cubic-bezier(.45,0,.25,1)}
+.faq .acc .chev{transition:transform .42s cubic-bezier(.45,0,.25,1)}
+/* Araçlar: "Hesapla" altında ince ilerleme çubuğu */
+.tprog{height:4px;margin-top:-6px;border-radius:99px;background:var(--paper2);overflow:hidden;opacity:0;transition:opacity .2s ease-in-out}
+.tprog i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#3A3A40,var(--ink))}
+.tprog.run{opacity:1}
+.tprog.run i{animation:tfill .8s cubic-bezier(.45,0,.25,1) forwards}
+@keyframes tfill{0%{width:0}60%{width:78%}100%{width:100%}}
+.tres-p.loading:after{animation-duration:.8s}
+.tbtn.busy:after{animation-duration:.8s}
+.feat:after,.astep:after{display:none!important}
+.tbtn:after{display:none}
