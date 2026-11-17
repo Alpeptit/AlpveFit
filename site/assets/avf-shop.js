@@ -1,4 +1,4 @@
-/* Alpvefit — paketler, sipariş/ödeme (sanal POS / kart), siparişlerim ve profil. Fiyatlar ve ödeme sonucu yalnız sunucudan gelir. */
+/* AlpveFit — paketler, sipariş/ödeme (sanal POS / kart), siparişlerim ve profil. Fiyatlar ve ödeme sonucu yalnız sunucudan gelir. */
 (function () {
   "use strict";
   var AVF = window.AVF, h = AVF.h;
@@ -9,50 +9,62 @@
   function moneyC(n, cur) { try { return new Intl.NumberFormat(AVF.lang === "en" ? "en-US" : "tr-TR", { style: "currency", currency: cur || "TRY", maximumFractionDigits: 0 }).format(Number(n)); } catch (e) { return money(n) + " " + cur; } }
   AVF.moneyC = moneyC;
   function catalog() { return cat ? Promise.resolve(cat) : AVF.api("GET", "/packages").then(function (c) { cat = c; return c; }); }
+  // Paket kartları: üç pakette de AYNI kategoriler ve AYNI satırlar aynı sırada yer alır (simetrik karşılaştırma).
   var PKG_COPY = {
-    starter: { tag: "Temelden başlayanlar için", icon: "dumb", items: ["Kişiye özel beslenme programı", "Kişiye özel antrenman programı", "Vitamin / mineral / takviye planı"] },
-    advanced: { tag: "Deneyimli sporcular için", icon: "flask", items: ["Kişiye özel beslenme programı", "Kişiye özel antrenman programı", "Vitamin / mineral / takviye planı", "Farmakoloji desteği (yetkili uzman tarafından, isteğe bağlı)"] },
-    competitor: { tag: "Sahneye ve yarışmaya hazırlık", icon: "tag", items: ["Yarışma hazırlığına yönelik beslenme ve antrenman", "Vitamin / mineral / takviye planı", "Farmakoloji desteği (yetkili uzman tarafından, isteğe bağlı)"] },
+    starter: { tag: "Temelden başlayanlar için", level: "Başlangıç", icon: "dumb" },
+    advanced: { tag: "Deneyimli sporcular için", level: "İleri seviye", icon: "flask" },
+    competitor: { tag: "Sahneye ve yarışmaya hazırlık", level: "Yarışma", icon: "award" },
   };
+  var PKG_CATS = [
+    ["list", "Program", [["Kişiye özel beslenme programı", function () { return true; }], ["Kişiye özel antrenman programı", function () { return true; }], ["Vitamin / mineral / takviye planı", function () { return true; }]]],
+    ["users", "Uzman desteği", [["Farmakoloji desteği (isteğe bağlı)", function (p) { return !!p.pharmacology; }], ["Yarışma ve sahne hazırlığı", function (p) { return p.key === "competitor"; }]]],
+    ["shield", "Teslim ve gizlilik", [["Ödemeden sonra 24 saat içinde teslim", function () { return true; }], ["Planlar yalnızca sizin panelinizde", function () { return true; }]]],
+  ];
   var STATUS = { pending: ["Ödeme bekleniyor", "chip"], paid: ["Ödendi", "chip lime"], expired: ["Süresi doldu", "chip mute"], cancelled: ["İptal edildi", "chip mute"] };
   function statusChip(s) { var m = STATUS[s] || [s, "chip"]; return h("span", { class: m[1], text: m[0] }); }
   function weeksText(w) { return w + " hafta"; }
 
   // ---------- paketler sayfası ----------
+  AVF.pkgGrid = function (opts) {
+    var box = h("div", { class: "pkggrid" + (opts && opts.compact ? " compact" : "") }, AVF.skeleton(3));
+    catalog().then(function (c) { AVF.mount(box, c.packages.map(function (p) { return pkgCard(p, c); })); },
+      function (e) { AVF.mount(box, AVF.state("alert", "Paketler yüklenemedi", AVF.errText(e))); });
+    return box;
+  };
   AVF.packagesPage = function (view) {
-    document.title = "Paketler — Alpvefit";
+    document.title = "Paketler — AlpveFit";
     var box = h("div", { class: "wrap section" }, AVF.skeleton(3));
     AVF.mount(view,
-      h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("div", { class: "eyebrow" }, "Uzaktan Eğitim Sistemi"), h("h1", {}, "Paketler"),
-        h("p", {}, "Ödemeden sonra programlarınız 7 gün içinde uzmanlarımızca hazırlanır ve panelinizde yayınlanır."))), box);
+      h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("span", { class: "eyebrow" }, AVF.icon("layers"), "Uzaktan Eğitim Sistemi"), h("h1", {}, "Paketler"),
+        h("p", {}, "Ödemeden sonra programlarınız 24 saat içinde uzmanlarımızca hazırlanır ve panelinizde yayınlanır."))), box);
     catalog().then(function (c) {
-      var cards = c.packages.map(function (p) { return pkgCard(p, c); });
-      cards.push(h("div", { class: "card pkg" }, h("span", { class: "tile teal" }, AVF.icon("pin")), h("h3", {}, "Yüz yüze eğitim paketi"), h("p", { class: "tagline" }, "Birebir, yüz yüze çalışma"),
-        h("ul", { class: "ticks" }, h("li", {}, "Paket bilgisi ve fiyatı için bizimle iletişime geçin")),
-        h("div", { class: "pkg-foot" }, h("a", { class: "btn ghost block", href: "mailto:" + c.inPersonContact + "?subject=" + encodeURIComponent("Yüz yüze eğitim paketi") }, AVF.icon("mail"), c.inPersonContact))));
-      AVF.mount(box, h("div", { class: "grid4" }, cards),
-        h("div", { class: "note", style: "margin-top:18px" }, "Ödeme: kredi / banka kartı ile sanal POS üzerinden alınır. Kart bilgileriniz Alpvefit sunucularında saklanmaz."),
-        c.payment && c.payment.test ? h("div", { class: "note warn", style: "margin-top:10px" }, h("b", {}, "Test aşaması: "), "ödeme sistemi şu anda sahte (deneme) sanal POS ile çalışır; gerçek tahsilat yapılmaz.") : null,
-        h("p", { class: "fine" }, "Programlar bilgilendirme ve eğitim amaçlıdır; tıbbi hizmet değildir. Farmakoloji içeriği isteğe bağlıdır ve hiçbir üyeye zorunlu kılınmaz. ",
-          h("a", { href: "/yasal/sorumluluk-reddi", "data-link": "" }, "Sağlık ve Farmakoloji Sorumluluk Beyanı")));
+      AVF.mount(box, h("div", { class: "pkggrid" }, c.packages.map(function (p) { return pkgCard(p, c); })),
+        h("div", { class: "pkgnotes" },
+          h("div", { class: "pnote" }, AVF.icon("card"), h("span", {}, "Ödeme kredi / banka kartı ile sanal POS üzerinden alınır. Kart bilgileriniz AlpveFit sunucularında saklanmaz.")),
+          h("div", { class: "pnote" }, AVF.icon("pulse"), h("span", {}, "Programlar bilgilendirme ve eğitim amaçlıdır; tıbbi hizmet değildir. Farmakoloji içeriği isteğe bağlıdır ve hiçbir üyeye zorunlu kılınmaz."))),
+        c.payment && c.payment.test ? h("div", { class: "note warn", style: "margin-top:12px" }, h("b", {}, "Test aşaması: "), "ödeme sistemi şu anda sahte (deneme) sanal POS ile çalışır; gerçek tahsilat yapılmaz.") : null);
     }, function (e) { AVF.mount(box, AVF.state("alert", "Paketler yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: function () { AVF.packagesPage(view); } }, "Tekrar dene"))); });
   };
   function pkgCard(p, c) {
-    var copy = PKG_COPY[p.key] || { tag: "", icon: "list", items: [] }, sel = p.options[0];
+    var copy = PKG_COPY[p.key] || { tag: "", level: "", icon: "list" }, sel = p.options[0];
     var price = h("div", { class: "price" }), listP = h("div", { class: "listp" }), buy = h("button", { class: "btn block", type: "button" }, "Satın al");
-    var opts = h("div", { class: "seg", role: "radiogroup", "aria-label": "Süre seçin" });
+    var opts = h("div", { class: "seg dur n" + p.options.length, role: "radiogroup", "aria-label": "Süre seçin" });
     function paint() {
       AVF.mount(price, h("b", {}, moneyC(sel.price, cat && cat.currency)));
-      AVF.mount(listP, weeksText(sel.weeks) + " · " + (p.pharmacology ? "farmakoloji dahil" : "farmakolojisiz"));
+      AVF.mount(listP, weeksText(sel.weeks) + " · tek ödeme");
       Array.prototype.forEach.call(opts.children, function (b, i) { b.setAttribute("aria-checked", p.options[i] === sel ? "true" : "false"); });
     }
     p.options.forEach(function (o) { opts.appendChild(h("button", { type: "button", role: "radio", onclick: function () { sel = o; paint(); } }, weeksText(o.weeks))); });
     buy.addEventListener("click", function () { AVF.checkout(p, sel, c); });
     paint();
-    return h("div", { class: "card pkg" }, h("span", { class: "tile" + (p.pharmacology ? " teal" : "") }, AVF.icon(copy.icon)), h("h3", { text: p.label }), h("p", { class: "tagline" }, copy.tag),
-      h("div", { class: "chip " + (p.pharmacology ? "" : "lime") }, p.pharmacology ? "Farmakoloji desteği var" : "Farmakoloji desteği yok"),
-      opts, price, listP,
-      h("ul", { class: "ticks" }, copy.items.concat(["Planlar ödemeden sonra 7 gün içinde hazırlanır"]).map(function (t) { return h("li", {}, t); })),
+    return h("article", { class: "card pkg" },
+      h("div", { class: "pkg-head" }, h("span", { class: "tile" }, AVF.icon(copy.icon)), h("span", { class: "chip" }, copy.level)),
+      h("h3", { text: p.label }), h("p", { class: "tagline" }, copy.tag),
+      h("div", { class: "pkg-price" }, price, listP), opts,
+      h("div", { class: "pkg-cats" }, PKG_CATS.map(function (cg) {
+        return h("div", { class: "pcat" }, h("div", { class: "pcat-t" }, AVF.icon(cg[0]), h("span", { text: cg[1] })),
+          h("ul", {}, cg[2].map(function (row) { var on = row[1](p); return h("li", { class: on ? "on" : "off" }, AVF.icon(on ? "check" : "x"), h("span", { text: row[0] })); })));
+      })),
       h("div", { class: "pkg-foot" }, buy));
   }
 
@@ -77,7 +89,7 @@
               : h("button", { type: "button", disabled: true, "aria-disabled": "true" }, AVF.icon("card"), h("span", {}, h("b", {}, "Kredi / banka kartı"), h("small", {}, "Şu anda aktif değildir")), h("em", {}, "Pasif"))),
       payOn && c.payment.test ? h("div", { class: "note warn", style: "margin:10px 0" }, h("b", {}, "Test aşaması: "), "ödeme sahte (deneme) sanal POS ile yapılır; gerçek tahsilat olmaz.") : null,
       lbl(chk1, ["", lnk("kullanim-kosullari", "Hizmet Şartları ve Mesafeli Satış Sözleşmesi"), "’ni okudum, kabul ediyorum. Hizmetin ödeme onayından hemen sonra ifasına başlanmasını talep ediyor ve cayma hakkının bulunmadığı konusunda bilgilendirildiğimi kabul ediyorum."]),
-      p.pharmacology ? lbl(chk2, [lnk("sorumluluk-reddi", "Sağlık ve Farmakoloji Sorumluluk Beyanı"), "’nı okudum. Farmakoloji içeriğinin isteğe bağlı olduğunu, bana zorunlu kılınmadığını; kullanıp kullanmayacağıma kendi irademle karar vereceğimi ve sonuçlarının bana ait olduğunu kabul ediyorum."]) : null,
+      p.pharmacology ? lbl(chk2, ["", lnk("kullanim-kosullari", "Hizmet Şartları"), "’ndaki sağlık ve farmakoloji hükümlerini okudum. Farmakoloji içeriğinin isteğe bağlı olduğunu, bana zorunlu kılınmadığını; kullanıp kullanmayacağıma kendi irademle karar vereceğimi ve sonuçlarının bana ait olduğunu kabul ediyorum."]) : null,
       lbl(chk3, [lnk("kvkk", "KVKK Aydınlatma Metni"), "’ni okudum."]), err, go);
     ov = h("div", { class: "ov", onmousedown: function (e) { if (e.target === ov) close(); } }, dlg);
     document.body.appendChild(ov); document.addEventListener("keydown", key, true); go.focus();

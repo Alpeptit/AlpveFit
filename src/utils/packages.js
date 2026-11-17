@@ -9,10 +9,8 @@ export const PACKAGES = {
 export const PACKAGE_KEYS = Object.keys(PACKAGES);
 export const PACKAGE_LABELS = { starter: "Başlangıç Paketi", advanced: "İleri Seviye Program", competitor: "Yarışmacı Paketi" };
 export const PACKAGE_LABELS_EN = { starter: "Starter Package", advanced: "Advanced Program", competitor: "Competitor Package" };
-/** Yüz yüze eğitim paketi satılmaz; yalnız bu adrese yönlendirilir. */
-export const IN_PERSON_CONTACT = "destek@alpvefit.com";
-/** Ödemeden sonra planların hazırlanma süresi (gün). */
-export const PLAN_DELIVERY_DAYS = 7;
+/** Ödemeden sonra planların hazırlanma süresi (saat). */
+export const PLAN_DELIVERY_HOURS = 24;
 /** Üyeye ödemeyle açılan plan türleri. Farmakoloji yalnız farmakolojili paketlerde. */
 export function kindsForPackage(key) {
   const p = PACKAGES[key];

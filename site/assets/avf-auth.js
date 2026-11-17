@@ -1,4 +1,4 @@
-/* Alpvefit — giriş / kayıt / şifre sıfırlama / ikinci adım penceresi.
+/* AlpveFit — giriş / kayıt / şifre sıfırlama / ikinci adım penceresi.
    Kurallar Alpeptit ile aynıdır: iki adımlı kayıt (e-postaya 6 haneli kod), reCAPTCHA, şifre kuralları, Authenticator + kurtarma kodu,
    şifre sıfırlama (kod veya e-posta bağlantısı), 6 hatalı koddan sonra 30 dk hesap kilidi (sunucu uygular, burada yalnız gösterilir). */
 (function () {
@@ -26,7 +26,7 @@
     lastFocus = document.activeElement;
     body = h("div");
     dlg = h("div", { class: "dlg", role: "dialog", "aria-modal": "true", "aria-labelledby": "auth-title" },
-      AVF.logo(true),
+      AVF.logo(false),
       h("button", { class: "x", type: "button", "aria-label": "Kapat", onclick: close }, AVF.icon("x")), body);
     ov = h("div", { class: "ov", onmousedown: function (e) { if (e.target === ov) close(); } }, dlg);
     document.body.appendChild(ov); document.body.style.overflow = "hidden";

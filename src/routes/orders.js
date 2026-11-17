@@ -7,7 +7,7 @@ import { logAudit } from "../utils/auditLog.js";
 import { expireDueOrders, markOrderPaid } from "../services/orderFulfilment.js";
 import { activeProvider, isTestProvider } from "../services/payments.js";
 import {
-  PACKAGES, PACKAGE_KEYS, PACKAGE_LABELS, IN_PERSON_CONTACT, PLAN_DELIVERY_DAYS, CURRENCY,
+  PACKAGES, PACKAGE_KEYS, PACKAGE_LABELS, PLAN_DELIVERY_HOURS, CURRENCY,
   findOption, OPEN_STATUSES, MAX_OPEN_UNPAID_ORDERS, paymentWindowHours,
 } from "../utils/packages.js";
 
@@ -21,7 +21,7 @@ ordersRouter.get("/packages", (req, res) => {
   const provider = activeProvider();
   res.setHeader("Cache-Control", "no-store");
   res.json({
-    planDeliveryDays: PLAN_DELIVERY_DAYS, inPersonContact: IN_PERSON_CONTACT, currency: CURRENCY,
+    planDeliveryHours: PLAN_DELIVERY_HOURS, currency: CURRENCY,
     payment: { enabled: !!provider, test: isTestProvider(provider) },
     packages: PACKAGE_KEYS.map((key) => ({
       key, label: PACKAGE_LABELS[key], pharmacology: PACKAGES[key].pharmacology,

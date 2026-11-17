@@ -1,6 +1,6 @@
 import { pool } from "../db/pool.js";
 import { logAuditTx } from "../utils/auditLog.js";
-import { kindsForPackage, PLAN_DELIVERY_DAYS } from "../utils/packages.js";
+import { kindsForPackage, PLAN_DELIVERY_HOURS } from "../utils/packages.js";
 import { sendMail } from "../utils/mailer.js";
 import { orderPaidMail } from "../utils/emailTemplates.js";
 
@@ -8,7 +8,7 @@ import { orderPaidMail } from "../utils/emailTemplates.js";
  * Siparişi 'ödendi' yapar (sanal POS başarılı ödemesi VEYA yönetici onayı). TEK transaction'da:
  *  - kilitli satır yalnız pending ise güncellenir (çift onay yok)
  *  - paketin plan türleri üyeye açılır (farmakoloji yalnız farmakolojili paketlerde) — var olan izin silinmez
- *  - plans_due_at = ödeme + 7 gün; bildirim + denetim kaydı aynı işlemde
+ *  - plans_due_at = ödeme + 24 saat; bildirim + denetim kaydı aynı işlemde
  * Dönüş: true = bu çağrı onayladı.
  */
 export async function markOrderPaid(orderId, { paymentRef = null, actorId = null, note = null, source }) {
@@ -20,10 +20,10 @@ export async function markOrderPaid(orderId, { paymentRef = null, actorId = null
     const o = rows[0];
     if (o && o.status === "pending") {
       await client.query(
-        `UPDATE orders SET status = 'paid', paid_at = now(), plans_due_at = now() + make_interval(days => $2),
+        `UPDATE orders SET status = 'paid', paid_at = now(), plans_due_at = now() + make_interval(hours => $2),
                 payment_ref = COALESCE($3, payment_ref), approved_by = $4, approval_note = $5, updated_at = now()
          WHERE id = $1`,
-        [o.id, PLAN_DELIVERY_DAYS, paymentRef, actorId, note]
+        [o.id, PLAN_DELIVERY_HOURS, paymentRef, actorId, note]
       );
       if (o.user_id) {
         for (const kind of kindsForPackage(o.package_key)) {

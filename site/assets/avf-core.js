@@ -1,10 +1,16 @@
-/* Alpvefit — ortak çekirdek: DOM yardımcıları, API istemcisi (CSRF), bildirimler, reCAPTCHA. Kullanıcı verisi HİÇBİR ZAMAN innerHTML ile yazılmaz. */
+/* AlpveFit — ortak çekirdek: DOM yardımcıları, API istemcisi (CSRF), bildirimler, reCAPTCHA. Kullanıcı verisi HİÇBİR ZAMAN innerHTML ile yazılmaz. */
 (function () {
   "use strict";
   var AVF = (window.AVF = window.AVF || {});
 
   // ---------- simgeler (yalnız sabit, güvenilir SVG yolları) ----------
   var P = {
+    wrench: "M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z", clock: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2",
+    building: "M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16M16 9h2a2 2 0 012 2v10M3 21h18M8 7h4M8 11h4M8 15h4", compass: "M12 21a9 9 0 100-18 9 9 0 000 18zM15.5 8.5l-2 5-5 2 2-5z",
+    scale: "M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 006 0zM19 7l-3 7a3 3 0 006 0zM12 3l-2 2h4z", headset: "M4 15v-3a8 8 0 0116 0v3M4 15a2 2 0 002 2h1v-5H6a2 2 0 00-2 2zM20 15a2 2 0 01-2 2h-1v-5h1a2 2 0 012 2zM17 17v1a3 3 0 01-3 3h-2",
+    ticket: "M3 8a2 2 0 002-2h14a2 2 0 002 2v2a2 2 0 000 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 000-4zM14 6v12", chat: "M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12zM8.5 12h.01M12 12h.01M15.5 12h.01",
+    spark: "M12 3l2 5.5L19.5 10 14 12l-2 6-2-6-5.5-2L10 8.5zM19 3v4M21 5h-4", target: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 17a5 5 0 100-10 5 5 0 000 10zM12 13a1 1 0 100-2 1 1 0 000 2z",
+    layers: "M12 3l9 5-9 5-9-5zM3 13l9 5 9-5", award: "M12 15a6 6 0 100-12 6 6 0 000 12zM8.5 13.5L7 21l5-3 5 3-1.5-7.5", mission: "M4 21V4M4 4h12l-2 4 2 4H4",
     help: "M9.5 9a2.5 2.5 0 115 .5c0 1.5-2.5 2-2.5 3.5M12 17h.01M3 12a9 9 0 1018 0 9 9 0 10-18 0", file: "M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6", pulse: "M3 12h4l2-6 4 12 2-6h6", up: "M12 19V5M6 11l6-6 6 6",
     arrow: "M5 12h14M13 6l6 6-6 6", back: "M19 12H5M11 6l-6 6 6 6", send: "M22 2L11 13M22 2l-7 20-4-9-9-4z", book: "M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19V5M9 7h6", calc: "M6 3h12v18H6zM9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01", msg: "M4 5h16v11H9l-5 4z", save: "M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7",
     home: "M3 11l9-8 9 8M5 10v10h14V10", user: "M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0", bell: "M6 16V11a6 6 0 1112 0v5l2 2H4zM10 20a2 2 0 004 0",
@@ -25,14 +31,29 @@
   };
 
 
-  // Marka: tek kaynak. "A" harfi aynı zamanda bir zirve (Alp) ve çubuk (fit). Koyu zeminde beyaz, açık zeminde siyah kare.
-  AVF.logo = function (light) {
+  // Marka: tek kaynak. Yuvarlatılmış kare içinde iki zirve (Alp) ve güneş noktası; yanında "AlpveFit" yazısı.
+  // light = açık zemin (siyah kare). Koyu zeminde (light=false) beyaz kare + siyah çizgi.
+  AVF.mark = function (size) {
     var NS = "http://www.w3.org/2000/svg", s = document.createElementNS(NS, "svg");
-    s.setAttribute("viewBox", "0 0 32 32"); s.setAttribute("class", "lmk-g"); s.setAttribute("aria-hidden", "true");
-    [["path", { d: "M5 26L16 6l11 20", fill: "none", stroke: "currentColor", "stroke-width": "3.4", "stroke-linecap": "round", "stroke-linejoin": "round" }],
-     ["path", { d: "M11 20h10", fill: "none", stroke: "currentColor", "stroke-width": "3.4", "stroke-linecap": "round" }],
-     ["circle", { cx: "16", cy: "6", r: "2.2", fill: "currentColor" }]].forEach(function (e) { var n = document.createElementNS(NS, e[0]); Object.keys(e[1]).forEach(function (k) { n.setAttribute(k, e[1][k]); }); s.appendChild(n); });
-    return AVF.h("span", { class: "logo" + (light ? " lt" : "") }, AVF.h("span", { class: "lmk" }, s), AVF.h("span", { class: "wm", "data-notr": "" }, "ALPVE", AVF.h("em", {}, "FIT")));
+    s.setAttribute("viewBox", "0 0 64 64"); s.setAttribute("class", "lmk"); s.setAttribute("aria-hidden", "true");
+    if (size) { s.setAttribute("width", size); s.setAttribute("height", size); }
+    [["rect", { width: "64", height: "64", rx: "18", class: "lmk-bg" }],
+     ["path", { d: "M13 45L27 21l8 13 5-7 11 18", fill: "none", class: "lmk-fg", "stroke-width": "5", "stroke-linecap": "round", "stroke-linejoin": "round" }],
+     ["circle", { cx: "45", cy: "18", r: "3.4", class: "lmk-dot" }]].forEach(function (e) { var n = document.createElementNS(NS, e[0]); Object.keys(e[1]).forEach(function (k) { n.setAttribute(k, e[1][k]); }); s.appendChild(n); });
+    return s;
+  };
+  AVF.logo = function (onDark) {
+    return AVF.h("span", { class: "logo" + (onDark ? " ondark" : "") }, AVF.mark(), AVF.h("span", { class: "wm", "data-notr": "" }, "AlpveFit"));
+  };
+  // Zengin metin: yalnız **kalın** işaretini tanır; tüm parçalar textContent ile yazılır (HTML yorumlanmaz).
+  AVF.rich = function (tag, text, attrs) {
+    var el = AVF.h(tag, attrs || null);
+    String(text).split(/(\*\*[^*]+\*\*)/).forEach(function (part) {
+      if (!part) return;
+      if (/^\*\*[^*]+\*\*$/.test(part)) el.appendChild(AVF.h("strong", { text: part.slice(2, -2) }));
+      else el.appendChild(document.createTextNode(part));
+    });
+    return el;
   };
 
   // ---------- DOM ----------
@@ -81,8 +102,9 @@
   AVF.onSessionEnd = null;   // uygulama tarafından atanır (oturum süresi doldu / kilitlendi)
 
   // Hata nesnesi: { status, data }. 401 sessionExpired → oturum kapatılır (altyapı hatası 503 oturumu SONLANDIRMAZ).
-  AVF.api = function (method, path, body) {
+  AVF.api = function (method, path, body, extra) {
     var headers = { Accept: "application/json" };
+    if (extra) Object.keys(extra).forEach(function (k) { headers[k] = extra[k]; });
     var opt = { method: method, credentials: "same-origin", headers: headers };
     if (body !== undefined) { headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
     if (method !== "GET") { var c = AVF.cookie("avf_csrf"); if (c) headers["x-csrf-token"] = c; }
@@ -164,9 +186,12 @@
     var panel = AVF.h("div", { class: "panel", id: id, role: "region" });
     var btn = AVF.h("button", { type: "button", "aria-expanded": opts.open ? "true" : "false", "aria-controls": id, onclick: function () {
       var o = wrap.classList.toggle("open"); btn.setAttribute("aria-expanded", o ? "true" : "false"); if (o && opts.onOpen) opts.onOpen(panel);
+      // Grup (ör. SSS): bir öğe açılınca diğerleri kapanır.
+      if (o && opts.group) opts.group.forEach(function (w) { if (w !== wrap && w.classList.contains("open")) { w.classList.remove("open"); var b = w.querySelector("button[aria-expanded]"); if (b) b.setAttribute("aria-expanded", "false"); } });
     } }, AVF.h("span", { class: "tile" + (opts.teal ? " teal" : "") }, AVF.icon(opts.icon || "list")),
       AVF.h("span", { class: "t" }, AVF.h("b", { text: opts.title }), opts.sub ? AVF.h("small", { text: opts.sub }) : null), AVF.icon("chev", "chev"));
     wrap.appendChild(btn); wrap.appendChild(panel);
+    if (opts.group) opts.group.push(wrap);
     if (opts.content) AVF.mount(panel, opts.content);
     wrap.setTitleSub = function (s) { var sm = btn.querySelector("small"); if (sm) sm.textContent = s; };
     return wrap;

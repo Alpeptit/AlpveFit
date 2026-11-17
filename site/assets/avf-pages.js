@@ -1,57 +1,52 @@
-/* Alpvefit — bilgi sayfaları: SSS, Hakkımızda, Blog, Araçlar (hesaplayıcılar), Forum (yapım aşamasında).
+/* AlpveFit — bilgi sayfaları: SSS, Hakkımızda, Blog, Araçlar (hesaplayıcılar), Forum (yapım aşamasında).
    Hesaplayıcılar tamamen tarayıcıda çalışır: girilen değerler sunucuya GÖNDERİLMEZ ve saklanmaz. */
 (function () {
   "use strict";
   var AVF = window.AVF, h = AVF.h;
 
   function link(href, children, attrs) { attrs = attrs || {}; attrs.href = href; attrs["data-link"] = ""; return h("a", attrs, children); }
-  function page(view, title, doc, sub, body) {
-    document.title = doc + " — Alpvefit";
+  function page(view, title, doc, sub, body, icon) {
+    document.title = doc + " — AlpveFit";
     AVF.mount(view,
-      h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("h1", { text: title }), sub ? h("p", { text: sub }) : null)),
+      h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, icon ? h("span", { class: "eyebrow" }, AVF.icon(icon), doc) : null, h("h1", { text: title }), sub ? h("p", { text: sub }) : null)),
       h("div", { class: "wrap section" }, body));
   }
 
   // ---------- SSS ----------
   var FAQ = [
-    ["Ödeme nasıl yapılıyor?", "Kredi / banka kartı ile sanal POS üzerinden ödenir. Kart bilgileriniz Alpvefit sunucularında saklanmaz. Şu an test aşamasındayız; ödeme sahte (deneme) sanal POS ile yapılır ve gerçek tahsilat olmaz."],
-    ["Programım ne zaman hazır olur?", "Ödemeniz onaylandıktan sonra 7 gün içinde. Her plan yayınlandığında panelinizde görünür ve bildirim alırsınız."],
-    ["Planlarımı kimler görebilir?", "Planlarınızı yalnızca siz ve size atanmış uzman görür. Her planda hazırlayan uzmanın adı ve yayın tarihi yer alır."],
-    ["Programlar nasıl hazırlanıyor?", "Her program yetkili uzmanlarca elle hazırlanır. Sistem hiçbir beslenme, antrenman, takviye veya farmakoloji içeriğini otomatik üretmez."],
-    ["Kişisel bilgilerimi vermek zorunda mıyım?", "Hayır, isteğe bağlıdır. Boy, kilo, meslek gibi bilgiler programın size uygun hazırlanmasına yardımcı olur; açık rızanızla kaydedilir ve istediğiniz zaman silebilirsiniz."],
-    ["Farmakoloji desteği zorunlu mu?", "Hayır. İleri Seviye ve Yarışmacı paketlerinde yer alır ancak tamamen isteğe bağlıdır; hiçbir üyeye zorunlu kılınmaz. Karar ve sorumluluk üyeye aittir."],
-    ["Yüz yüze eğitim alabilir miyim?", "Yüz yüze eğitim için destek@alpvefit.com adresine yazmanız yeterlidir. Sitede randevu veya takvim sistemi bulunmaz."],
-    ["Verilerim ne kadar süre saklanır?", "Kişisel verileriniz 180 gün süreyle saklanır ve sonrasında silinir veya anonimleştirilir. Ayrıntılar KVKK Aydınlatma Metni'ndedir."]
+    ["card", "Ödeme nasıl yapılıyor?", "Ödeme, kredi veya banka kartınızla sanal POS üzerinden güvenli olarak alınır. Kart bilgileriniz AlpveFit sunucularına iletilmez ve saklanmaz; işlem ödeme kuruluşunun güvenli sayfasında tamamlanır. Şu an test aşamasındayız; ödeme sahte (deneme) sanal POS ile yapılır ve gerçek tahsilat olmaz."],
+    ["clock", "Programım ne zaman hazır olur?", "Ödemeniz onaylandıktan sonra 24 saat içinde. Beslenme, antrenman ve takviye planlarınız uzmanınız tarafından hazırlanır; her plan panelinizde yayınlandığında bildirim alırsınız."],
+    ["lock", "Planlarımı kimler görebilir?", "Planlarınızı yalnızca siz ve size atanmış yetkili uzman görebilir. Her planda hazırlayan uzmanın adı ve yayın tarihi yer alır; planlar başka üyelerle paylaşılmaz."],
+    ["target", "Programlar nasıl hazırlanıyor?", "Her program, hedefiniz ve yaşam düzeniniz dikkate alınarak yetkili uzmanlarca elle hazırlanır. Sistem hiçbir beslenme, antrenman, takviye veya farmakoloji içeriğini otomatik olarak üretmez."],
+    ["id", "Kişisel bilgilerimi vermek zorunda mıyım?", "Hayır, tamamen isteğe bağlıdır. Boy, kilo, meslek gibi bilgiler programınızın size daha uygun hazırlanmasına yardımcı olur; açık rızanızla kaydedilir ve panelinizden dilediğiniz an silebilirsiniz."],
+    ["flask", "Farmakoloji desteği zorunlu mu?", "Hayır. İleri Seviye ve Yarışmacı paketlerinde yer alır ancak tamamen isteğe bağlıdır; hiçbir üyeye zorunlu kılınmaz. Kullanıp kullanmama kararı ve sorumluluğu üyeye aittir."],
+    ["chat", "Size nasıl ulaşabilirim?", "Sağ alttaki canlı destek penceresinden bize yazabilir, üye panelinizden destek talebi (ticket) oluşturabilir veya destek@alpvefit.com adresine e-posta gönderebilirsiniz."],
+    ["shield", "Verilerim ne kadar süre saklanır?", "Kişisel verileriniz 180 gün süreyle saklanır; ardından silinir veya anonim hâle getirilir. Yasal olarak daha uzun saklanması gereken mali kayıtlar bu sürenin dışındadır. Ayrıntılar KVKK Aydınlatma Metni’ndedir."]
   ];
   AVF.pages = {};
   AVF.pages.faq = function (view) {
-    page(view, "Sık sorulan sorular", "Sık sorulan sorular", "Aradığınızı bulamazsanız destek@alpvefit.com adresine yazın.",
-      h("div", { class: "stack narrow" }, FAQ.map(function (q) { return AVF.accordion({ icon: "list", title: q[0], content: h("p", { style: "margin:0;color:var(--muted)", text: q[1] }) }); })));
+    var group = [];
+    page(view, "Sık sorulan sorular", "Sık sorulan sorular", "Aradığınızı bulamazsanız canlı destekten veya destek@alpvefit.com adresinden bize ulaşın.",
+      h("div", { class: "faq" }, FAQ.map(function (q, i) { return AVF.accordion({ icon: q[0], title: q[1], group: group, open: i === 0, content: h("p", { class: "faq-a", text: q[2] }) }); })), "help");
   };
 
   // ---------- Hakkımızda ----------
   AVF.pages.about = function (view) {
     function pillar(icon, t, s) { return h("div", { class: "card feat" }, h("span", { class: "tile" }, AVF.icon(icon)), h("h3", { text: t }), h("p", { text: s })); }
-    page(view, "Hakkımızda", "Hakkımızda", "Alpvefit, uzaktan eğitim ve koçluk hizmeti sunan bağımsız bir platformdur.",
-      h("div", { class: "stack" },
-        h("div", { class: "card prose" },
-          h("h2", { text: "Yaklaşımımız" }),
-          h("p", { text: "Alpvefit'te her program, kişinin hedefine, yaşam düzenine ve sağlık durumuna göre uzmanlar tarafından elle hazırlanır. Otomatik üretilmiş şablon kullanılmaz; planlar yalnızca yetkili kişilerce oluşturulur ve yayınlanır." }),
-          h("p", { text: "Hazırlanan her planda, planı kimin hazırladığı ve ne zaman yayınlandığı açıkça görünür. Planlarınızı yalnızca siz görürsünüz." })),
+    page(view, "Hakkımızda", "Hakkımızda", "AlpveFit, uzaktan eğitim ve koçluk hizmeti sunan bağımsız bir platformdur.",
+      h("div", { class: "stack lg" },
+        h("div", { class: "card prose mission" },
+          h("span", { class: "tile" }, AVF.icon("mission")),
+          h("div", {}, h("h2", { text: "Misyonumuz" }),
+            h("p", { text: "AlpveFit’te her program, kişinin hedefine, yaşam düzenine, sağlık durumuna ve maddi durumuna göre uzmanlar tarafından titizlikle hazırlanır. Otomatik üretilmiş şablon kullanılmaz; planlar yalnızca yetkili kişilerce oluşturulur ve kullanıcı panelinizde yalnızca sizin görebileceğiniz şekilde yayınlanır." }))),
         h("div", { class: "grid3" },
-          pillar("shield", "Şeffaflık", "Planı hazırlayan uzman ve yayın tarihi her planda görünür."),
-          pillar("globe", "Uzaktan çalışma", "Nerede olursanız olun uzmanınızla çalışın. Yüz yüze eğitim için bizimle iletişime geçin."),
+          pillar("award", "Uzman kadro", "Programlarınız yalnızca yetkili ve deneyimli uzmanlar tarafından hazırlanır ve güncellenir."),
+          pillar("clock", "Hızlı teslim", "Ödemenizin onaylanmasından sonra programlarınız 24 saat içinde panelinizde yayınlanır."),
           pillar("lock", "Gizlilik", "Verileriniz ayrı bir sistemde tutulur; açık rızanız olmadan kimseyle paylaşılmaz.")),
         h("div", { class: "card prose" },
-          h("h2", { text: "Neleri yapmıyoruz?" }),
-          h("ul", { class: "ticks" },
-            h("li", { text: "Alpvefit herhangi bir ürün veya madde satmaz; yalnızca eğitim ve koçluk hizmeti sunar." }),
-            h("li", { text: "Planlar otomatik üretilmez; farmakoloji içeriği isteğe bağlıdır ve yalnızca yetkili uzmanlarca eklenir." }),
-            h("li", { text: "Sitede randevu veya takvim sistemi yoktur; yüz yüze eğitim yalnızca e-posta ile planlanır." }))),
-        h("div", { class: "card prose" },
-          h("h2", { text: "İletişim" }),
-          h("p", { text: "Soru, öneri ve yüz yüze eğitim talepleriniz için: destek@alpvefit.com" }),
-          h("div", { class: "row" }, link("/paketler", "Paketleri incele", { class: "btn" }), link("/sss", "Sık sorulan sorular", { class: "btn ghost" })))));
+          h("h2", {}, AVF.icon("headset"), h("span", { text: "İletişim" })),
+          h("p", {}, "Soru ve önerileriniz için ", h("a", { href: "mailto:destek@alpvefit.com" }, "destek@alpvefit.com"), " adresine yazabilirsiniz."),
+          h("div", { class: "row" }, h("a", { class: "btn", href: "mailto:destek@alpvefit.com" }, AVF.icon("mail", "bico"), "E-posta gönder"), link("/sss", "Sık sorulan sorular", { class: "btn ghost" })))), "users");
   };
 
   // ---------- Forum (yapım aşamasında) ----------
@@ -73,7 +68,7 @@
   }
   AVF.pages.blog = function (view) {
     var box = h("div", { class: "stack" }, AVF.skeleton(3));
-    page(view, "Blog", "Blog", "Beslenme, antrenman ve sağlıklı yaşam üzerine yazılar.", box);
+    page(view, "Blog", "Blog", "Beslenme, antrenman ve sağlıklı yaşam üzerine yazılar.", box, "book");
     AVF.api("GET", "/blog").then(function (rows) {
       if (!rows.length) return AVF.mount(box, AVF.state("book", "Henüz yazı yok", "Yeni yazılar yayınlandığında burada görünecek."));
       AVF.mount(box, h("div", { class: "grid3" }, rows.map(function (p) {
@@ -86,7 +81,7 @@
     var box = h("div", { class: "card prose" }, AVF.skeleton(2));
     page(view, "Blog", "Blog", "", h("div", { class: "narrow-col" }, box, h("div", { style: "margin-top:16px" }, link("/blog", "Tüm yazılar", { class: "btn ghost" }))));
     AVF.api("GET", "/blog/" + encodeURIComponent(slug)).then(function (p) {
-      document.title = p.title + " — Alpvefit";
+      document.title = p.title + " — AlpveFit";
       AVF.mount(box, h("h1", { "data-notr": "", text: p.title }), h("p", { class: "meta" }, (p.author_name ? p.author_name + " · " : "") + AVF.fmtDate(p.published_at)), renderBody(p.body));
     }, function () { AVF.mount(box, AVF.state("alert", "Yazı bulunamadı", "Aradığınız yazı yayında değil veya kaldırılmış olabilir.")); });
   };
@@ -147,8 +142,8 @@
     if (!t) {
       page(view, "Araçlar", "Araçlar", "Hesaplayıcılar tarayıcınızda çalışır; girdiğiniz değerler hiçbir yere gönderilmez.",
         h("div", { class: "grid3" }, TOOLS.map(function (x) {
-          return link("/araclar/" + x.key, [h("span", { class: "tile" }, AVF.icon(x.icon)), h("h3", { text: x.title }), h("p", { text: x.desc }), h("span", { class: "chip", text: "Hesapla" })], { class: "card feat postcard" });
-        })));
+          return link("/araclar/" + x.key, [h("span", { class: "tile" }, AVF.icon(x.icon)), h("h3", { text: x.title }), h("p", { text: x.desc }), h("span", { class: "chip" }, AVF.icon("wrench"), "Hesapla")], { class: "card feat postcard" });
+        })), "wrench");
       return;
     }
     var out = h("div", { "aria-live": "polite" });

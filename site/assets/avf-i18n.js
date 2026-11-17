@@ -1,4 +1,4 @@
-/* Alpvefit — dil desteği (TR/EN). Kaynak metinler Türkçedir; İngilizce seçiliyse arayüz metinleri, sunucu hata iletileri ve bildirimler
+/* AlpveFit — dil desteği (TR/EN). Kaynak metinler Türkçedir; İngilizce seçiliyse arayüz metinleri, sunucu hata iletileri ve bildirimler
    sözlükten (avf-i18n-data.js) çevrilir. Çeviri, DOM'a yazılan metin düğümleri ve erişilebilirlik öznitelikleri üzerinde çalışır;
    data-notr işaretli alanlar (kullanıcı/uzman içeriği, hukuki metinler) çevrilmez. Seçim localStorage'da saklanır; e-postalar da bu dile göre gelir. */
 (function () {
@@ -8,7 +8,17 @@
   AVF.lang = stored === "en" || stored === "tr" ? stored : (String(navigator.language || "tr").toLowerCase().indexOf("tr") === 0 ? "tr" : "en");
   document.documentElement.lang = AVF.lang;
   AVF.locale = function () { return AVF.lang === "en" ? "en-GB" : "tr-TR"; };
-  AVF.setLang = function (l) { try { localStorage.setItem("avf_lang", l); } catch (e) { /* yok say */ } location.reload(); };
+  // Dil değişimi sayfa YENİLENMEDEN yapılır: çevrilen her metnin Türkçe aslı saklanır; TR'ye dönüşte asıllar geri yazılır,
+  // EN'ye geçişte tüm sayfa çevrilir. Ardından uygulama görünümü yeniden çizer (AVF.onLangChange).
+  AVF.onLangChange = AVF.onLangChange || [];
+  AVF.setLang = function (l) {
+    if (l !== "tr" && l !== "en") return;
+    try { localStorage.setItem("avf_lang", l); } catch (e) { /* yok say */ }
+    if (l === AVF.lang) return;
+    AVF.lang = l; document.documentElement.lang = l;
+    if (l === "en") { node(document.body); title(); } else restore(document.body);
+    AVF.onLangChange.forEach(function (f) { try { f(l); } catch (e) { /* bir dinleyicinin hatası diğerlerini durdurmaz */ } });
+  };
 
   AVF.DICT = AVF.DICT || {};      // tam eşleşme: { "Türkçe": "English" }
   AVF.PATTERNS = AVF.PATTERNS || []; // değişkenli: [ /regex/, "English $1" ]
@@ -37,21 +47,29 @@
     return s;
   }
   AVF.t = function (s) { return AVF.lang === "en" && typeof s === "string" ? tr1(s) : s; };
-  if (AVF.lang !== "en") return;
-
   var ATTRS = ["placeholder", "aria-label", "title", "alt", "aria-description"], busy = false;
   function skip(n) { for (var e = n.nodeType === 1 ? n : n.parentNode; e && e.nodeType === 1; e = e.parentNode) { if (e.hasAttribute("data-notr") || e.tagName === "SCRIPT" || e.tagName === "STYLE") return true; } return false; }
+  var ORIG = typeof WeakMap === "function" ? new WeakMap() : null, origTitle = null;
+  function keep(n, key, val) { if (!ORIG) return; var m = ORIG.get(n); if (!m) { m = {}; ORIG.set(n, m); } if (!(key in m)) m[key] = val; }
   function node(n) {
-    if (n.nodeType === 3) { if (skip(n)) return; var v = tr1(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; return; }
+    if (AVF.lang !== "en" || !n) return;
+    if (n.nodeType === 3) { if (skip(n)) return; var v = tr1(n.nodeValue); if (v !== n.nodeValue) { keep(n, "#", n.nodeValue); n.nodeValue = v; } return; }
     if (n.nodeType !== 1 || skip(n)) return;
-    for (var i = 0; i < ATTRS.length; i++) { var a = n.getAttribute(ATTRS[i]); if (a) { var t = tr1(a); if (t !== a) n.setAttribute(ATTRS[i], t); } }
-    if (n.tagName === "INPUT" && /^(button|submit)$/.test(n.type) && n.value) { var tv = tr1(n.value); if (tv !== n.value) n.value = tv; }
+    for (var i = 0; i < ATTRS.length; i++) { var a = n.getAttribute(ATTRS[i]); if (a) { var t = tr1(a); if (t !== a) { keep(n, ATTRS[i], a); n.setAttribute(ATTRS[i], t); } } }
+    if (n.tagName === "INPUT" && /^(button|submit)$/.test(n.type) && n.value) { var tv = tr1(n.value); if (tv !== n.value) { keep(n, "value", n.value); n.value = tv; } }
     for (var c = n.firstChild; c; c = c.nextSibling) node(c);
   }
-  function title() { var t = tr1(document.title); if (t !== document.title) document.title = t; }
+  function restore(n) {
+    if (!ORIG || !n) return;
+    var m = ORIG.get(n);
+    if (m) { Object.keys(m).forEach(function (k) { if (k === "#") n.nodeValue = m[k]; else if (k === "value") n.value = m[k]; else n.setAttribute(k, m[k]); }); ORIG.delete(n); }
+    for (var c = n.firstChild; c; c = c.nextSibling) restore(c);
+    if (n === document.body && origTitle) { document.title = origTitle; origTitle = null; }
+  }
+  function title() { if (AVF.lang !== "en") return; var t = tr1(document.title); if (t !== document.title) { origTitle = document.title; document.title = t; } }
   function start() {
     var mo = new MutationObserver(function (list) {
-      if (busy) return; busy = true;
+      if (busy || AVF.lang !== "en") return; busy = true;
       try {
         list.forEach(function (m) {
           if (m.type === "childList") m.addedNodes.forEach(node);

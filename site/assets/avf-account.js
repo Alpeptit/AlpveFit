@@ -1,4 +1,4 @@
-/* Alpvefit — Hesap Ayarları: ad soyad, e-posta, şifre, iki adımlı doğrulama, son girişler, hesabı sil.
+/* AlpveFit — Hesap Ayarları: ad soyad, e-posta, şifre, iki adımlı doğrulama, son girişler, hesabı sil.
    Alpeptit ile aynı kurallar: her hassas değişiklik hesaba kayıtlı e-postaya gelen 6 haneli kodla onaylanır (sunucu denetler). */
 (function () {
   "use strict";

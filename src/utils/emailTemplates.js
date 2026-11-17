@@ -1,4 +1,4 @@
-// Alpvefit e-posta şablonları (Alpvefit şablon yapısından türetildi; marka, renk ve içerik Alpvefit'e ait) (tek merkez).
+// AlpveFit e-posta şablonları (AlpveFit şablon yapısından türetildi; marka, renk ve içerik AlpveFit'e ait) (tek merkez).
 // • Koyu antrasit üst bant + lime ◆ ALPVEFIT, beyaz kart, lime vurgu, ortalanmış kod kutusu.
 // • E-posta istemcisi uyumluluğu: tablo düzeni, satır içi stil, harici yazı tipi/görsel/izleme pikseli YOK
 //   (görseller kapalıyken de eksiksiz görünür; alıcı hakkında hiçbir veri dışarı sızmaz).
@@ -74,10 +74,10 @@ const button = (label, href) => {
 function strip(s) { return String(s).replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'"); }
 
 const FOOT = {
-  tr: { auto: "Bu e-posta Alpvefit hesabınızla ilgili bir işlem nedeniyle otomatik olarak gönderildi; lütfen yanıtlamayın. Yardım için sitemizdeki canlı desteği kullanabilirsiniz.",
-        never: "Alpvefit ekibi sizden hiçbir zaman şifrenizi, doğrulama kodunuzu veya kurtarma kodlarınızı istemez." },
-  en: { auto: "This email was sent automatically because of an action on your Alpvefit account; please do not reply. For help, use live support on our website.",
-        never: "The Alpvefit team will never ask you for your password, verification code or recovery codes." },
+  tr: { auto: "Bu e-posta AlpveFit hesabınızla ilgili bir işlem nedeniyle otomatik olarak gönderildi; lütfen yanıtlamayın. Yardım için sitemizdeki canlı desteği kullanabilirsiniz.",
+        never: "AlpveFit ekibi sizden hiçbir zaman şifrenizi, doğrulama kodunuzu veya kurtarma kodlarınızı istemez." },
+  en: { auto: "This email was sent automatically because of an action on your AlpveFit account; please do not reply. For help, use live support on our website.",
+        never: "The AlpveFit team will never ask you for your password, verification code or recovery codes." },
 };
 
 /** Ortak çerçeve: üst bant, kart, alt bilgi. blocks = [{html,text}] */
@@ -102,13 +102,13 @@ ${blocks.map((b) => b.html).join("\n")}
 </td></tr>
 <tr><td class="ap-px" style="background:#ffffff;border-radius:0 0 16px 16px;padding:0 28px 26px">
 <div style="border-top:1px solid ${C.line};padding-top:16px;font-size:12px;line-height:1.6;color:${C.muted}">${foot}<br><span style="color:#94a3b8">${esc(f.never)}</span></div></td></tr>
-<tr><td align="center" style="padding:16px 8px 0;font-size:11.5px;color:#94a3b8">&copy; ${year} Alpvefit · <a href="${BRAND_URL}" style="color:#94a3b8;text-decoration:underline">alpvefit.com</a></td></tr>
+<tr><td align="center" style="padding:16px 8px 0;font-size:11.5px;color:#94a3b8">&copy; ${year} AlpveFit · <a href="${BRAND_URL}" style="color:#94a3b8;text-decoration:underline">alpvefit.com</a></td></tr>
 </table></td></tr></table></body></html>`;
   const text = [`ALPVEFIT`, ``, title, ``, ...blocks.map((b) => b.text).filter(Boolean), ``, `—`, strip(foot), f.never, `\n${BRAND_URL}`].join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
   return { html, text };
 }
 
-const subj = (s) => `Alpvefit — ${s}`;
+const subj = (s) => `AlpveFit — ${s}`;
 const VALID = { tr: (m) => `${m} dakika geçerlidir · kimseyle paylaşmayın`, en: (m) => `Valid for ${m} minutes · do not share it with anyone` };
 const NOT_YOU = {
   tr: "Bu işlemi siz başlatmadıysanız bu e-postayı dikkate almayın ve kodu kimseyle paylaşmayın; şifrenizi değiştirmenizi öneririz.",
@@ -123,8 +123,8 @@ const NOT_YOU_DONE = {
 // purpose → metin. Tümü aynı düzende: başlık, açıklama, kod kutusu, "siz değilseniz" uyarısı.
 const CODE_TEXT = {
   register: {
-    tr: { s: "E-posta Doğrulama", e: "Hoş geldiniz", t: "E-posta adresinizi doğrulayın", d: "Alpvefit hesabınızı oluşturmak için aşağıdaki doğrulama kodunu kayıt ekranına girin." },
-    en: { s: "Email Verification", e: "Welcome", t: "Verify your email address", d: "Enter the verification code below on the sign-up screen to create your Alpvefit account." },
+    tr: { s: "E-posta Doğrulama", e: "Hoş geldiniz", t: "E-posta adresinizi doğrulayın", d: "AlpveFit hesabınızı oluşturmak için aşağıdaki doğrulama kodunu kayıt ekranına girin." },
+    en: { s: "Email Verification", e: "Welcome", t: "Verify your email address", d: "Enter the verification code below on the sign-up screen to create your AlpveFit account." },
   },
   password_change: {
     tr: { s: "Şifre Değişikliği Onayı", e: "Hesap güvenliği", t: "Şifre değişikliğini onaylayın", d: "Hesap şifrenizi değiştirme talebinizi onaylamak için aşağıdaki kodu girin. Onaydan sonra tüm cihazlardaki oturumlar kapanır." },
@@ -139,8 +139,8 @@ const CODE_TEXT = {
     en: { s: "Confirm Email Change", e: "Account security", t: "Email change request", d: "We received a request to change your account email to the address below. Enter the code to continue." },
   },
   email_change: {
-    tr: { s: "Yeni E-posta Adresini Doğrulayın", e: "Hesap bilgileri", t: "Yeni e-posta adresinizi doğrulayın", d: "Bu adresi Alpvefit hesabınızın yeni e-posta adresi olarak onaylamak için aşağıdaki kodu girin." },
-    en: { s: "Verify Your New Email", e: "Account details", t: "Verify your new email address", d: "Enter the code below to confirm this address as the new email for your Alpvefit account." },
+    tr: { s: "Yeni E-posta Adresini Doğrulayın", e: "Hesap bilgileri", t: "Yeni e-posta adresinizi doğrulayın", d: "Bu adresi AlpveFit hesabınızın yeni e-posta adresi olarak onaylamak için aşağıdaki kodu girin." },
+    en: { s: "Verify Your New Email", e: "Account details", t: "Verify your new email address", d: "Enter the code below to confirm this address as the new email for your AlpveFit account." },
   },
   delete_account: {
     tr: { s: "Hesap Silme Onayı", e: "Kalıcı işlem", t: "Hesap silme onayı", d: "Hesabınızı ve kişisel verilerinizi kalıcı olarak silmek için aşağıdaki kodu girin." },
@@ -184,8 +184,8 @@ export function codeMail(purpose, code, lang, extra = {}) {
 export function resetMail(lang, { code, url = "", minutes = 15 }) {
   const lg = L(lang), en = lg === "en";
   const blocks = [
-    p(esc(en ? "We received a request to reset the password of your Alpvefit account. Use the button below to choose a new password:"
-             : "Alpvefit hesabınızın şifresini sıfırlama isteği aldık. Yeni şifrenizi belirlemek için aşağıdaki düğmeyi kullanın:")),
+    p(esc(en ? "We received a request to reset the password of your AlpveFit account. Use the button below to choose a new password:"
+             : "AlpveFit hesabınızın şifresini sıfırlama isteği aldık. Yeni şifrenizi belirlemek için aşağıdaki düğmeyi kullanın:")),
     button(en ? "Reset my password" : "Şifremi sıfırla", url),
     p(esc(url ? (en ? "Or enter this code on the password reset screen:" : "Ya da bu kodu şifre sıfırlama ekranına girin:")
               : (en ? "Enter this code on the password reset screen:" : "Bu kodu şifre sıfırlama ekranına girin:"))),
@@ -204,15 +204,15 @@ export function noticeMail(kind, lang, extra = {}) {
   const lg = L(lang), en = lg === "en";
   const N = {
     password_changed: en
-      ? { s: "Your Password Was Changed", e: "Account security", t: "Your password was changed", b: [p("The password for your Alpvefit account was just changed. For your security, all sessions were signed out.")], warn: NOT_YOU_DONE.en }
-      : { s: "Şifreniz Değiştirildi", e: "Hesap güvenliği", t: "Şifreniz değiştirildi", b: [p("Alpvefit hesabınızın şifresi az önce değiştirildi. Güvenliğiniz için tüm oturumlar kapatıldı.")], warn: NOT_YOU_DONE.tr },
+      ? { s: "Your Password Was Changed", e: "Account security", t: "Your password was changed", b: [p("The password for your AlpveFit account was just changed. For your security, all sessions were signed out.")], warn: NOT_YOU_DONE.en }
+      : { s: "Şifreniz Değiştirildi", e: "Hesap güvenliği", t: "Şifreniz değiştirildi", b: [p("AlpveFit hesabınızın şifresi az önce değiştirildi. Güvenliğiniz için tüm oturumlar kapatıldı.")], warn: NOT_YOU_DONE.tr },
     // v59: Hesabım'dan şifre değişikliği — değişikliği yapan cihazın oturumu açık kalır, diğer tüm oturumlar kapanır
     password_changed_kept: en
-      ? { s: "Your Password Was Changed", e: "Account security", t: "Your password was changed", b: [p("The password for your Alpvefit account was just changed. You stay signed in on the device you used; all other sessions were signed out.")], warn: NOT_YOU_DONE.en }
-      : { s: "Şifreniz Değiştirildi", e: "Hesap güvenliği", t: "Şifreniz değiştirildi", b: [p("Alpvefit hesabınızın şifresi az önce değiştirildi. Değişikliği yaptığınız cihazdaki oturumunuz açık kaldı; diğer tüm cihazlardaki oturumlar kapatıldı.")], warn: NOT_YOU_DONE.tr },
+      ? { s: "Your Password Was Changed", e: "Account security", t: "Your password was changed", b: [p("The password for your AlpveFit account was just changed. You stay signed in on the device you used; all other sessions were signed out.")], warn: NOT_YOU_DONE.en }
+      : { s: "Şifreniz Değiştirildi", e: "Hesap güvenliği", t: "Şifreniz değiştirildi", b: [p("AlpveFit hesabınızın şifresi az önce değiştirildi. Değişikliği yaptığınız cihazdaki oturumunuz açık kaldı; diğer tüm cihazlardaki oturumlar kapatıldı.")], warn: NOT_YOU_DONE.tr },
     email_changed: en
-      ? { s: "Your Email Address Was Changed", e: "Account security", t: "Your email address was changed", b: [p("The email address of your Alpvefit account was changed. Messages about your account will now go to the new address.")], warn: NOT_YOU_DONE.en }
-      : { s: "E-posta Adresiniz Değiştirildi", e: "Hesap güvenliği", t: "E-posta adresiniz değiştirildi", b: [p("Alpvefit hesabınızın e-posta adresi değiştirildi. Hesabınızla ilgili iletiler artık yeni adrese gönderilecek.")], warn: NOT_YOU_DONE.tr },
+      ? { s: "Your Email Address Was Changed", e: "Account security", t: "Your email address was changed", b: [p("The email address of your AlpveFit account was changed. Messages about your account will now go to the new address.")], warn: NOT_YOU_DONE.en }
+      : { s: "E-posta Adresiniz Değiştirildi", e: "Hesap güvenliği", t: "E-posta adresiniz değiştirildi", b: [p("AlpveFit hesabınızın e-posta adresi değiştirildi. Hesabınızla ilgili iletiler artık yeni adrese gönderilecek.")], warn: NOT_YOU_DONE.tr },
     totp_enabled: en
       ? { s: "Two-Step Verification Is On", e: "Account security", t: "Google Authenticator is now on", b: [p("Two-step verification with Google Authenticator was turned on for your account. Keep your recovery codes somewhere safe; they are the only way back in if you lose your phone.")], warn: NOT_YOU_DONE.en, tone: "ok" }
       : { s: "İki Adımlı Doğrulama Etkin", e: "Hesap güvenliği", t: "Google Authenticator etkinleştirildi", b: [p("Hesabınızda Google Authenticator ile iki adımlı doğrulama etkinleştirildi. Kurtarma kodlarınızı güvenli bir yerde saklayın; telefonunuzu kaybederseniz hesabınıza yalnız bu kodlarla erişebilirsiniz.")], warn: NOT_YOU_DONE.tr, tone: "ok" },
@@ -263,14 +263,14 @@ export function planPublishedMail(lang, o) {
   return { subject: subj(en ? "New Plan Published" : "Yeni Plan Yayınlandı"), html, text };
 }
 
-/** Ödeme onaylandı. o: { orderNumber, dueAt } — planlar ödemeden itibaren 7 gün içinde hazırlanır. */
+/** Ödeme onaylandı. o: { orderNumber, dueAt } — planlar ödemeden itibaren 24 saat içinde hazırlanır. */
 export function orderPaidMail(lang, o) {
   const lg = L(lang), en = lg === "en", base = siteBase();
   const t = en ? "Your payment is confirmed" : "Ödemeniz onaylandı";
   const blocks = [
-    p(esc(en ? "Thank you. Your payment was received and confirmed. Your nutrition, training and supplement programs are prepared by our experts within 7 days; you will be notified when each plan is published."
-             : "Teşekkür ederiz. Ödemeniz alındı ve onaylandı. Beslenme, antrenman ve takviye programlarınız uzmanlarımız tarafından 7 gün içinde hazırlanır; her plan yayınlandığında bildirim alırsınız.")),
-    rows([[en ? "Order" : "Sipariş", o.orderNumber], [en ? "Plans ready by" : "Planların hazır olacağı tarih", o.dueAt ? fmtDate(o.dueAt, lg) : ""]]),
+    p(esc(en ? "Thank you. Your payment was received and confirmed. Your nutrition, training and supplement programs are prepared by our experts within 24 hours; you will be notified when each plan is published."
+             : "Teşekkür ederiz. Ödemeniz alındı ve onaylandı. Beslenme, antrenman ve takviye programlarınız uzmanlarımız tarafından 24 saat içinde hazırlanır; her plan yayınlandığında bildirim alırsınız.")),
+    rows([[en ? "Order" : "Sipariş", o.orderNumber], [en ? "Plans ready by" : "Planların hazır olacağı zaman", o.dueAt ? fmtDate(o.dueAt, lg) : ""]]),
     button(en ? "Go to my panel" : "Panelime git", base ? `${base}/panel` : ""),
   ];
   const { html, text } = layout(lg, { preheader: t, eyebrow: en ? "Order" : "Sipariş", title: t, blocks });

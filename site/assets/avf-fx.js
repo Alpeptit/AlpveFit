@@ -1,4 +1,4 @@
-/* Alpvefit — dokunsal etkileşim ve hareket: basma dalgası, titreşim geri bildirimi, kaydırınca beliren öğeler. */
+/* AlpveFit — dokunsal etkileşim ve hareket: basma dalgası, titreşim geri bildirimi, kaydırınca beliren öğeler. */
 (function () {
   "use strict";
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -91,7 +91,8 @@ r = await A.c.call("PUT", `/admin/users/${A.id}/role`, { role: "user" }); chk("y
 r = await A.c.call("PUT", `/admin/members/${M1.id}/access`, { kinds: ["nutrition", "supplement"] }); chk("yönetici: M1 erişimi = beslenme + takviye", r.status === 200, r);
 r = await A.c.call("PUT", `/admin/members/${M2.id}/access`, { kinds: ["nutrition", "pharmacology"] }); chk("yönetici: M2 erişimi = beslenme + farmakoloji", r.status === 200, r);
 r = await A.c.call("PUT", "/admin/assignments", { coachId: C1.id, memberId: M1.id, delivery: "online" }); chk("yönetici: C1 → M1 (online)", r.status === 200, r);
-r = await A.c.call("PUT", "/admin/assignments", { coachId: C2.id, memberId: M2.id, delivery: "in_person" }); chk("yönetici: C2 → M2 (yüz yüze)", r.status === 200, r);
+r = await A.c.call("PUT", "/admin/assignments", { coachId: C2.id, memberId: M2.id, delivery: "in_person" }); chk("yüz yüze koçluk biçimi reddedilir (yalnız uzaktan)", r.status === 400, r);
+r = await A.c.call("PUT", "/admin/assignments", { coachId: C2.id, memberId: M2.id }); chk("yönetici: C2 → M2 (varsayılan: uzaktan)", r.status === 200, r);
 
 r = await M1.c.call("GET", "/plans/overview");
 chk("üye: panel yalnız erişimi açık türleri gösterir, koçluk biçimi görünür", r.status === 200 && r.body.kinds.map((k) => k.kind).join() === "nutrition,supplement" && r.body.coaches[0]?.delivery === "online", r.body);

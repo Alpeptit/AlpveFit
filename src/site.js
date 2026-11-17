@@ -19,8 +19,8 @@ const PRIVATE_ASSET = /^[a-z0-9-]+\.(js|css|html)$/;
 export const SITE_CSP = [
   "default-src 'self'",
   "script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com data:",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "img-src 'self' data: blob: https://www.gstatic.com",
   "connect-src 'self' https://www.google.com/recaptcha/",
   "frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/",

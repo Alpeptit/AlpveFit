@@ -99,7 +99,7 @@ twoFactorRouter.post("/2fa/confirm-toggle", requireAuth, async (req, res) => {
   // yöntem, kullanıcı uygulamadaki kodu /2fa/activate ile doğruladığında etkinleşir (QR'ı okutmadan yarıda bırakan kullanıcı kilitlenmez).
   const secret = generateSecret();
   await pool.query(`UPDATE users SET totp_pending_secret = $2, totp_pending_at = now() WHERE id = $1`, [req.user.sub, encrypt(secret)]);
-  const otpUrl = keyuri(rows[0].email || "hesap", "Alpvefit", secret);
+  const otpUrl = keyuri(rows[0].email || "hesap", "AlpveFit", secret);
   const qrDataUrl = await QRCode.toDataURL(otpUrl, { errorCorrectionLevel: "M", margin: 1, width: 240 });
   res.json({ enabled: false, pending: true, qrDataUrl, secret }); // secret: QR okutulamazsa elle girmek için (yalnız bu an)
 });
@@ -283,7 +283,7 @@ twoFactorRouter.post("/2fa/renew/confirm", requireAuth, async (req, res) => {
   await pool.query(`UPDATE users SET totp_pending_secret = $2, totp_pending_at = now() WHERE id = $1 AND totp_enabled = true`, [req.user.sub, encrypt(secret)]);
   await pool.query(`UPDATE verification_codes SET consumed_at = now() WHERE user_id = $1 AND purpose = 'totp_renew_ticket' AND consumed_at IS NULL`, [req.user.sub]);
   const renewTicket = await createTicket(req.user.sub, "totp_renew_ticket", 15);
-  const qrDataUrl = await QRCode.toDataURL(keyuri(pre[0].email || "hesap", "Alpvefit", secret), { errorCorrectionLevel: "M", margin: 1, width: 240 });
+  const qrDataUrl = await QRCode.toDataURL(keyuri(pre[0].email || "hesap", "AlpveFit", secret), { errorCorrectionLevel: "M", margin: 1, width: 240 });
   res.json({ pending: true, renew: true, qrDataUrl, secret, renewTicket });   // secret yalnız bu an (QR okutulamazsa elle girmek için)
 });
 
