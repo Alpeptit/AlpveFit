@@ -24,7 +24,15 @@
   var GNAME = { nut: "Beslenme", body: "Vücut Analizi", train: "Antrenman" };
 
   // ---- sonuç bileşenleri (koyu sonuç kartı) ----
+  // Birim sistemi: "met" (cm · kg) veya "imp" (inç · lb). Hesaplar her zaman metrik yapılır; giriş ve sonuç gösterimi çevrilir.
+  var LB = 2.20462, IN = 2.54, UNITS = "met";
+  try { if (localStorage.getItem("avf_units") === "imp") UNITS = "imp"; } catch (e) { /* depolama yok */ }
+  function uLabel(u) { return UNITS === "imp" ? (u === "kg" ? "lb" : u === "cm" ? "inç" : u) : u; }
+  function toDisp(v, u) { return UNITS === "imp" ? (u === "kg" ? v * LB : u === "cm" ? v / IN : v) : v; }
+  function toMetric(v, u) { return UNITS === "imp" ? (u === "kg" ? v / LB : u === "cm" ? v * IN : v) : v; }
+  function kgTxt(kg) { return fmt(toDisp(kg, "kg"), 1) + " " + uLabel("kg"); }
   function stat(label, value, dec, unit, big) {
+    if (unit === "kg" || unit === "cm") { value = toDisp(value, unit); unit = uLabel(unit); }
     var n = h("b", { "data-notr": "" }, "0");
     var el = h("div", { class: "tstat" + (big ? " big" : "") }, h("span", { class: "tl", text: label }), h("div", { class: "tv" }, n, unit ? h("em", { text: unit }) : null));
     el._go = function () { countUp(n, value, dec); };
@@ -109,7 +117,7 @@
         var inch = Math.max(0, v.h / 2.54 - 60), m = v.s === "m";
         var R = [["Devine", (m ? 50 : 45.5) + 2.3 * inch], ["Robinson", (m ? 52 : 49) + (m ? 1.9 : 1.7) * inch], ["Miller", (m ? 56.2 : 53.1) + (m ? 1.41 : 1.36) * inch], ["Hamwi", (m ? 48 : 45.5) + (m ? 2.7 : 2.2) * inch]];
         var avg = R.reduce(function (s, x) { return s + x[1]; }, 0) / R.length, mx = Math.max.apply(null, R.map(function (x) { return x[1]; }));
-        return [stat("Ortalama ideal kilo", avg, 1, "kg", true), bars(R.map(function (x) { return [x[0], x[1] / mx * 100, fmt(x[1], 1) + " kg"]; }))];
+        return [stat("Ortalama ideal kilo", avg, 1, "kg", true), bars(R.map(function (x) { return [x[0], x[1] / mx * 100, kgTxt(x[1])]; }))];
       }, note: "Formüller 152 cm üzeri boylar için tasarlanmıştır; kas kütlesini dikkate almaz." },
     { key: "yag-orani", grp: "body", icon: "percent", title: "Yağ Oranı", desc: "US Navy formülüyle vücut yağ yüzdenizi ve yağsız kas kütlenizi hesaplayın.",
       fields: [F.sex, F.height, F.weight, ["num", "n", "Boyun çevresi", 20, 70, "cm"], ["num", "wa", "Bel çevresi", 40, 200, "cm"], ["num", "hi", "Kalça çevresi", 0, 200, "cm", "Kadınlar için"]],
@@ -126,7 +134,7 @@
       calc: function (v) {
         var ep = v.r === 1 ? v.w : v.w * (1 + v.r / 30), br = v.r === 1 ? v.w : v.w * 36 / (37 - v.r), m = (ep + br) / 2;
         return [stat("Tahmini 1RM", m, 1, "kg", true), stat("Epley", ep, 1, "kg"), stat("Brzycki", br, 1, "kg"),
-          bars([95, 90, 85, 80, 75, 70, 65, 60].map(function (p) { return ["%" + p, p, fmt(m * p / 100, 1) + " kg"]; }))];
+          bars([95, 90, 85, 80, 75, 70, 65, 60].map(function (p) { return ["%" + p, p, kgTxt(m * p / 100)]; }))];
       }, note: "Maksimum denemeleri ısındıktan sonra, güvenli bir ortamda ve gerekirse yardımcıyla yapın." },
     { key: "su", grp: "nut", icon: "drop", title: "Su İhtiyacı", desc: "Kilonuza ve egzersiz sürenize göre günlük su ihtiyacınızı hesaplayın.",
       fields: [F.weight, ["num", "m", "Günlük egzersiz süresi", 0, 600, "dk"]],
@@ -189,14 +197,15 @@
     return w;
   }
   function formFor(t, out) {
-    var inputs = {}, form = h("form", { class: "tform", novalidate: true });
+    var inputs = {}, units = [], form = h("form", { class: "tform", novalidate: true }), busy = false;
     var nums = h("div", { class: "tnums" });
     t.fields.forEach(function (f) {
       if (f[0] === "num") {
-        var inp = AVF.input("number", { inputmode: "decimal", step: "any", min: String(f[3]), max: String(f[4]), autocomplete: "off", placeholder: f[6] ? AVF.t(typeof f[6] === "string" ? f[6] : "İsteğe bağlı") : "0", class: f[6] ? "opt" : "" });
-        inputs[f[1]] = inp;
+        var inp = AVF.input("number", { inputmode: "decimal", step: "any", autocomplete: "off", placeholder: f[6] ? AVF.t(typeof f[6] === "string" ? f[6] : "İsteğe bağlı") : "0", class: f[6] ? "opt" : "" });
+        var unitEl = f[5] ? h("small", { text: uLabel(f[5]) }) : null;
+        inputs[f[1]] = inp; units.push([inp, unitEl, f[5]]);
         nums.appendChild(h("label", { class: "tfield", for: inp.id }, h("span", { class: "tfl" }, h("span", { text: f[2] }), null),
-          h("div", { class: "tin" }, inp, f[5] ? h("small", { text: f[5] }) : null)));
+          h("div", { class: "tin" }, inp, unitEl)));
         nums.setAttribute("data-n", String(nums.children.length));
         if (!nums.parentNode) form.appendChild(nums);
       } else {
@@ -208,21 +217,47 @@
     });
     var err = h("p", { class: "terr", role: "alert" });
     form.appendChild(err);
-    form.appendChild(h("button", { class: "btn block tbtn noico", type: "submit" }, h("span", { text: "Hesapla" }), AVF.icon("arrow", "bico")));
+    var btn = h("button", { class: "btn block tbtn noico", type: "submit" }, h("span", { text: "Hesapla" }), AVF.icon("arrow", "bico"));
+    form.appendChild(btn);
+    // Birim değişince girilmiş değerler yeni birime çevrilir.
+    form._setUnits = function (next) {
+      if (next === UNITS) return;
+      units.forEach(function (u) {
+        if (u[2] !== "kg" && u[2] !== "cm") return;
+        var n = num(u[0].value);
+        if (u[0].value === "" || isNaN(n)) return;
+        var metric = u[2] === "kg" ? (UNITS === "imp" ? n / LB : n) : (UNITS === "imp" ? n * IN : n);
+        var shown = u[2] === "kg" ? (next === "imp" ? metric * LB : metric) : (next === "imp" ? metric / IN : metric);
+        u[0].value = String(Math.round(shown * 10) / 10);
+      });
+      UNITS = next; try { localStorage.setItem("avf_units", next); } catch (e) { /* depolama yok */ }
+      units.forEach(function (u) { if (u[1]) u[1].textContent = AVF.t(uLabel(u[2])); });
+    };
+    form._hasUnits = units.some(function (u) { return u[2] === "kg" || u[2] === "cm"; });
     form.addEventListener("submit", function (e) {
       e.preventDefault(); err.textContent = ""; var v = {}, bad = null, badEl = null;
       t.fields.forEach(function (f) {
         if (f[0] === "num") {
           var raw = inputs[f[1]].value, n = num(raw);
           if (f[6] && (raw === "" || isNaN(n))) { v[f[1]] = 0; return; }
-          if (!(n >= f[3] && n <= f[4])) { bad = bad || (AVF.t(f[2]) + ": " + f[3] + " – " + f[4] + " " + AVF.t("arasında bir değer girin.")); badEl = badEl || inputs[f[1]]; }
-          v[f[1]] = n;
+          var m = toMetric(n, f[5]);
+          if (!(m >= f[3] && m <= f[4])) {
+            var lo = Math.round(toDisp(f[3], f[5])), hi = Math.round(toDisp(f[4], f[5]));
+            bad = bad || (AVF.t(f[2]) + ": " + lo + " – " + hi + " " + AVF.t(uLabel(f[5])) + " " + AVF.t("arasında bir değer girin.")); badEl = badEl || inputs[f[1]];
+          }
+          v[f[1]] = m;
         } else v[f[1]] = inputs[f[1]].value;
       });
       if (bad) { err.textContent = bad; if (badEl) { badEl.classList.add("bad"); setTimeout(function () { badEl.classList.remove("bad"); }, 900); } return; }
       var res = t.calc(v);
       if (typeof res === "string") { err.textContent = AVF.t(res); return; }
-      showResult(out, t, res);
+      if (busy) return; busy = true;
+      // Zarif bir yükleme çizgisi: sonuç kartının üstünde ve düğmenin altında kısa süre akar.
+      var panel = out.parentNode; btn.classList.add("busy"); if (panel) { panel.classList.remove("loading"); void panel.offsetWidth; panel.classList.add("loading"); }
+      setTimeout(function () {
+        busy = false; btn.classList.remove("busy"); if (panel) panel.classList.remove("loading");
+        if (document.body.contains(out)) showResult(out, t, res);
+      }, REDUCE ? 0 : 650);
     });
     return form;
   }
@@ -354,6 +389,17 @@
     emptyState(out, t);
     if (t.custom === "rest") restTool(form, out, t);
     else if (t.custom === "body") bodyTool(form, out);
-    else AVF.mount(form, h("div", { class: "tfl head" }, h("span", { text: "Bilgileriniz" })), formFor(t, out));
+    else {
+      var f2 = formFor(t, out), sw = null;
+      if (f2._hasUnits) {
+        sw = h("div", { class: "tunit", role: "radiogroup", "aria-label": "Birim sistemi" }, [["met", "cm · kg"], ["imp", "inç · lb"]].map(function (o) {
+          return h("button", { type: "button", role: "radio", "aria-checked": String(UNITS === o[0]), "data-notr": "", onclick: function () {
+            f2._setUnits(o[0]); Array.prototype.forEach.call(sw.children, function (b) { b.setAttribute("aria-checked", "false"); }); this.setAttribute("aria-checked", "true");
+            if (!out.classList.contains("empty") && f2.requestSubmit) f2.requestSubmit();
+          } }, o[1].replace("inç", AVF.lang === "en" ? "in" : "inç"));
+        }));
+      }
+      AVF.mount(form, h("div", { class: "tfl head row-u" }, h("span", { text: "Bilgileriniz" }), sw), f2);
+    }
   };
 })();

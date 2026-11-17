@@ -268,6 +268,8 @@ adminRouter.get("/audit", requireAdmin, async (req, res) => {
 
 // ---------- blog (yalnız yönetici) ----------
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+export const BLOG_CATEGORIES = ["beslenme", "antrenman", "farmakoloji"];
+const COVER_RE = /^[a-z0-9-]{0,40}$/;
 function blogFields(b, partial) {
   const out = {};
   const need = (k) => !partial || b[k] !== undefined;
@@ -276,10 +278,12 @@ function blogFields(b, partial) {
   if (need("body")) { if (!isNonEmptyString(b.body) || cleanText(b.body).length > 40000) return { error: "İçerik boş olamaz (en çok 40.000 karakter)." }; out.body = cleanText(b.body); }
   if (b.excerpt !== undefined) { const ex = cleanText(b.excerpt); if (ex.length > 300) return { error: "Özet en çok 300 karakter olmalı." }; out.excerpt = ex; }
   if (b.status !== undefined) { if (b.status !== "draft" && b.status !== "published") return { error: "Geçersiz durum." }; out.status = b.status; }
+  if (b.category !== undefined) { if (!BLOG_CATEGORIES.includes(b.category)) return { error: "Geçersiz kategori." }; out.category = b.category; }
+  if (b.cover !== undefined) { const cv = String(b.cover || "").trim(); if (!COVER_RE.test(cv)) return { error: "Geçersiz kapak görseli." }; out.cover = cv; }
   return { out };
 }
 adminRouter.get("/blog", requireAdmin, async (req, res) => {
-  const { rows } = await pool.query(`SELECT id, slug, title, excerpt, body, status, author_name, published_at, updated_at FROM blog_posts ORDER BY updated_at DESC LIMIT 200`);
+  const { rows } = await pool.query(`SELECT id, slug, title, excerpt, body, status, category, cover, author_name, published_at, updated_at FROM blog_posts ORDER BY published_at DESC NULLS FIRST, updated_at DESC LIMIT 200`);
   res.json(rows);
 });
 adminRouter.post("/blog", requireAdmin, async (req, res) => {
@@ -288,9 +292,9 @@ adminRouter.post("/blog", requireAdmin, async (req, res) => {
   const { rows: dup } = await pool.query(`SELECT 1 FROM blog_posts WHERE slug = $1`, [out.slug]); if (dup.length) return bad(res, "Bu adres (slug) zaten kullanılıyor.");
   try {
     const { rows } = await pool.query(
-      `INSERT INTO blog_posts (slug, title, excerpt, body, status, author_id, author_name, published_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7, CASE WHEN $5 = 'published' THEN now() END) RETURNING id`,
-      [out.slug, out.title, out.excerpt || "", out.body, out.status || "draft", req.user.sub, me[0]?.full_name || ""]);
+      `INSERT INTO blog_posts (slug, title, excerpt, body, status, category, cover, author_id, author_name, published_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, CASE WHEN $5 = 'published' THEN now() END) RETURNING id`,
+      [out.slug, out.title, out.excerpt || "", out.body, out.status || "draft", out.category || "beslenme", out.cover || "", req.user.sub, me[0]?.full_name || ""]);
     await logAudit(req.user.sub, "blog.create", "blog_post", rows[0].id, { slug: out.slug, status: out.status || "draft" }, ip(req));
     res.status(201).json({ id: rows[0].id });
   } catch (e) { if (e.code === "23505") return bad(res, "Bu adres (slug) zaten kullanılıyor."); throw e; }

@@ -6,15 +6,24 @@
   var AVF = window.AVF, h = AVF.h, ov = null, dlg = null, body = null, lastFocus = null, onDone = null;
   var S = {};   // akış durumu (userId, loginTicket, resetId, ticket…)
 
+  // Taslak koruma: giriş/kayıt alanlarına yazılanlar (ŞİFRE HARİÇ — şifre hiçbir zaman tarayıcıya kaydedilmez) bu sekmede saklanır;
+  // sekmeler arası geçişte, yanlışlıkla kapatmada veya sayfa yenilendiğinde kaybolmaz. Başarılı giriş/kayıttan sonra silinir.
+  var DKEY = "avf_auth_draft", VKEY = "avf_auth_view";
+  function draft() { try { return JSON.parse(sessionStorage.getItem(DKEY) || "{}") || {}; } catch (e) { return {}; } }
+  function saveDraft(k, v) { try { var d = draft(); if (v) d[k] = String(v).slice(0, 200); else delete d[k]; sessionStorage.setItem(DKEY, JSON.stringify(d)); } catch (e) { /* depolama yok */ } }
+  function clearDraft() { try { sessionStorage.removeItem(DKEY); sessionStorage.removeItem(VKEY); } catch (e) { /* depolama yok */ } }
+  function keep(inp, k) { var d = draft(); if (d[k] && !inp.value) inp.value = d[k]; inp.addEventListener("input", function () { saveDraft(k, inp.value); }); return inp; }
+  function markView(name) { try { if (name) sessionStorage.setItem(VKEY, name); else sessionStorage.removeItem(VKEY); } catch (e) { /* depolama yok */ } }
   function close() {
     if (!ov) return;
+    markView(null);
     document.removeEventListener("keydown", onKey, true);
     ov.parentNode && ov.parentNode.removeChild(ov); ov = dlg = body = null; S = {}; onDone = null;
     AVF.lockScroll(false);
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   }
   function onKey(e) {
-    if (e.key === "Escape") { e.stopPropagation(); close(); return; }
+    // Pencere yalnızca sağ üstteki çarpı (X) ile kapanır; Esc ve dışarı tıklama yazılanları kaybettirmesin diye kapatmaz.
     if (e.key !== "Tab" || !dlg) return;
     var f = dlg.querySelectorAll('button:not([disabled]),input:not([disabled]),a[href]'); if (!f.length) return;
     var a = f[0], z = f[f.length - 1];
@@ -28,7 +37,11 @@
     dlg = h("div", { class: "dlg", role: "dialog", "aria-modal": "true", "aria-labelledby": "auth-title" },
       AVF.logo(false),
       h("button", { class: "x", type: "button", "aria-label": "Kapat", onclick: close }, AVF.icon("x")), body);
-    ov = h("div", { class: "ov", onmousedown: function (e) { if (e.target === ov) close(); } }, dlg);
+    ov = h("div", { class: "ov" }, dlg);
+    // Açılıştan hemen sonraki istemsiz odaklanmalar (ör. dokunmanın alttaki alana "sızması") engellenir: klavye yalnızca
+    // kullanıcı alana kendisi dokunduğunda açılır.
+    var openedAt = Date.now();
+    dlg.addEventListener("focusin", function (e) { if (Date.now() - openedAt < 450 && e.target && e.target.tagName === "INPUT") e.target.blur(); });
     document.body.appendChild(ov); AVF.lockScroll(true);
     document.addEventListener("keydown", onKey, true);
   }
@@ -44,6 +57,14 @@
     inp.addEventListener("input", paint);
     return h("ul", { class: "pwrules", "aria-label": "Şifre kuralları" }, lis);
   }
+  // Kullanıcı adı kuralları: şifre kurallarıyla aynı biçimde, alanın hemen altında ve yazdıkça işaretlenir.
+  function userRules(inp) {
+    var R2 = [["Boşluk içermez", function (v) { return v.length > 0 && !/\s/.test(v); }], ["Türkçe karakter içermez (ç, ğ, ı, ö, ş, ü)", function (v) { return v.length > 0 && !/[çÇğĞıİöÖşŞüÜ]/.test(v); }]];
+    var lis = R2.map(function (r) { return h("li", {}, h("i", { "aria-hidden": "true" }), h("span", { text: r[0] })); });
+    function paint() { var v = inp.value; R2.forEach(function (r, i) { lis[i].classList.toggle("ok", r[1](v)); }); }
+    inp.addEventListener("input", paint); paint();
+    return h("ul", { class: "pwrules urules", "aria-label": "Kullanıcı adı kuralları" }, lis);
+  }
   function view(title, sub) { var t = h("h2", { id: "auth-title", text: title }); AVF.mount(body, t, sub ? h("p", { class: "sub", text: sub }) : null); return body; }
   function ssl() { return h("div", { class: "ssl" }, AVF.icon("lock"), "256-bit SSL ile korunan güvenli bağlantı"); }
   function err(box, msg) { AVF.mount(box, msg ? h("p", { class: "err", role: "alert", text: msg }) : null); }
@@ -54,7 +75,7 @@
       h("button", { type: "button", role: "tab", "aria-selected": String(active === "register"), onclick: function () { register(); } }, "Kayıt Ol"));
   }
   function finish(user, extra) {
-    AVF.session.user = user; var cb = onDone; close();
+    AVF.session.user = user; var cb = onDone; clearDraft(); close();
     if (extra && extra.recoveryUsed) AVF.toast("Kurtarma kodu kullanıldı. Authenticator'ınızı yenilemeniz önerilir.");
     if (cb) cb(user); else if (AVF.onLogin) AVF.onLogin(user);
   }
@@ -65,8 +86,9 @@
   function login(prefill) {
     shell(); var v = view("Tekrar hoş geldiniz", "Hesabınıza giriş yaparak devam edin.");
     var remembered = ""; try { remembered = localStorage.getItem("avf_remember") || ""; } catch (e) { /* kullanılamıyor */ }
-    var id = AVF.input("text", { autocomplete: "username", placeholder: "Kullanıcı adı veya e-posta", value: prefill || remembered, maxlength: "100", autocapitalize: "none", spellcheck: "false" });
+    var id = keep(AVF.input("text", { autocomplete: "username", placeholder: "Kullanıcı adı veya e-posta", value: prefill || remembered, maxlength: "100", autocapitalize: "none", spellcheck: "false" }), "id");
     var pw = AVF.passwordInput({ autocomplete: "current-password", placeholder: "••••••••", maxlength: "200" });
+    markView("login");
     var rem = h("input", { type: "checkbox", id: "rem" }); if (remembered) rem.checked = true;
     var box = h("div"); var btn = h("button", { class: "btn block", type: "submit" }, "Giriş Yap");
     var form = h("form", { novalidate: true, onsubmit: function (e) {
@@ -94,9 +116,10 @@
   // ---------- KAYIT ----------
   function register() {
     shell(); var v = view("Hesap oluşturun", "Bilgilerinizi girin; e-posta adresinize bir doğrulama kodu göndereceğiz.");
-    var name = AVF.input("text", { autocomplete: "name", placeholder: "Ad Soyad", maxlength: "100" });
-    var user = AVF.input("text", { autocomplete: "username", placeholder: "Kullanıcı adı (boşluksuz, Türkçe karakter yok)", maxlength: "40", autocapitalize: "none", spellcheck: "false" });
-    var mail = AVF.input("email", { autocomplete: "email", placeholder: "E-posta adresi", maxlength: "200", autocapitalize: "none" });
+    var name = keep(AVF.input("text", { autocomplete: "name", placeholder: "Ad Soyad", maxlength: "100" }), "name");
+    var user = keep(AVF.input("text", { autocomplete: "username", placeholder: "Kullanıcı adınız", maxlength: "40", autocapitalize: "none", spellcheck: "false" }), "user");
+    var mail = keep(AVF.input("email", { autocomplete: "email", placeholder: "E-posta adresi", maxlength: "200", autocapitalize: "none" }), "mail");
+    markView("register");
     var pw = AVF.passwordInput({ autocomplete: "new-password", placeholder: "En az 8 karakter", maxlength: "200" });
     var k1 = h("input", { type: "checkbox" }), k2 = h("input", { type: "checkbox" });
     var box = h("div"); var btn = h("button", { class: "btn block", type: "submit" }, "Doğrulama Kodu Gönder");
@@ -111,10 +134,10 @@
       if (!k1.checked || !k2.checked) return err(box, "Devam etmek için onay kutularını işaretlemeniz gerekir.");
       AVF.busy(btn, true, "Gönderiliyor…");
       AVF.captcha("register").then(function (tok) { return AVF.api("POST", "/auth/register", { fullName: n, username: u, email: m, password: pw.input.value, recaptchaToken: tok, kvkkAccepted: true, aboutAccepted: true }); })
-        .then(function (r) { S.userId = r.userId; S.email = m; regCode(r.message); },
+        .then(function (r) { S.userId = r.userId; S.email = m; markView(null); regCode(r.message); },
           function (e2) { if (e2.data && e2.data.userId) { S.userId = e2.data.userId; } fail(box, e2, btn); });
     } },
-      AVF.field("Ad Soyad", name, { icon: "id" }), AVF.field("Kullanıcı Adı", user, { icon: "user" }), AVF.field("E-posta", mail, { icon: "mail" }),
+      AVF.field("Ad Soyad", name, { icon: "id" }), AVF.field("Kullanıcı Adı", user, { icon: "user" }), userRules(user), AVF.field("E-posta", mail, { icon: "mail" }),
       AVF.field("Şifre", pw, { icon: "lock" }),
       pwRules(pw.input),
       h("label", { class: "consent" }, AVF.icon("shield"), h("span", null, h("a", { href: "/yasal/kvkk", target: "_blank", rel: "noopener" }, "KVKK Aydınlatma Metni"), " ve ", h("a", { href: "/yasal/gizlilik-cerez", target: "_blank", rel: "noopener" }, "Gizlilik ve Çerez Politikası"), "’nı okudum ve anladığımı onaylıyorum."), k1),
@@ -220,5 +243,7 @@
     AVF.api("POST", "/auth/reset-password/link", { token: m[1] }).then(function (r) { S.ticket = r.ticket; newPass(); }, function (e) { expired(e.data && e.data.message); });
   }
 
-  AVF.auth = { open: function (viewName, cb) { onDone = cb || null; (viewName === "register" ? register : login)(); }, close: close, checkResetLink: checkResetLink, locked: lockedView };
+  AVF.auth = { open: function (viewName, cb) { onDone = cb || null; (viewName === "register" ? register : login)(); }, close: close, checkResetLink: checkResetLink, locked: lockedView,
+    // Sayfa yenilendiğinde açık olan giriş/kayıt penceresi, yazılanlarla birlikte geri gelir (oturum açık değilse).
+    restore: function () { var v = null; try { v = sessionStorage.getItem(VKEY); } catch (e) { /* depolama yok */ } if ((v === "login" || v === "register") && !(AVF.session && AVF.session.user)) AVF.auth.open(v); } };
 })();

@@ -63,6 +63,7 @@
     AVF.toast("Destek talebi oluşturmak için giriş yapın.");
     AVF.afterLogin = { path: "/panel/destek/yeni", at: Date.now() }; AVF.auth.open("login");
   };
+  var SOCIAL = [["youtube", "https://www.youtube.com/@alpvefit", "YouTube"], ["instagram", "https://www.instagram.com/alpvefit/", "Instagram"], ["tiktok", "https://www.tiktok.com/@alpvefit", "TikTok"]];
   function renderFooter() {
     function col(icon, title, rows) {
       return h("div", { class: "fcol" }, h("h4", {}, AVF.icon(icon), h("span", { text: title })), h("ul", {}, rows.map(function (r) { return h("li", {}, r); })));
@@ -71,7 +72,11 @@
     AVF.mount(footEl, h("div", { class: "wrap" },
       h("div", { class: "ftgrid" },
         h("div", { class: "fbrand" }, AVF.logo(true), h("p", { text: "Uzaktan eğitim ve birebir koçluk platformumuzda, tüm programlar tarafımızca tamamen size özel olarak sıfırdan hazırlanmaktadır." }),
-          null),
+          h("div", { class: "fsocial" },
+            h("div", { class: "fs-icons" }, SOCIAL.map(function (x) {
+              return h("a", { class: "fs-i", href: x[1], target: "_blank", rel: "noopener noreferrer", "aria-label": x[2] + " — /alpvefit", title: x[2] }, AVF.icon(x[0]));
+            })),
+            h("span", { class: "fs-h", "data-notr": "" }, "/alpvefit"))),
         col("building", "Kurumsal", [fl("/", "home", "Ana Sayfa"), fl("/hakkimizda", "users", "Hakkımızda"), fl("/sss", "help", "SSS")]),
         col("compass", "Keşfet", [fl("/paketler", "tag", "Paketler"), fl("/blog", "book", "Blog"), fl("/forum", "msg", "Forum"), fl("/araclar", "wrench", "Araçlar")]),
         col("scale", "Yasal", AVF.LEGAL_LINKS.map(function (l) { return fl("/yasal/" + l[0], LEGAL_ICONS[l[0]] || "file", l[1]); })),
@@ -312,7 +317,7 @@
   function boot() {
     buildShell();
     AVF.api("GET", "/auth/me").then(function (u) { AVF.session.user = u; }, function () { AVF.session.user = null; }).then(function () {
-      route(); refreshUnread(); AVF.auth.checkResetLink(); cookieBanner();
+      route(); refreshUnread(); AVF.auth.checkResetLink(); if (AVF.auth.restore) AVF.auth.restore(); cookieBanner();
     });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();

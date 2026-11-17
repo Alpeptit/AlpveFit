@@ -204,6 +204,8 @@
 
   // ---------- yönetici: blog ----------
   function slugify(t) { return String(t).toLowerCase().replace(/ç/g, "c").replace(/ğ/g, "g").replace(/ı/g, "i").replace(/ö/g, "o").replace(/ş/g, "s").replace(/ü/g, "u").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80); }
+  var BLOG_CATS = [["beslenme", "Beslenme"], ["antrenman", "Antrenman"], ["farmakoloji", "Farmakoloji"]];
+  var BLOG_COVERS = ["karbonhidrat", "yag", "protein", "supplement", "vitamin", "mineral", "hipertrofi", "atrofi", "iki-set", "ppl", "upper-lower", "split", "steroid", "peptit", "sarm", "pct"];
   function blogView(c) {
     var list = h("div", { class: "stack" });
     function load() {
@@ -215,11 +217,13 @@
       var ex = h("textarea", { class: "inp", maxlength: "300", rows: "2", id: "bx" + Math.random().toString(36).slice(2, 7) }); ex.value = p ? p.excerpt : "";
       var bd = h("textarea", { class: "inp", maxlength: "40000", rows: "14", id: "bb" + Math.random().toString(36).slice(2, 7) }); bd.value = p ? p.body : "";
       var st = h("select", { class: "inp", id: "bs" + Math.random().toString(36).slice(2, 7) }, h("option", { value: "draft", text: "Taslak" }), h("option", { value: "published", text: "Yayında" })); st.value = p ? p.status : "draft";
+      var cat = h("select", { class: "inp", id: "bc" + Math.random().toString(36).slice(2, 7) }, BLOG_CATS.map(function (c) { return h("option", { value: c[0], text: c[1] }); })); cat.value = p ? p.category : "beslenme";
+      var cov = h("select", { class: "inp", id: "bv" + Math.random().toString(36).slice(2, 7) }, h("option", { value: "", text: "Kapak yok (yalnız renk)" }), BLOG_COVERS.map(function (c) { return h("option", { value: c, text: c }); })); cov.value = p ? p.cover : "";
       var msg = h("div", { "aria-live": "polite" });
       if (!p) t.addEventListener("input", function () { if (!sl.dataset.touched) sl.value = slugify(t.value); });
       sl.addEventListener("input", function () { sl.dataset.touched = "1"; });
       var save = h("button", { class: "btn", type: "button", onclick: function () {
-        var body = { title: t.value, slug: sl.value, excerpt: ex.value, body: bd.value, status: st.value };
+        var body = { title: t.value, slug: sl.value, excerpt: ex.value, body: bd.value, status: st.value, category: cat.value, cover: cov.value };
         AVF.busy(save, true, "Kaydediliyor…");
         api(p ? "PUT" : "POST", p ? "/blog/" + p.id : "/blog", body).then(function () { AVF.toast("Yazı kaydedildi."); done(); }, function (e) { AVF.busy(save, false, ""); err(msg, e); });
       } }, "Kaydet");
@@ -227,10 +231,10 @@
         if (!del.dataset.sure) { del.dataset.sure = "1"; del.lastChild.textContent = "Silmek için tekrar tıklayın"; return; }
         api("DELETE", "/blog/" + p.id).then(function () { AVF.toast("Yazı silindi."); done(); }, function (e) { err(msg, e); });
       } }, "Sil") : null;
-      return h("div", {}, AVF.field("Başlık", t), AVF.field("Adres (slug)", sl), AVF.field("Özet", ex, { optional: true }), AVF.field("İçerik (düz metin; paragraflar arasında boş satır, alt başlık için ## )", bd), AVF.field("Durum", st), msg, h("div", { class: "row" }, save, del));
+      return h("div", {}, AVF.field("Başlık", t), AVF.field("Adres (slug)", sl), AVF.field("Özet", ex, { optional: true }), AVF.field("Kategori", cat), AVF.field("Kapak çizimi", cov), AVF.field("İçerik (paragraflar arasında boş satır; ## alt başlık, ### ara başlık, - madde, **kalın**, [1] atıf, !uyari|… ve !bilgi|… kutuları; ## Kaynaklar altında [1] … PMID: 12345678)", bd), AVF.field("Durum", st), msg, h("div", { class: "row" }, save, del));
     }
     function postRow(p) {
-      return AVF.accordion({ icon: "book", title: p.title, sub: (p.status === "published" ? "Yayında" : "Taslak") + " · /blog/" + p.slug, content: form(p, load) });
+      return AVF.accordion({ icon: "book", title: p.title, sub: (p.status === "published" ? "Yayında" : "Taslak") + " · " + (({ beslenme: "Beslenme", antrenman: "Antrenman", farmakoloji: "Farmakoloji" })[p.category] || "") + " · /blog/" + p.slug, content: form(p, load) });
     }
     var addBox = h("div", { class: "card", style: "padding:20px;display:none" });
     var add = h("button", { class: "btn", type: "button", onclick: function () {

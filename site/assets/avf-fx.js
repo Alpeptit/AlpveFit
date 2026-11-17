@@ -23,6 +23,16 @@
     var r = c.getBoundingClientRect(); c.style.setProperty("--mx", (e.clientX - r.left) + "px"); c.style.setProperty("--my", (e.clientY - r.top) + "px");
   }, { passive: true });
 
+  // Dokunmatikte odak vurgusu: başlığa veya karta dokununca simge ve başlık rengi değişir (masaüstündeki hover karşılığı).
+  var TAP = ".shead,.feat,.astep", tapEl = null, tapT = 0;
+  function untap() { if (tapEl) tapEl.classList.remove("tap"); tapEl = null; }
+  document.addEventListener("touchstart", function (e) {
+    var t = e.target.closest ? e.target.closest(TAP) : null; if (!t) return;
+    if (tapEl !== t) untap(); clearTimeout(tapT); tapEl = t; t.classList.add("tap");
+  }, { passive: true });
+  document.addEventListener("touchend", function () { clearTimeout(tapT); tapT = setTimeout(untap, 1200); }, { passive: true });
+  document.addEventListener("touchcancel", function () { clearTimeout(tapT); tapT = setTimeout(untap, 600); }, { passive: true });
+
   // Kaydırınca beliren kartlar
   var io = null;
   if (!reduce && "IntersectionObserver" in window) {

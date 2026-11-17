@@ -40,8 +40,9 @@
     catalog().then(function (c) {
       AVF.mount(box, h("div", { class: "pkggrid" }, c.packages.map(function (p) { return pkgCard(p, c); })),
         h("div", { class: "pkgnotes" },
-          h("div", { class: "pnote" }, AVF.icon("card"), h("div", {}, h("span", {}, "Ödeme kredi / banka kartı ile sanal POS üzerinden alınır. Kart bilgileriniz AlpveFit sunucularında saklanmaz."),
-            h("span", { class: "ssl-line" }, AVF.icon("lock"), "256-bit SSL sertifikası ile korunan güvenli bağlantı"))),
+          h("div", { class: "pnote" },
+            h("div", { class: "pn-row" }, h("span", { class: "pn-ic" }, AVF.icon("card")), h("span", { class: "pn-t" }, "Ödeme kredi / banka kartı ile sanal POS üzerinden alınır. Kart bilgileriniz AlpveFit sunucularında saklanmaz.")),
+            h("div", { class: "pn-row ok" }, h("span", { class: "pn-ic" }, AVF.icon("lock")), h("span", { class: "pn-t" }, "256-bit SSL sertifikası ile korunan güvenli bağlantı"))),
           null));
     }, function (e) { AVF.mount(box, AVF.state("alert", "Paketler yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: function () { AVF.packagesPage(view); } }, "Tekrar dene"))); });
   };

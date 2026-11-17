@@ -53,7 +53,10 @@
   // ---------- Hakkımızda ----------
   AVF.pages.about = function (view) {
     function pillar(icon, t, s) { return h("div", { class: "card feat" }, h("span", { class: "tile" }, AVF.icon(icon)), h("h3", { text: t }), h("p", { text: s })); }
-    function step(n, icon, t, s) { return h("div", { class: "astep" }, h("span", { class: "astep-n", "data-notr": "", text: n }), h("span", { class: "tile" }, AVF.icon(icon)), h("h3", { text: t }), h("p", { text: s })); }
+    function step(n, icon, t, s, ready) {
+      return h("div", { class: "astep" + (ready ? " ready" : "") }, h("span", { class: "astep-n", "data-notr": "", text: n }), h("span", { class: "tile" }, AVF.icon(icon)),
+        ready ? h("span", { class: "ready-badge" }, h("b", { "data-notr": "", text: "24" }), h("span", { text: "saat" })) : null, h("h3", { text: t }), h("p", { text: s }));
+    }
     page(view, "Hakkımızda", "Hakkımızda", "AlpveFit; hedeflerinize ulaşmanız için doğrudan bizimle birebir çalıştığınız, bağımsız bir uzaktan eğitim ve koçluk platformudur.",
       h("div", { class: "stack lg" },
         h("div", { class: "card prose mission" },
@@ -65,7 +68,7 @@
             step("01", "userplus", "Kayıt Olun", "Modern ve sade arayüzümüz üzerinden saniyeler içinde sisteme kayıt olun."),
             step("02", "id", "Bilgilerinizi Paylaşın", "Boy, kilo, yaş, günlük rutininiz, sağlık durumunuz, alerjileriniz ve bütçeniz gibi detayları bize bildirin."),
             step("03", "tag", "Paketinizi Seçin", "Hedeflerinize en uygun olan Başlangıç, İleri Seviye veya Yarışmacı paketinden birini seçin."),
-            step("04", "clock", "Programınız Hazır (24 Saat)", "Ödemenizin ardından yapılan detaylı analizle tamamen size özel hazırlanan programınız, en geç 24 saat içinde sadece sizin görebileceğiniz panelinize yüklenir."))),
+            step("04", "clock", "Programınız Hazır!", "Ödemenizin ardından yapılan detaylı analizle tamamen size özel hazırlanan programınız, en geç 24 saat içinde hazır!", true))),
         h("div", {}, h("div", { class: "shead" }, h("span", { class: "kicker" }, AVF.icon("shield"), "Değerlerimiz"), h("h2", { class: "sec", text: "İlkelerimiz" })),
           h("div", { class: "grid3" },
             pillar("target", "Değişim Odaklılık", "Hedeflerinize ulaşmanız için gereken tüm özeni gösteriyor, fiziksel ve mental dönüşümünüzü en temel önceliğimiz olarak görüyoruz."),
@@ -87,35 +90,6 @@
         h("div", { class: "row", style: "justify-content:center;margin-top:8px" }, link("/blog", "Blog'u incele", { class: "btn" }), link("/araclar", "Araçlara git", { class: "btn ghost" }))));
   };
 
-  // ---------- Blog ----------
-  function renderBody(text) {
-    var out = [];
-    String(text).split(/\n{2,}/).forEach(function (blk) {
-      blk = blk.trim(); if (!blk) return;
-      if (/^## /.test(blk)) out.push(h("h2", { "data-notr": "", text: blk.slice(3) }));
-      else out.push(h("p", { "data-notr": "", style: "white-space:pre-wrap", text: blk }));
-    });
-    return out;
-  }
-  AVF.pages.blog = function (view) {
-    var box = h("div", { class: "stack" }, AVF.skeleton(3));
-    page(view, "Blog", "Blog", "Beslenme, antrenman ve sağlıklı yaşam üzerine yazılar.", box, "book");
-    AVF.api("GET", "/blog").then(function (rows) {
-      if (!rows.length) return AVF.mount(box, AVF.state("book", "Henüz yazı yok", "Yeni yazılar yayınlandığında burada görünecek."));
-      AVF.mount(box, h("div", { class: "grid3" }, rows.map(function (p) {
-        return link("/blog/" + p.slug, [h("span", { class: "tile" }, AVF.icon("book")), h("h3", { "data-notr": "", text: p.title }), p.excerpt ? h("p", { "data-notr": "", text: p.excerpt }) : null,
-          h("small", {}, (p.author_name ? p.author_name + " · " : "") + AVF.fmtDate(p.published_at))], { class: "card feat postcard" });
-      })));
-    }, function (e) { AVF.mount(box, AVF.state("alert", "Yazılar yüklenemedi", AVF.errText(e))); });
-  };
-  AVF.pages.post = function (view, slug) {
-    var box = h("div", { class: "card prose" }, AVF.skeleton(2));
-    page(view, "Blog", "Blog", "", h("div", { class: "narrow-col" }, box, h("div", { style: "margin-top:16px" }, link("/blog", "Tüm yazılar", { class: "btn ghost" }))));
-    AVF.api("GET", "/blog/" + encodeURIComponent(slug)).then(function (p) {
-      document.title = p.title + " — AlpveFit";
-      AVF.mount(box, h("h1", { "data-notr": "", text: p.title }), h("p", { class: "meta" }, (p.author_name ? p.author_name + " · " : "") + AVF.fmtDate(p.published_at)), renderBody(p.body));
-    }, function () { AVF.mount(box, AVF.state("alert", "Yazı bulunamadı", "Aradığınız yazı yayında değil veya kaldırılmış olabilir.")); });
-  };
-
+  // Blog: avf-blog.js (AVF.pages.blog / AVF.pages.post orada tanımlanır).
   // Araçlar: avf-tools.js (AVF.pages.tools orada tanımlanır).
 })();
