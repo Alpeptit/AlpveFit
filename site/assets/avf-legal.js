@@ -151,7 +151,7 @@
           "Yazı tipleri AlpveFit sunucularından yüklenir; bu amaçla üçüncü taraf bir hizmete istek gönderilmez.",
           "Kayıt ve giriş sırasında kötüye kullanımı önlemek için **Google reCAPTCHA** kullanılır; Google bu kapsamda cihaz ve tarayıcı bilgisi işleyebilir."]],
         ["Güvenlik", [
-          "Şifreler **tek yönlü özetlenerek** saklanır; iki aşamalı doğrulama etkinleştirilebilir ve yönetim hesaplarında **zorunludur**. Plan ve profil bilgilerinize **yalnızca siz ve koçunuz** erişebilir."]],
+          "Şifreler **tek yönlü özetlenerek** saklanır; iki aşamalı doğrulama etkinleştirilebilir. Plan ve profil bilgilerinize **yalnızca siz ve koçunuz** erişebilir."]],
         ["Saklama", [
           "Giriş kayıtları, bildirimler, destek yazışmaları ve süresi dolmuş siparişler **180 gün** sonra silinir."]],
         ["İletişim", [

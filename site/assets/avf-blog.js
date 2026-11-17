@@ -26,7 +26,9 @@
         '<ellipse cx="262" cy="170" rx="16" ry="22" transform="rotate(25 262 170)" fill="' + INK + '"/><path d="M270 150q10-14 22-16" ' + st(2.6) + '/>';
     },
     protein: function () {
-      return '<path d="M200 48c-34 0-58 52-58 88a58 58 0 0 0 116 0c0-36-24-88-58-88z" ' + W + '/><path d="M172 150c0-16 12-26 28-26s28 10 28 26-12 24-28 24-28-8-28-24z" fill="' + INK + '"/>';
+      return '<path d="M120 172C118 122 152 70 212 66c50-3 80 28 72 66-8 38-46 56-92 56-30 0-54-2-66-8-4-2-6-6-6-8z" ' + W + '/>' +
+        '<path d="M170 112l22 34M200 98l30 44M232 96l24 34" ' + st(5) + '/>' +
+        '<path d="M236 206c8-16 24-26 42-26-2 18-16 30-34 30z" fill="' + INK + '"/><path d="M248 200c8-6 16-12 24-16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>';
     },
     supplement: function () {
       return '<g transform="rotate(-35 170 124)"><rect x="128" y="104" width="84" height="40" rx="20" ' + W + '/><path d="M170 104v40" ' + st() + '/><path d="M148 104h22v40h-22a20 20 0 0 1 0-40z" fill="' + INK + '"/></g>' +

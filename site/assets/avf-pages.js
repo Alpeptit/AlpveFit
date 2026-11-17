@@ -75,8 +75,8 @@
           h("span", { class: "tile" }, AVF.icon("mail")),
           h("div", {}, h("h2", { text: "İletişim" }),
             AVF.lang === "en"
-              ? h("p", { "data-notr": "" }, "For any questions, feedback or suggestions, you can reach us at ", h("a", { href: "mailto:destek@alpvefit.com" }, "destek@alpvefit.com"), ".")
-              : h("p", { "data-notr": "" }, "Her türlü soru, görüş ve öneriniz için bizimle ", h("a", { href: "mailto:destek@alpvefit.com" }, "destek@alpvefit.com"), " adresi üzerinden iletişime geçebilirsiniz."),
+              ? h("div", { class: "faq-ans ct-ans" }, h("span", { class: "faq-mark", "aria-hidden": "true" }, AVF.icon("reply")), h("p", { "data-notr": "" }, "For any questions, feedback or suggestions, you can reach us at ", h("a", { href: "mailto:destek@alpvefit.com" }, "destek@alpvefit.com"), "."))
+              : h("div", { class: "faq-ans ct-ans" }, h("span", { class: "faq-mark", "aria-hidden": "true" }, AVF.icon("reply")), h("p", { "data-notr": "" }, "Her türlü soru, görüş ve öneriniz için bizimle ", h("a", { href: "mailto:destek@alpvefit.com" }, "destek@alpvefit.com"), " adresi üzerinden iletişime geçebilirsiniz.")),
             h("div", { class: "row" }, h("a", { class: "btn", href: "mailto:destek@alpvefit.com" }, AVF.icon("mail", "bico"), "E-posta gönder"), link("/sss", "Sık sorulan sorular", { class: "btn ghost" }))))), "users");
   };
 
