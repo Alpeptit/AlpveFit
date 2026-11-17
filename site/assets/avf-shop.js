@@ -36,7 +36,7 @@
     var box = h("div", { class: "wrap section" }, AVF.skeleton(3));
     AVF.mount(view,
       h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("span", { class: "eyebrow" }, AVF.icon("layers"), "Uzaktan Eğitim Sistemi"), h("h1", {}, "Paketler"),
-        h("p", {}, "Ödemeden sonra programlarınız 24 saat içinde koçunuz tarafından hazırlanır ve panelinizde yayınlanır."))), box);
+        h("p", {}, "Ödemeden sonra programlarınız 24 saat içinde tarafımızca hazırlanır ve panelinizde yayınlanır."))), box);
     catalog().then(function (c) {
       AVF.mount(box, h("div", { class: "pkggrid" }, c.packages.map(function (p) { return pkgCard(p, c); })),
         h("div", { class: "pkgnotes" },
@@ -131,7 +131,7 @@
         h("div", {}, h("span", {}, "Ödeme"), h("b", { text: "Kredi / banka kartı" }))));
       var body = [];
       if (o.status === "paid") {
-        body.push(h("div", { class: "note" }, h("b", {}, "Ödemeniz onaylandı. "), "Planlarınız " + AVF.fmtDate(o.plans_due_at) + " tarihine kadar koçunuz tarafından hazırlanır; her plan yayınlandığında bildirim alırsınız."),
+        body.push(h("div", { class: "note" }, h("b", {}, "Ödemeniz onaylandı. "), "Planlarınız " + AVF.fmtDate(o.plans_due_at) + " tarihine kadar tarafımızca hazırlanır; her plan yayınlandığında bildirim alırsınız."),
           h("a", { class: "btn", href: "/panel", "data-link": "" }, "Planlarıma git"));
       } else if (o.status === "expired" || o.status === "cancelled") {
         body.push(h("div", { class: "note warn" }, o.status === "expired" ? "Bu siparişin ödeme süresi doldu. Ödeme bilgileri artık geçerli değildir; bu adrese ödeme yapmayın." : "Bu sipariş iptal edildi. Ödeme bilgileri artık geçerli değildir."),

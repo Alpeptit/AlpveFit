@@ -37,15 +37,15 @@
   };
 
 
-  // Marka: tek kaynak. Yuvarlatılmış kare içinde iki zirve (Alp) ve güneş noktası; yanında "AlpveFit" yazısı.
+  // Marka: tek kaynak. Yuvarlatılmış kare içinde yumuşak köşeli bir "A"; yanında "AlpveFit" yazısı.
   // light = açık zemin (siyah kare). Koyu zeminde (light=false) beyaz kare + siyah çizgi.
   AVF.mark = function (size) {
     var NS = "http://www.w3.org/2000/svg", s = document.createElementNS(NS, "svg");
     s.setAttribute("viewBox", "0 0 64 64"); s.setAttribute("class", "lmk"); s.setAttribute("aria-hidden", "true");
     if (size) { s.setAttribute("width", size); s.setAttribute("height", size); }
     [["rect", { width: "64", height: "64", rx: "18", class: "lmk-bg" }],
-     ["path", { d: "M13 45L27 21l8 13 5-7 11 18", fill: "none", class: "lmk-fg", "stroke-width": "5", "stroke-linecap": "round", "stroke-linejoin": "round" }],
-     ["circle", { cx: "45", cy: "18", r: "3.4", class: "lmk-dot" }]].forEach(function (e) { var n = document.createElementNS(NS, e[0]); Object.keys(e[1]).forEach(function (k) { n.setAttribute(k, e[1][k]); }); s.appendChild(n); });
+     ["path", { d: "M19.5 46.5L30 20.5q2-4.5 4 0l10.5 26", fill: "none", class: "lmk-fg", "stroke-width": "6", "stroke-linecap": "round", "stroke-linejoin": "round" }],
+     ["path", { d: "M24.5 37.5h15", fill: "none", class: "lmk-fg", "stroke-width": "5.5", "stroke-linecap": "round" }]].forEach(function (e) { var n = document.createElementNS(NS, e[0]); Object.keys(e[1]).forEach(function (k) { n.setAttribute(k, e[1][k]); }); s.appendChild(n); });
     return s;
   };
   AVF.logo = function (onDark) {

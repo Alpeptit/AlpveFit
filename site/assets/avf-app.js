@@ -56,7 +56,7 @@
     });
     window.addEventListener("popstate", function () { route(); });
   }
-  var NAV = [["/", "home", "Ana Sayfa"], ["/hakkimizda", "users", "Hakkımızda"], ["/sss", "help", "SSS"], ["/paketler", "tag", "Paketler"], ["/araclar", "wrench", "Araçlar"], ["/forum", "msg", "Forum"], ["/panel", "user", "Hesap"]];
+  var NAV = [["/", "home", "Ana Sayfa"], ["/hakkimizda", "users", "Hakkımızda"], ["/sss", "help", "SSS"], ["/paketler", "tag", "Paketler"], ["/araclar", "wrench", "Araçlar"], ["/forum", "msg", "Forum"]];
   var LEGAL_ICONS = { kvkk: "shield", "kullanim-kosullari": "file", "gizlilik-cerez": "lock" };
   AVF.openTicket = function () {
     if (AVF.session.user) return go("/panel/destek/yeni");
@@ -70,7 +70,7 @@
     function fl(href, icon, text) { return link(href, [AVF.icon(icon), h("span", { text: text })]); }
     AVF.mount(footEl, h("div", { class: "wrap" },
       h("div", { class: "ftgrid" },
-        h("div", { class: "fbrand" }, AVF.logo(true), h("p", { text: "Uzaktan eğitim ve birebir koçluk platformu. Programlarınız koçunuz tarafından, yalnızca size özel hazırlanır." }),
+        h("div", { class: "fbrand" }, AVF.logo(true), h("p", { text: "Uzaktan eğitim ve birebir koçluk platformumuzda, tüm programlar tarafımızca tamamen size özel olarak sıfırdan hazırlanmaktadır." }),
           null),
         col("building", "Kurumsal", [fl("/", "home", "Ana Sayfa"), fl("/hakkimizda", "users", "Hakkımızda"), fl("/sss", "help", "SSS")]),
         col("compass", "Keşfet", [fl("/paketler", "tag", "Paketler"), fl("/blog", "book", "Blog"), fl("/forum", "msg", "Forum"), fl("/araclar", "wrench", "Araçlar")]),
@@ -92,20 +92,21 @@
     }
     AVF.mount(nav, NAV.map(item));
     AVF.mount(drawer, h("nav", null, h("div", { class: "dhead" }, AVF.logo(false), h("button", { class: "ibtn", type: "button", "aria-label": "Menüyü kapat", onclick: function () { drawer.classList.remove("open"); } }, AVF.icon("x"))),
-      NAV.filter(function (i) { return i[0] !== "/forum"; }).map(item),
+      NAV.filter(function (i) { return i[0] !== "/forum"; }).map(item), item(["/panel", "user", "Hesap"]),
       h("div", { class: "dsep" }),
       link("/blog", [AVF.icon("book"), h("span", { text: "Blog" })]),
       item(NAV.filter(function (i) { return i[0] === "/forum"; })[0]),
       u && (u.role === "coach" || u.role === "admin") ? [h("div", { class: "dsep" }), h("a", { href: "/uzman" }, AVF.icon("users"), h("span", { text: "Uzman Paneli" }))] : null,
       u ? h("a", { href: "#", onclick: function (e) { e.preventDefault(); logout(); } }, AVF.icon("out"), h("span", { text: "Çıkış yap" })) : null,
       h("div", { class: "dlang" }, langSwitch())));
+    // Sade üst çubuk: dil seçimi, (üyeyse) bildirimler ve tek bir hesap ikonu. Çıkış ve panel bağlantıları panelin içinde.
     AVF.mount(tools,
       langSwitch(),
-      u ? link("/panel/bildirimler", [AVF.icon("bell"), unread ? h("span", { class: "badge", "aria-label": unread + " okunmamış bildirim", text: String(unread > 99 ? "99+" : unread) }) : null], { class: "ibtn", "aria-label": "Bildirimler", title: "Bildirimler" }) : null,
-      u && (u.role === "coach" || u.role === "admin") ? h("a", { class: "ibtn desk-only", href: "/uzman", "aria-label": "Uzman paneli", title: "Uzman paneli" }, AVF.icon("users")) : null,
-      u ? link("/panel", [AVF.icon("user"), h("span", { text: "Panelim" })], { class: "ubtn" }) : h("button", { class: "ubtn", type: "button", onclick: function () { AVF.auth.open("login"); } }, AVF.icon("user"), h("span", { text: "Giriş yap" })),
-      u ? h("button", { class: "ibtn desk-only", type: "button", "aria-label": "Çıkış yap", title: "Çıkış yap", onclick: logout }, AVF.icon("out")) : null,
-      // mobil üst çubuk: Menü | Logo | Forum (giriş / kayıt menüde ve ana sayfada)
+      u ? link("/panel/bildirimler", [AVF.icon("bell"), unread ? h("span", { class: "badge", "aria-label": unread + " okunmamış bildirim", text: String(unread > 99 ? "99+" : unread) }) : null], { class: "ibtn plain", "aria-label": "Bildirimler", title: "Bildirimler" }) : null,
+      u && (u.role === "coach" || u.role === "admin") ? h("a", { class: "ibtn plain desk-only", href: "/uzman", "aria-label": "Uzman paneli", title: "Uzman paneli" }, AVF.icon("users")) : null,
+      u ? link("/panel", AVF.icon("user"), { class: "ibtn acct desk-only", "aria-label": "Hesabım", title: "Hesabım" })
+        : h("button", { class: "ibtn acct desk-only", type: "button", "aria-label": "Giriş yap / Kayıt ol", title: "Giriş yap / Kayıt ol", onclick: function () { AVF.auth.open("login"); } }, AVF.icon("user")),
+      // mobil üst çubuk: Menü | Logo | Forum (hesap menüde)
       link("/forum", AVF.icon("msg"), { class: "ibtn mob-only", "aria-label": "Forum", title: "Forum" }));
   }
   function refreshUnread() {
@@ -165,9 +166,8 @@
     AVF.mount(view,
       h("section", { class: "hero hero-split home" }, h("div", { class: "wrap" },
         h("div", { class: "hero-copy" },
-          h("span", { class: "eyebrow" }, AVF.icon("globe"), "Uzaktan eğitim ve koçluk"),
           h("div", { class: "titlerow" }, h("h1", { text: "Size özel program, uzman koçluk." }), mslot),
-          h("p", { text: "Beslenme, antrenman ve takviye programlarınız uzman koçunuz tarafından size özel hazırlanır; tek bir yerde, yalnızca sizin hesabınızda yayınlanır." }),
+          h("p", { text: "Beslenme, antrenman ve takviye programlarınız tarafımızca size özel hazırlanır; tek bir yerde, yalnızca sizin hesabınızda yayınlanır." }),
           h("div", { class: "cta" }, link("/paketler", "Paketleri incele", { class: "btn" }), u ? link("/panel", "Panelime git", { class: "btn ghost" }) : h("button", { class: "btn ghost", type: "button", onclick: function () { AVF.auth.open("register"); } }, "Kayıt ol")),
           h("ul", { class: "heroTicks" },
             h("li", {}, h("span", { class: "tk" }, AVF.icon("clock")), h("span", { text: "Ödemeden sonra 24 saat içinde programınız hazır!" })),
@@ -175,14 +175,14 @@
             h("li", {}, h("span", { class: "tk" }, AVF.icon("lock")), h("span", { text: "Planlarınız kişisel ve yalnızca size aittir" })))),
         h("div", { class: "stagewrap" }, stage))),
       h("section", { class: "section" }, h("div", { class: "wrap" },
-        h("div", { class: "shead center" }, h("span", { class: "kicker" }, AVF.icon("help"), h("span", { text: "Neden AlpveFit?" })), h("h2", { class: "sec", text: "Eğitim sürecinizin tamamı tek hesapta" }), h("p", { text: "Size özel hazırlanan, yalnızca sizin görebileceğiniz ve 24 saat içinde teslim edilen planlar." })),
+        h("div", { class: "shead center" }, h("span", { class: "kicker" }, AVF.icon("help"), h("span", { text: "Neden AlpveFit" })), h("h2", { class: "sec", text: "Eğitim sürecinizin tamamı tek hesapta" }), h("p", { text: "Size özel hazırlanan, yalnızca sizin görebileceğiniz ve 24 saat içinde teslim edilen planlar." })),
         h("div", { class: "grid3" },
-          feat("globe", "Uzaktan eğitim ve koçluk", "Nerede olursanız olun koçunuzla birebir çalışın. Başlangıç, İleri Seviye ve Yarışmacı paketleri."),
-          feat("target", "Kişiye özel planlar", "Her plan hedefinize ve yaşam düzeninize göre koçunuz tarafından bizzat hazırlanır; hazır şablon kullanılmaz."),
-          feat("clock", "24 saatte teslim", "Ödemeniz onaylandıktan sonra programlarınız 24 saat içinde panelinizde yayınlanır ve bildirim alırsınız.")))),
+          feat("globe", "Uzaktan Eğitim ve Koçluk", "Nerede yaşarsanız yaşayın, uzaktan da olsa yanınızdayız; değişimi birlikte mümkün kılabiliriz. Piyasada sıkça karşılaştığınız geçiştirme yaklaşımlardan farklı olarak, size hak ettiğiniz zamanı ayırmak ve değişiminizi adım adım sahiplenmek istiyoruz."),
+          feat("target", "Kişiye Özel Planlar", "Tüm programlarımız; ulaşmak istediğiniz hedefler, mevcut imkânlarınız ve günlük rutininiz baz alınarak ince bir işçilikle saat saat planlanır. Sizinle sürekli iletişimde kalarak ve düzenli kontroller gerçekleştirerek bu dönüşüm sürecini disiplinli bir şekilde yönetiyoruz."),
+          feat("clock", "24 Saatte Teslim", "Ödeme onay sürecinin tamamlanmasının ardından programlarınız en geç 24 saat içinde panelinizde aktif hâle getirilir; konuyla ilgili bildirimle anında bilgilendirilirsiniz.")))),
       h("section", { class: "section dark pkgband" }, h("div", { class: "wrap" },
-        h("div", { class: "shead center" }, h("span", { class: "kicker" }, AVF.icon("layers"), "Paketler"), h("h2", { class: "sec", text: "Programınız size özel" }),
-          h("p", { text: "Her program kişinin hedefine, yaşam düzenine ve sağlık durumuna göre koçunuz tarafından elle hazırlanır. Otomatik üretilmiş şablon kullanılmaz." })),
+        h("div", { class: "shead center" }, h("span", { class: "kicker" }, AVF.icon("layers"), "Paketler"), h("h2", { class: "sec", text: "Kişiye Özel Program" }),
+          h("p", { text: "Hazırlanan tüm programlar; hedefleriniz, yaşam tarzınız ve sağlık durumunuz titizlikle analiz edilerek, tamamen size özel olarak tasarlanır. Süreçte hiçbir şekilde otomatik üretilen şablonlar veya standart şablonlar kullanılmaz." })),
         AVF.pkgGrid({ compact: true }),
         h("div", { class: "center", style: "margin-top:34px" }, link("/paketler", "Paketleri incele", { class: "btn light lg" }))))
     );
@@ -217,7 +217,7 @@
       AVF.mount(menuEl, items.map(function (i) {
         var a = link("/panel" + (i[0] ? "/" + i[0] : ""), [AVF.icon(i[1]), i[2], i[0] === "bildirimler" && unread ? h("span", { class: "badge", text: String(unread) }) : null]);
         if (i[0] === sub || (i[0] === "siparisler" && sub.indexOf("siparis/") === 0) || (i[0] === "destek" && sub.indexOf("destek/") === 0)) a.setAttribute("aria-current", "page"); return a;
-      }));
+      }), h("button", { class: "pm-out", type: "button", onclick: logout }, AVF.icon("out"), "Çıkış yap"));
     }
     function draw() {
       paintMenu();
@@ -255,13 +255,13 @@
   function planKindView(el, kind) {
     var m = AVF.KIND[kind], ok = (kinds || []).some(function (k) { return k.kind === kind; });
     AVF.mount(el, h("h2", { class: "ptitle", text: m.label }));
-    if (!ok) return el.appendChild(AVF.state("lock", "Bu bölüm hesabınız için etkin değil", "Erişim izni koçunuz tarafından tanımlanır.", link("/panel", "Planlarıma dön", { class: "btn" })));
+    if (!ok) return el.appendChild(AVF.state("lock", "Bu bölüm hesabınız için etkin değil", "Erişim izni tarafımızca tanımlanır.", link("/panel", "Planlarıma dön", { class: "btn" })));
     var list = h("div", { class: "stack" }, AVF.skeleton(2)); el.appendChild(list);
-    if (kind === "supplement" || kind === "pharmacology") el.insertBefore(h("div", { class: "note" }, "Bu bölümde yalnızca koçunuzun bizzat girdiği içerik gösterilir."), list);
+    if (kind === "supplement" || kind === "pharmacology") el.insertBefore(h("div", { class: "note" }, "Bu bölümde yalnızca tarafımızca girilen içerik gösterilir."), list);
     function load() {
       AVF.mount(list, AVF.skeleton(2));
       AVF.api("GET", "/plans?kind=" + kind).then(function (rows) {
-        if (!rows.length) return AVF.mount(list, AVF.state(m.icon, "Henüz yayınlanmış plan yok", "Koçunuz bir plan yayınladığında burada görünür ve size bildirim gelir."));
+        if (!rows.length) return AVF.mount(list, AVF.state(m.icon, "Henüz yayınlanmış plan yok", "Bir plan yayınlandığında burada görünür ve size bildirim gelir."));
         AVF.mount(list, rows.map(function (p, i) {
           var when = p.starts_on || p.ends_on ? [p.starts_on ? AVF.fmtDate(p.starts_on) : "…", p.ends_on ? AVF.fmtDate(p.ends_on) : "…"].join(" – ") : "";
           return AVF.accordion({ icon: m.icon, open: i === 0, title: p.title, sub: "Hazırlayan: " + p.author_name + " · " + AVF.fmtDate(p.published_at),

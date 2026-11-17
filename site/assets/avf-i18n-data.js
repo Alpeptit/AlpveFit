@@ -4,6 +4,23 @@
   var AVF = (window.AVF = window.AVF || {});
   AVF.DICT = AVF.DICT || {}; AVF.PATTERNS = AVF.PATTERNS || [];
   var D = {
+"Uzaktan Eğitim ve Koçluk": "Remote Education & Coaching",
+"Kişiye Özel Planlar": "Personalised Plans",
+"24 Saatte Teslim": "Delivered in 24 Hours",
+"Kişiye Özel Program": "Personalised Program",
+"Nerede yaşarsanız yaşayın, uzaktan da olsa yanınızdayız; değişimi birlikte mümkün kılabiliriz. Piyasada sıkça karşılaştığınız geçiştirme yaklaşımlardan farklı olarak, size hak ettiğiniz zamanı ayırmak ve değişiminizi adım adım sahiplenmek istiyoruz.": "Wherever you live, we are with you, even from a distance; together we can make the change happen. Unlike the half-hearted approaches you often meet in the market, we want to give you the time you deserve and own your transformation step by step.",
+"Tüm programlarımız; ulaşmak istediğiniz hedefler, mevcut imkânlarınız ve günlük rutininiz baz alınarak ince bir işçilikle saat saat planlanır. Sizinle sürekli iletişimde kalarak ve düzenli kontroller gerçekleştirerek bu dönüşüm sürecini disiplinli bir şekilde yönetiyoruz.": "All our programs are planned hour by hour with fine craftsmanship, based on the goals you want to reach, your current means and your daily routine. By staying in constant contact and carrying out regular check-ins, we manage this transformation with discipline.",
+"Ödeme onay sürecinin tamamlanmasının ardından programlarınız en geç 24 saat içinde panelinizde aktif hâle getirilir; konuyla ilgili bildirimle anında bilgilendirilirsiniz.": "Once payment approval is complete, your programs are activated in your panel within 24 hours at the latest, and you are notified instantly.",
+"Hazırlanan tüm programlar; hedefleriniz, yaşam tarzınız ve sağlık durumunuz titizlikle analiz edilerek, tamamen size özel olarak tasarlanır. Süreçte hiçbir şekilde otomatik üretilen şablonlar veya standart şablonlar kullanılmaz.": "Every program is designed entirely for you after carefully analysing your goals, lifestyle and health. No automatically generated or standard templates are ever used.",
+"Uzaktan eğitim ve birebir koçluk platformumuzda, tüm programlar tarafımızca tamamen size özel olarak sıfırdan hazırlanmaktadır.": "On our remote education and one-to-one coaching platform, every program is prepared by us from scratch, entirely for you.",
+"Beslenme, antrenman ve takviye programlarınız tarafımızca size özel hazırlanır; tek bir yerde, yalnızca sizin hesabınızda yayınlanır.": "Your nutrition, training and supplement programs are prepared by us just for you, and published in one place — only in your account.",
+"Erişim izni tarafımızca tanımlanır.": "Access is granted by us.",
+"Bu bölümde yalnızca tarafımızca girilen içerik gösterilir.": "This section shows only content entered by us.",
+"Bir plan yayınlandığında burada görünür ve size bildirim gelir.": "When a plan is published it appears here and you are notified.",
+"Ödemeden sonra programlarınız 24 saat içinde tarafımızca hazırlanır ve panelinizde yayınlanır.": "After payment, your programs are prepared by us within 24 hours and published in your panel.",
+"tarihine kadar tarafımızca hazırlanır; her plan yayınlandığında bildirim alırsınız.": "by us; you are notified as each plan is published.",
+"AlpveFit’te her program, kişinin hedefine, yaşam düzenine, sağlık durumuna ve maddi durumuna göre tarafımızca titizlikle hazırlanır. Otomatik üretilmiş şablon kullanılmaz; planlar yalnızca yetkili kişi tarafından oluşturulur ve kullanıcı panelinizde yalnızca sizin görebileceğiniz şekilde yayınlanır.": "At AlpveFit, every program is carefully prepared by us according to your goal, lifestyle, health and budget. No automatically generated templates are used; plans are created only by the authorised person and published in your user panel so that only you can see them.",
+"AlpveFit maskotları: karşılıklı poz veren iki kaslı mantar": "AlpveFit mascots: two muscular mushrooms posing at each other",
 "Hareketsiz (masa başı)": "Sedentary (desk job)",
 "Ekstra aktif (günde 2 antrenman)": "Extra active (2 sessions a day)",
 "yıl": "years",

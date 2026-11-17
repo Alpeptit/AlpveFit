@@ -269,7 +269,7 @@ export function orderPaidMail(lang, o) {
   const t = en ? "Your payment is confirmed" : "Ödemeniz onaylandı";
   const blocks = [
     p(esc(en ? "Thank you. Your payment was received and confirmed. Your nutrition, training and supplement programs are prepared by your coach within 24 hours; you will be notified when each plan is published."
-             : "Teşekkür ederiz. Ödemeniz alındı ve onaylandı. Beslenme, antrenman ve takviye programlarınız koçunuz tarafından 24 saat içinde hazırlanır; her plan yayınlandığında bildirim alırsınız.")),
+             : "Teşekkür ederiz. Ödemeniz alındı ve onaylandı. Beslenme, antrenman ve takviye programlarınız tarafımızca 24 saat içinde hazırlanır; her plan yayınlandığında bildirim alırsınız.")),
     rows([[en ? "Order" : "Sipariş", o.orderNumber], [en ? "Plans ready by" : "Planların hazır olacağı zaman", o.dueAt ? fmtDate(o.dueAt, lg) : ""]]),
     button(en ? "Go to my panel" : "Panelime git", base ? `${base}/panel` : ""),
   ];
