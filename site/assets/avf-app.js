@@ -97,9 +97,11 @@
     AVF.mount(tools,
       langSwitch(),
       u ? link("/panel/bildirimler", [AVF.icon("bell"), unread ? h("span", { class: "badge", "aria-label": unread + " okunmamış bildirim", text: String(unread > 99 ? "99+" : unread) }) : null], { class: "ibtn", "aria-label": "Bildirimler", title: "Bildirimler" }) : null,
-      u && (u.role === "coach" || u.role === "admin") ? h("a", { class: "ibtn", href: "/uzman", "aria-label": "Uzman paneli", title: "Uzman paneli" }, AVF.icon("users")) : null,
+      u && (u.role === "coach" || u.role === "admin") ? h("a", { class: "ibtn desk-only", href: "/uzman", "aria-label": "Uzman paneli", title: "Uzman paneli" }, AVF.icon("users")) : null,
       u ? link("/panel", [AVF.icon("user"), h("span", { text: "Panelim" })], { class: "ubtn" }) : h("button", { class: "ubtn", type: "button", onclick: function () { AVF.auth.open("login"); } }, AVF.icon("user"), h("span", { text: "Giriş yap" })),
-      u ? h("button", { class: "ibtn", type: "button", "aria-label": "Çıkış yap", title: "Çıkış yap", onclick: logout }, AVF.icon("out")) : null);
+      u ? h("button", { class: "ibtn desk-only", type: "button", "aria-label": "Çıkış yap", title: "Çıkış yap", onclick: logout }, AVF.icon("out")) : null,
+      // mobil üst çubuk: Menü | Logo | Forum (giriş / kayıt menüde ve ana sayfada)
+      link("/forum", AVF.icon("msg"), { class: "ibtn mob-only", "aria-label": "Forum", title: "Forum" }));
   }
   function refreshUnread() {
     if (!AVF.session.user) { unread = 0; return renderChrome(); }

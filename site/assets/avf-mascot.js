@@ -21,6 +21,21 @@
     '<ellipse cx="130" cy="217" rx="6.5" ry="4" fill="#F59A8F" opacity=".6"/><ellipse cx="190" cy="217" rx="6.5" ry="4" fill="#F59A8F" opacity=".6"/>' +
     '<path d="M151 215q9 9 18 0z" fill="' + O + '" stroke="' + O + '" stroke-width="2" stroke-linejoin="round"/><path d="M155 218q5 3 10 0" fill="none" stroke="#F07D72" stroke-width="2.4" stroke-linecap="round"/>';
 
+  // Ana sahne yüzü: kararlı ve "agresif" — çatık kaşlar, yarı kapalı göz kapakları, sıkılmış dişler, alında öfke damarı.
+  var VEIN = "#B98A68";
+  var FACE_MAD = '<g class="msc-eyes"><ellipse cx="142" cy="204" rx="7.5" ry="7.5" fill="#fff" stroke="' + O + '" stroke-width="2.4"/><ellipse cx="178" cy="204" rx="7.5" ry="7.5" fill="#fff" stroke="' + O + '" stroke-width="2.4"/>' +
+    '<circle cx="144" cy="206" r="4" fill="' + O + '"/><circle cx="176" cy="206" r="4" fill="' + O + '"/><circle cx="145.2" cy="204.6" r="1.3" fill="#fff"/><circle cx="177.2" cy="204.6" r="1.3" fill="#fff"/>' +
+    '<path d="M133 196.5q9 5 18 3.5V194h-18zM187 196.5q-9 5-18 3.5V194h18z" fill="' + CREAM + '"/><path d="M134 199q8 3 16 1.5M186 199q-8 3-16 1.5" fill="none" stroke="' + O + '" stroke-width="2.2" stroke-linecap="round"/></g>' +
+    '<path d="M130 184l20 8M190 184l-20 8" fill="none" stroke="' + O + '" stroke-width="4.2" stroke-linecap="round"/>' +
+    '<path d="M154 186q6 3 12 0" fill="none" stroke="' + SHADE + '" stroke-width="2" stroke-linecap="round"/>' +
+    '<ellipse cx="129" cy="218" rx="6" ry="3.5" fill="#F59A8F" opacity=".45"/><ellipse cx="191" cy="218" rx="6" ry="3.5" fill="#F59A8F" opacity=".45"/>' +
+    '<rect x="147" y="213" width="26" height="11" rx="4.5" fill="#fff" stroke="' + O + '" stroke-width="2.4"/><path d="M147.5 218.5h25M153.5 213.5v10M160 213.5v10M166.5 213.5v10" stroke="' + O + '" stroke-width="1.5"/>' +
+    // öfke işareti (💢 benzeri) gövdenin sağ üstünde
+    '<g class="msc-anger" fill="none" stroke="#E2382D" stroke-width="2.6" stroke-linecap="round"><path d="M198 180q4 2 4 6M206 180q-4 2-4 6M198 194q4-2 4-6M206 194q-4-2-4-6"/></g>';
+  // damarlar: pazı ve ön kol üzerinde ince, hafif koyu çizgiler
+  var VEINS_UP = '<g fill="none" stroke="' + VEIN + '" stroke-width="1.8" stroke-linecap="round" opacity=".85"><path d="M86 196q5 6 2 12q-3 5 1 10M94 200q3 4 0 8"/><path d="M234 196q-5 6-2 12q3 5-1 10M226 200q-3 4 0 8"/></g>';
+  function veinFore(x) { return '<path d="M' + (x - 5) + ' 238q5 7 1 13q-4 6 1 12M' + (x + 4) + ' 244q-3 5 0 9" fill="none" stroke="' + VEIN + '" stroke-width="1.8" stroke-linecap="round" opacity=".85"/>'; }
+
   // kol parçaları: dış çizgi (OUT) ve dolgu (IN) ayrı çizilir
   var UL = "M110 184Q92 198 84 230", UR = "M210 184Q228 198 236 230";
   function stroke(d, w, c) { return '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"/>'; }
@@ -42,12 +57,12 @@
       stroke(UL, 36, CREAM) + stroke(UR, 36, CREAM) +
       '<ellipse class="msc-bl" cx="90" cy="206" rx="11" ry="14" fill="' + SHADE + '"/><ellipse class="msc-br" cx="230" cy="206" rx="11" ry="14" fill="' + SHADE + '"/>' +
       '<path d="M120 182q14 10 30 6M200 182q-14 10-30 6" fill="none" stroke="' + SHADE + '" stroke-width="3.5" stroke-linecap="round"/>' +
-      CAP + FACE +
+      VEINS_UP + CAP + FACE_MAD +
       // sağ ön kol (izleyiciye göre): dirsek (236,230) etrafında döner; dinlenmede yumruk belde
       '<g class="msc-fr">' + stroke("M236 230V266", 38, O) + stroke("M236 230V266", 32, CREAM) +
-      '<circle cx="236" cy="272" r="15" fill="' + CREAM + '" stroke="' + O + '" stroke-width="3"/><path d="M230 268q6 3 12 0" fill="none" stroke="' + SHADE + '" stroke-width="2.5" stroke-linecap="round"/></g>' +
+      '' + veinFore(236) + '<circle cx="236" cy="272" r="15" fill="' + CREAM + '" stroke="' + O + '" stroke-width="3"/><path d="M230 268q6 3 12 0" fill="none" stroke="' + SHADE + '" stroke-width="2.5" stroke-linecap="round"/></g>' +
       // sol ön kol + dambıl: dirsek (84,230) etrafında döner
-      '<g class="msc-fl">' + stroke("M84 230V266", 38, O) + stroke("M84 230V266", 32, CREAM) +
+      '<g class="msc-fl">' + stroke("M84 230V266", 38, O) + stroke("M84 230V266", 32, CREAM) + veinFore(84) +
       '<rect x="56" y="268.5" width="56" height="7" rx="3.5" fill="#5A5A61"/>' +
       '<rect x="48" y="256" width="12" height="32" rx="4" fill="' + IRON + '"/><rect x="108" y="256" width="12" height="32" rx="4" fill="' + IRON + '"/>' +
       '<rect x="41" y="261" width="8" height="22" rx="3" fill="' + IRON + '"/><rect x="119" y="261" width="8" height="22" rx="3" fill="' + IRON + '"/>' +

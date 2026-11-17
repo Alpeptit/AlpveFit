@@ -32,6 +32,9 @@
     document.body.appendChild(ov); document.body.style.overflow = "hidden";
     document.addEventListener("keydown", onKey, true);
   }
+  // Pencere açılınca giriş alanına OTOMATİK odaklanılmaz (mobilde klavye kendiliğinden açılmasın); odak pencerenin kendisine
+  // verilir — ekran okuyucu başlığı okur, kullanıcı alana dokunduğunda yazmaya başlar.
+  function softFocus() { if (!dlg) return; if (!dlg.hasAttribute("tabindex")) dlg.setAttribute("tabindex", "-1"); try { dlg.focus({ preventScroll: true }); } catch (e) { dlg.focus(); } }
   function view(title, sub) { var t = h("h2", { id: "auth-title", text: title }); AVF.mount(body, t, sub ? h("p", { class: "sub", text: sub }) : null); return body; }
   function ssl() { return h("div", { class: "ssl" }, AVF.icon("lock"), "256-bit SSL ile korunan güvenli bağlantı"); }
   function err(box, msg) { AVF.mount(box, msg ? h("p", { class: "err", role: "alert", text: msg }) : null); }
@@ -76,7 +79,7 @@
       h("div", { class: "row between" }, h("label", { class: "check", style: "margin:0" }, rem, "Kullanıcı bilgilerimi hatırla"), h("button", { type: "button", class: "lnk", onclick: forgot }, "Şifremi Unuttum")),
       captchaNote(), box, btn,
       h("p", { class: "center", style: "margin:14px 0 0" }, "Hesabın yok mu? ", h("button", { type: "button", class: "lnk", onclick: function () { register(); } }, "Kayıt Ol")), ssl());
-    v.insertBefore(seg("login"), v.children[2] || null); v.appendChild(form); id.focus();
+    v.insertBefore(seg("login"), v.children[2] || null); v.appendChild(form); softFocus();
   }
 
   // ---------- KAYIT ----------
@@ -108,7 +111,7 @@
       h("label", { class: "check" }, k2, h("span", null, h("a", { href: "/yasal/kullanim-kosullari", target: "_blank", rel: "noopener" }, "Hizmet Şartları"), " ile ", h("a", { href: "/yasal/sorumluluk-reddi", target: "_blank", rel: "noopener" }, "Sağlık ve Farmakoloji Sorumluluk Beyanı"), "’nı okudum ve kabul ediyorum.")),
       captchaNote(), box, btn,
       h("p", { class: "center", style: "margin:14px 0 0" }, "Zaten hesabın var mı? ", h("button", { type: "button", class: "lnk", onclick: function () { login(); } }, "Giriş Yap")), ssl());
-    v.insertBefore(seg("register"), v.children[2] || null); v.appendChild(form); name.focus();
+    v.insertBefore(seg("register"), v.children[2] || null); v.appendChild(form); softFocus();
   }
 
   // ---------- KAYIT KODU ----------
@@ -127,7 +130,7 @@
         .then(function (r) { finish(r.user); AVF.toast("Hesabınız oluşturuldu. Hoş geldiniz!"); }, function (e2) { fail(box, e2, btn); });
     } }, AVF.field("Doğrulama kodu", code, { optional: true }), box, btn,
       h("p", { class: "center", style: "margin:14px 0 0" }, resend, " · ", h("button", { type: "button", class: "lnk", onclick: function () { login(); } }, "Girişe dön")), ssl()));
-    code.focus();
+    softFocus();
   }
 
   // ---------- İKİNCİ ADIM: Authenticator / kurtarma kodu ----------
@@ -143,7 +146,7 @@
       AVF.api("POST", "/auth/login/verify-totp", payload).then(function (r) { finish(r.user, r); }, function (e2) { fail(box, e2, btn); });
     } }, AVF.field(useRecovery ? "Kurtarma kodu" : "Doğrulama kodu", code, { optional: true }), box, btn,
       h("p", { class: "center", style: "margin:14px 0 0" }, h("button", { type: "button", class: "lnk", onclick: function () { totp(!useRecovery); } }, useRecovery ? "Authenticator kodunu kullan" : "Telefonuma erişemiyorum — kurtarma kodu kullan")), ssl()));
-    code.focus();
+    softFocus();
   }
 
   // ---------- ŞİFREMİ UNUTTUM ----------
@@ -158,7 +161,7 @@
         .then(function (r) { S.resetId = r.resetId; resetCode(r.message); }, function (e2) { fail(box, e2, btn); });
     } }, AVF.field("Kullanıcı adı veya e-posta", id, { icon: "user" }), captchaNote(), box, btn,
       h("p", { class: "center", style: "margin:14px 0 0" }, h("button", { type: "button", class: "lnk", onclick: function () { login(); } }, "Girişe dön")), ssl()));
-    id.focus();
+    softFocus();
   }
   function resetCode(msg) {
     shell(); var v = view("Kodu girin", msg || "E-postanıza gelen 6 haneli kodu girin veya e-postadaki bağlantıya tıklayın. Kod 15 dakika geçerlidir.");
@@ -173,7 +176,7 @@
       h("p", { class: "center", style: "margin:14px 0 0" }, h("button", { type: "button", class: "lnk", onclick: function () {
         AVF.api("POST", "/auth/reset-password/resend", { resetId: S.resetId }).then(function () { AVF.toast("Yeni bağlantı ve kod gönderildi."); }, function (e) { err(box, AVF.errText(e)); });
       } }, "Kodu yeniden gönder")), ssl()));
-    code.focus();
+    softFocus();
   }
   function expired(msg) {
     shell(); var v = view("İstek geçersiz", msg || "Sıfırlama isteğinin süresi doldu veya geçersiz.");
@@ -190,7 +193,7 @@
         login(); AVF.toast(r.unlocked ? "Şifreniz yenilendi ve hesap kilidi kaldırıldı. Giriş yapabilirsiniz." : "Şifreniz yenilendi. Giriş yapabilirsiniz.");
       }, function (e2) { if (e2.data && e2.data.error === "reset_expired") { AVF.busy(btn, false); return expired(e2.data.message); } fail(box, e2, btn); });
     } }, AVF.field("Yeni şifre", pw, { icon: "lock", hint: "En az 8 karakter; en az 1 harf ve 1 noktalama işareti; boşluk ve ardışık sayı olmaz." }), box, btn, ssl()));
-    pw.input.focus();
+    softFocus();
   }
 
   // ---------- KİLİTLİ HESAP ----------

@@ -5,6 +5,7 @@
 
   // ---------- simgeler (yalnız sabit, güvenilir SVG yolları) ----------
   var P = {
+    userplus: "M10 12a4 4 0 100-8 4 4 0 000 8zM3 21a7 7 0 0114 0M19 8v6M16 11h6",
     wrench: "M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z", clock: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2",
     building: "M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16M16 9h2a2 2 0 012 2v10M3 21h18M8 7h4M8 11h4M8 15h4", compass: "M12 21a9 9 0 100-18 9 9 0 000 18zM15.5 8.5l-2 5-5 2 2-5z",
     scale: "M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 006 0zM19 7l-3 7a3 3 0 006 0zM12 3l-2 2h4z", headset: "M4 15v-3a8 8 0 0116 0v3M4 15a2 2 0 002 2h1v-5H6a2 2 0 00-2 2zM20 15a2 2 0 01-2 2h-1v-5h1a2 2 0 012 2zM17 17v1a3 3 0 01-3 3h-2",
@@ -73,7 +74,7 @@
   };
   // Tüm düğmeler simge taşır: etiketten anlamlı bir simge seçilir (yalnız simgesi olmayan, metinli düğmelerde).
   var BTN_ICONS = [
-    [/giriş|login|sign in/i, "user"], [/kayıt ol|üye ol/i, "user"], [/çıkış/i, "out"], [/kopyala/i, "copy"],
+    [/giriş|login|sign in/i, "user"], [/kayıt ol|üye ol|sign up|register/i, "userplus"], [/çıkış/i, "out"], [/kopyala/i, "copy"],
     [/sil\b|silin|kaldır|hesabı sil/i, "trash"], [/iptal|kapat|vazgeç|reddet/i, "x"], [/geri\b|önceki|ana sayfa/i, "back"],
     [/öde|satın|kart/i, "card"], [/gönder|yayınla|ilet/i, "send"], [/yeni|ekle|oluştur/i, "plus"], [/yenile|tekrar|dene/i, "refresh"],
     [/kaydet|onayla|doğrula|tamam|evet|etkinleştir|aktif/i, "check"], [/şifre|güvenlik/i, "lock"], [/e-posta|mail/i, "mail"]
