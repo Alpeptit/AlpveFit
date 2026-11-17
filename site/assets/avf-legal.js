@@ -7,7 +7,7 @@
 
   var DOCS = {
     "kullanim-kosullari": {
-      tr: { title: "Hizmet Şartları ve Mesafeli Satış Sözleşmesi", sections: [
+      tr: { title: "Hizmet Şartları ve Mesafeli Satış Sözleşmesi", sub: "6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği kapsamında", sections: [
         ["Taraflar ve kapsam", [
           "Bu sözleşme, alpvefit.com üzerinden hizmet satın alan kişi (**“Üye”**) ile **AlpveFit** arasında kurulur. Siteye üye olarak veya bir paket satın alarak bu şartları kabul etmiş olursunuz.",
           "AlpveFit, **uzaktan eğitim ve koçluk** hizmeti sunan bir platformdur. Sitede fiziksel ürün satılmaz ve gönderim yapılmaz; hizmet yalnızca dijital olarak sunulur.",
@@ -46,7 +46,7 @@
           "AlpveFit bu şartları ve fiyatları **gelecekteki siparişler için** değiştirebilir; mevcut siparişin fiyatı ve kapsamı değişmez.",
           "Bu sözleşmeye **Türk hukuku** uygulanır. Uyuşmazlıklarda, parasal sınırlar dâhilinde Tüketici Hakem Heyetleri ve Tüketici Mahkemeleri yetkilidir."]],
       ] },
-      en: { title: "Terms of Service and Distance Sales Agreement", sections: [
+      en: { title: "Terms of Service and Distance Sales Agreement", sub: "Under Consumer Protection Law No. 6502 and the Distance Contracts Regulation", sections: [
         ["Parties and scope", [
           "This agreement is made between the person who purchases a service through alpvefit.com (**“Member”**) and **AlpveFit**. By registering or buying a package you accept these terms.",
           "AlpveFit is a **remote education and coaching** platform. No physical products are sold or shipped; the service is delivered digitally only.",
@@ -88,7 +88,7 @@
     },
 
     "kvkk": {
-      tr: { title: "KVKK Aydınlatma Metni ve Açık Rıza", sections: [
+      tr: { title: "KVKK Aydınlatma Metni ve Açık Rıza", sub: "6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında aydınlatma metni", sections: [
         ["Veri sorumlusu", [
           "6698 sayılı Kişisel Verilerin Korunması Kanunu (**“KVKK”**) uyarınca kişisel verileriniz, veri sorumlusu sıfatıyla **AlpveFit** (alpvefit.com) tarafından aşağıda açıklanan kapsamda işlenir. İletişim: **" + MAIL + "**"]],
         ["İşlenen veriler", [
@@ -114,7 +114,7 @@
         ["Açık rıza", [
           "Sağlık ve koçluk bilgilerinizi kaydederken, bu bilgilerin yukarıdaki amaçla ve belirtilen kişilerce işlenmesine **açık rıza** verdiğinizi ayrıca onaylarsınız. Rıza vermemeniz hâlinde hizmetin diğer bölümlerinden yararlanmaya devam edebilirsiniz."]],
       ] },
-      en: { title: "KVKK Notice and Explicit Consent", sections: [
+      en: { title: "KVKK Notice and Explicit Consent", sub: "Information notice under the Personal Data Protection Law No. 6698", sections: [
         ["Data controller", [
           "Under Turkish Personal Data Protection Law No. 6698 (**“KVKK”**), your personal data is processed by **AlpveFit** (alpvefit.com) as data controller within the scope below. Contact: **" + MAIL + "**"]],
         ["Data processed", [
@@ -143,7 +143,7 @@
     },
 
     "gizlilik-cerez": {
-      tr: { title: "Gizlilik ve Çerez Politikası", sections: [
+      tr: { title: "Gizlilik ve Çerez Politikası", sub: "Kişisel verilerinizin gizliliği ve sitemizde kullanılan çerezler hakkında bilgilendirme", sections: [
         ["Genel", [
           "Gizliliğiniz bizim için önceliklidir. Kişisel verilerinizin nasıl işlendiği **KVKK Aydınlatma Metni**’nde ayrıntılı olarak açıklanmıştır. Verileriniz **satılmaz**, reklam veya profilleme amacıyla kullanılmaz."]],
         ["Çerezler", [
@@ -157,7 +157,7 @@
         ["İletişim", [
           "!mail|Gizlilikle ilgili sorularınız için: **" + MAIL + "**"]],
       ] },
-      en: { title: "Privacy and Cookie Policy", sections: [
+      en: { title: "Privacy and Cookie Policy", sub: "How we protect your privacy and the cookies used on our website", sections: [
         ["General", [
           "Your privacy is our priority. How your personal data is processed is explained in detail in the **KVKK Notice**. Your data is **not sold** or used for advertising or profiling."]],
         ["Cookies", [
@@ -201,9 +201,9 @@
       return out;
     }
     AVF.mount(view,
-      h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("span", { class: "eyebrow" }, AVF.icon("scale"), "Yasal"), h("h1", { text: d.title, "data-notr": "" }))),
+      h("section", { class: "hero pagehero" }, h("div", { class: "wrap" }, h("span", { class: "eyebrow" }, AVF.icon("scale"), "Yasal"), h("h1", { text: d.title, "data-notr": "" }), d.sub ? h("p", { class: "legal-sub", text: d.sub, "data-notr": "" }) : null)),
       h("div", { class: "wrap section" }, h("article", { class: "card legal", "data-notr": "" },
-        h("div", { class: "legal-head" }, h("span", { class: "tile" }, AVF.icon(ICONS[slug] || "file")), h("b", { text: d.title })),
+        h("div", { class: "legal-head" }, h("span", { class: "tile" }, AVF.icon(ICONS[slug] || "file")), h("div", { class: "lh-t" }, h("b", { text: d.title }), d.sub ? h("small", { text: d.sub }) : null)),
         d.sections.map(function (s, i) {
           var ic = (SEC_ICONS[slug] || [])[i];
           return h("section", null, h("h2", {}, h("span", { class: "num", text: String(i + 1).padStart(2, "0") }), ic ? h("span", { class: "sico" }, AVF.icon(ic)) : null, h("span", { text: s[0] })), body(s[1]));

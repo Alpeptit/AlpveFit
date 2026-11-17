@@ -4,6 +4,7 @@
   var AVF = (window.AVF = window.AVF || {});
   AVF.DICT = AVF.DICT || {}; AVF.PATTERNS = AVF.PATTERNS || [];
   var D = {
+    "Bu patika bir yere çıkmıyor. Aradığınız sayfa taşınmış ya da hiç var olmamış olabilir; mantarımız bile haritayı ters tutuyor.": "This path leads nowhere. The page you are looking for may have moved or never existed — even our mushroom is holding the map upside down.",
     "inç": "in",
     "Devamını oku": "Read more",
     "Bilimsel temelli yazılar": "Science-based articles",

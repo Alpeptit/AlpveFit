@@ -197,7 +197,7 @@
     return w;
   }
   function formFor(t, out) {
-    var inputs = {}, units = [], form = h("form", { class: "tform", novalidate: true }), busy = false;
+    var inputs = {}, units = [], form = h("form", { class: "tform", novalidate: true });
     var nums = h("div", { class: "tnums" });
     t.fields.forEach(function (f) {
       if (f[0] === "num") {
@@ -219,8 +219,6 @@
     form.appendChild(err);
     var btn = h("button", { class: "btn block tbtn noico", type: "submit" }, h("span", { text: "Hesapla" }), AVF.icon("arrow", "bico"));
     form.appendChild(btn);
-    var prog = h("div", { class: "tprog", role: "progressbar", "aria-label": "Hesaplanıyor", "aria-valuemin": "0", "aria-valuemax": "100" }, h("i"));
-    form.appendChild(prog);
     // Birim değişince girilmiş değerler yeni birime çevrilir.
     form._setUnits = function (next) {
       if (next === UNITS) return;
@@ -253,14 +251,7 @@
       if (bad) { err.textContent = bad; if (badEl) { badEl.classList.add("bad"); setTimeout(function () { badEl.classList.remove("bad"); }, 900); } return; }
       var res = t.calc(v);
       if (typeof res === "string") { err.textContent = AVF.t(res); return; }
-      if (busy) return; busy = true;
-      // Zarif bir yükleme çizgisi: sonuç kartının üstünde ve düğmenin altında kısa süre akar.
-      var panel = out.parentNode; btn.classList.add("busy"); prog.classList.remove("run"); void prog.offsetWidth; prog.classList.add("run");
-      if (panel) { panel.classList.remove("loading"); void panel.offsetWidth; panel.classList.add("loading"); }
-      setTimeout(function () {
-        busy = false; btn.classList.remove("busy"); prog.classList.remove("run"); if (panel) panel.classList.remove("loading");
-        if (document.body.contains(out)) showResult(out, t, res);
-      }, 850);
+      showResult(out, t, res);
     });
     return form;
   }

@@ -45,7 +45,7 @@
     var group = [], en = AVF.lang === "en";
     page(view, "Sık sorulan sorular", "Sık sorulan sorular", "Herhangi bir sorunuzda veya destek ihtiyacınızda destek@alpvefit.com üzerinden bizimle iletişime geçebilirsiniz.",
       h("div", { class: "faq" }, FAQ.map(function (q) {
-        var acc = AVF.accordion({ icon: q[0], title: q[1], group: group, content: AVF.rich("p", en ? q[4] : q[3], { class: "faq-a", "data-notr": "" }) });
+        var acc = AVF.accordion({ icon: q[0], title: q[1], group: group, content: h("div", { class: "faq-ans" }, h("span", { class: "faq-mark", "aria-hidden": "true" }, AVF.icon("reply")), AVF.rich("p", en ? q[4] : q[3], { class: "faq-a", "data-notr": "" })) });
         return acc;
       })), "help");
   };
@@ -60,13 +60,13 @@
           h("span", { class: "tile" }, AVF.icon("mission")),
           h("div", {}, h("h2", { text: "Misyon" }),
             h("p", { text: "AlpveFit’te her program; hedefinize, yaşam düzeninize, sağlık durumunuza ve bütçenize göre tarafımızca titizlikle hazırlanır. Otomatik üretilmiş şablonlar kesinlikle kullanılmaz; planlar tarafımızca oluşturulur ve kullanıcı panelinizde yalnızca sizin görebileceğiniz şekilde yayınlanır." }))),
-        h("div", {}, h("div", { class: "shead" }, h("span", { class: "kicker" }, AVF.icon("layers"), "Süreç"), h("h2", { class: "sec", text: "Nasıl Çalışıyoruz?" })),
+        h("div", {}, h("div", { class: "shead" }, h("h2", { class: "sec", text: "Nasıl Çalışıyoruz?" })),
           h("div", { class: "asteps" },
             step("01", "userplus", "Kayıt Olun", "Modern ve sade arayüzümüz üzerinden saniyeler içinde sisteme kayıt olun."),
             step("02", "id", "Bilgilerinizi Paylaşın", "Boy, kilo, yaş, günlük rutininiz, sağlık durumunuz, alerjileriniz ve bütçeniz gibi detayları bize bildirin."),
             step("03", "tag", "Paketinizi Seçin", "Hedeflerinize en uygun olan Başlangıç, İleri Seviye veya Yarışmacı paketinden birini seçin."),
             step("04", "clock", "Programınız Hazır!", "Ödemenizin ardından yapılan detaylı analizle tamamen size özel hazırlanan programınız, en geç 24 saat içinde hazır!"))),
-        h("div", {}, h("div", { class: "shead" }, h("span", { class: "kicker" }, AVF.icon("shield"), "Değerlerimiz"), h("h2", { class: "sec", text: "İlkelerimiz" })),
+        h("div", {}, h("div", { class: "shead" }, h("h2", { class: "sec", text: "İlkelerimiz" })),
           h("div", { class: "grid3" },
             pillar("target", "Değişim Odaklılık", "Hedeflerinize ulaşmanız için gereken tüm özeni gösteriyor, fiziksel ve mental dönüşümünüzü en temel önceliğimiz olarak görüyoruz."),
             pillar("heart", "Önce Sağlık", "Tüm planlamalarımızda sağlığınızı her şeyin önünde tutuyor, sürdürülebilir ve güvenli bir gelişim süreci sunuyoruz."),

@@ -74,9 +74,8 @@
         h("div", { class: "fbrand" }, AVF.logo(true), h("p", { text: "Uzaktan eğitim ve birebir koçluk platformumuzda, tüm programlar tarafımızca tamamen size özel olarak sıfırdan hazırlanmaktadır." }),
           h("div", { class: "fsocial" },
             h("div", { class: "fs-icons" }, SOCIAL.map(function (x) {
-              return h("a", { class: "fs-i", href: x[1], target: "_blank", rel: "noopener noreferrer", "aria-label": x[2] + " — /alpvefit", title: x[2] }, AVF.icon(x[0]));
-            })),
-            h("span", { class: "fs-h", "data-notr": "" }, "/alpvefit"))),
+              return h("a", { class: "fs-i", href: x[1], target: "_blank", rel: "noopener noreferrer", "aria-label": x[2], title: x[2] }, AVF.icon(x[0]));
+            })))),
         col("building", "Kurumsal", [fl("/", "home", "Ana Sayfa"), fl("/hakkimizda", "users", "Hakkımızda"), fl("/sss", "help", "SSS")]),
         col("compass", "Keşfet", [fl("/paketler", "tag", "Paketler"), fl("/blog", "book", "Blog"), fl("/forum", "msg", "Forum"), fl("/araclar", "wrench", "Araçlar")]),
         col("scale", "Yasal", AVF.LEGAL_LINKS.map(function (l) { return fl("/yasal/" + l[0], LEGAL_ICONS[l[0]] || "file", l[1]); })),
@@ -154,7 +153,11 @@
   }
   function notFound() {
     document.title = "Sayfa bulunamadı — AlpveFit";
-    AVF.mount(view, h("div", { class: "wrap section" }, AVF.state("alert", "Sayfa bulunamadı", "Aradığınız sayfa mevcut değil veya taşınmış olabilir.", link("/", "Ana sayfaya dön", { class: "btn" }))));
+    AVF.mount(view, h("section", { class: "nf" }, h("div", { class: "wrap nf-in" },
+      h("div", { class: "nf-code", "aria-hidden": "true" }, h("span", { text: "4" }), h("span", { class: "nf-m" }, AVF.mascotLost ? AVF.mascotLost() : null), h("span", { text: "4" })),
+      h("h1", { text: "Sayfa bulunamadı" }),
+      h("p", { text: "Bu patika bir yere çıkmıyor. Aradığınız sayfa taşınmış ya da hiç var olmamış olabilir; mantarımız bile haritayı ters tutuyor." }),
+      h("div", { class: "nf-act" }, link("/", "Ana sayfaya dön", { class: "btn" }), link("/paketler", "Paketleri incele", { class: "btn ghost" })))));
   }
 
   // ---------- ana sayfa ----------

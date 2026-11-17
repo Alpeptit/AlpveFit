@@ -14,5 +14,6 @@ def stamp(page, assets_dir, prefix):
     s2 = re.sub(re.escape(prefix) + r'([a-z0-9-]+\.(?:js|css))\?v=[A-Za-z0-9]+"', rep, s)
     if s2 != s: p.write_text(s2, encoding="utf-8")
 stamp("site/index.html", "site/assets", "/assets/")
+stamp("site/404.html", "site/assets", "/assets/")              # 404 de aynı uygulamayı yükler (marka ve maskotlu sayfa)
 stamp("site-uzman/index.html", "site/assets", "/assets/")          # ortak çekirdek (herkese açık)
 stamp("site-uzman/index.html", "site-uzman/assets", "/assets/uzman/")

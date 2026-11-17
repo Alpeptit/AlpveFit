@@ -65,8 +65,36 @@
       '<path d="M92 146q8 7 16 0" fill="none" stroke="' + INK + '" stroke-width="3" stroke-linecap="round"/>' +
       '<ellipse cx="80" cy="145" rx="5" ry="3" fill="' + MID + '" opacity=".6"/><ellipse cx="120" cy="145" rx="5" ry="3" fill="' + MID + '" opacity=".6"/></svg>';
   }
+  // 404: yolunu kaybetmiş mantar — elinde ters dönmüş bir harita, şaşkın bakış, etrafında soru işaretleri.
+  function lost() {
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 230" class="msc-lost" role="img" aria-label="Yolunu kaybetmiş AlpveFit mantarı">' +
+      '<ellipse cx="120" cy="214" rx="66" ry="7" fill="' + INK + '" opacity=".08"/>' +
+      // gövde ve bacaklar
+      '<rect x="100" y="186" width="15" height="22" rx="7" fill="' + STEM + '" stroke="' + INK + '" stroke-width="3"/><rect x="125" y="186" width="15" height="22" rx="7" fill="' + SH + '" stroke="' + INK + '" stroke-width="3"/>' +
+      '<path d="M94 214c0-8 6-11 13-11s12 3 12 11zM121 214c0-8 6-11 12-11 7 0 13 3 13 11z" fill="' + INK + '"/>' +
+      '<path d="M84 118c-5 26-2 52 10 72q26 10 52 0c12-20 15-46 10-72z" fill="' + STEM + '" stroke="' + INK + '" stroke-width="3" stroke-linejoin="round"/>' +
+      // harita (ters tutulmuş)
+      '<g transform="rotate(-8 120 170)"><path d="M86 152l22-6 24 6 22-6v38l-22 6-24-6-22 6z" fill="#fff" stroke="' + INK + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M108 146v38M132 152v38" stroke="' + INK + '" stroke-width="2" opacity=".5"/><path d="M94 176q10-10 18-2t18-6q8-6 16 0" fill="none" stroke="' + INK + '" stroke-width="2" stroke-dasharray="3 4" stroke-linecap="round"/>' +
+      '<path d="M141 162l5 5M146 162l-5 5" stroke="' + INK + '" stroke-width="2.4" stroke-linecap="round"/></g>' +
+      // eller
+      '<circle cx="84" cy="168" r="9" fill="#fff" stroke="' + INK + '" stroke-width="3"/><circle cx="157" cy="160" r="9" fill="#fff" stroke="' + INK + '" stroke-width="3"/>' +
+      // şapka (eğik)
+      '<g transform="rotate(-6 120 110)">' + CAP.replace(/cx="100"/g, 'cx="120"').replace('M38 106C38 62 66 32 100 32s62 30 62 74c0 8-7 12-17 12H55c-10 0-17-4-17-12z', 'M58 106C58 62 86 32 120 32s62 30 62 74c0 8-7 12-17 12H75c-10 0-17-4-17-12z')
+        .replace('M52 92c2-24 18-42 40-48', 'M72 92c2-24 18-42 40-48')
+        .replace(/<ellipse cx="(\d+)" cy="(\d+)" rx="([\d.]+)" ry="([\d.]+)"\/>/g, function (m, x, y, rx, ry) { return '<ellipse cx="' + (+x + 20) + '" cy="' + y + '" rx="' + rx + '" ry="' + ry + '"/>'; }) + '</g>' +
+      // yüz: şaşkın
+      '<ellipse cx="108" cy="134" rx="6.5" ry="7.5" fill="#fff" stroke="' + INK + '" stroke-width="2.4"/><ellipse cx="132" cy="134" rx="6.5" ry="7.5" fill="#fff" stroke="' + INK + '" stroke-width="2.4"/>' +
+      '<circle cx="105.5" cy="132" r="3.4" fill="' + INK + '"/><circle cx="129.5" cy="132" r="3.4" fill="' + INK + '"/>' +
+      '<path d="M100 122q8-5 15-1M126 120q8-3 14 3" fill="none" stroke="' + INK + '" stroke-width="2.8" stroke-linecap="round"/>' +
+      '<ellipse cx="120" cy="150" rx="4.5" ry="5.5" fill="' + INK + '"/>' +
+      // soru işaretleri
+      '<g class="msc-q" fill="none" stroke="' + INK + '" stroke-width="4" stroke-linecap="round"><path d="M196 44a10 10 0 1 1 13 9.6c-2.6.8-3 3-3 6.4"/><path d="M42 60a8 8 0 1 1 10.4 7.6c-2 .6-2.4 2.4-2.4 5"/></g>' +
+      '<circle cx="206" cy="71" r="2.6" fill="' + INK + '"/><circle cx="50" cy="83" r="2.2" fill="' + INK + '"/></svg>';
+  }
   function parse(str) { var doc = new DOMParser().parseFromString(str, "image/svg+xml"); return document.importNode(doc.documentElement, true); }
   AVF.mascot = function () { return parse(scene()); };
   AVF.mascotMini = function () { return parse(mini()); };
+  AVF.mascotLost = function () { return parse(lost()); };
   AVF.mascotPlay = function () { /* hareket tamamen CSS ile */ };
 })();
