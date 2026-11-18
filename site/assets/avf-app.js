@@ -265,7 +265,7 @@
         h("aside", { class: "side" },
           h("div", { class: "card ucard" }, h("span", { class: "tile" }, AVF.icon("shield")), h("div", null, h("b", { text: AVF.maskName(u.full_name) }), h("small", { text: u.email }), h("span", { class: "ok" }, "✓ E-posta doğrulandı"))), menuEl),
         content));
-    // Menü sırası: Planlarım (açılır), Siparişlerim, Destek Taleplerim, Kişisel Bilgiler, Bildirimler, Hesap Ayarları, Güvenli Çıkış Yap.
+    // Menü sırası: Planlarım (açılır), Forum Ayarları, Siparişlerim, Destek Taleplerim, Kişisel Bilgiler, Bildirimler, Hesap Ayarları, Güvenli Çıkış Yap.
     // Planlarım varsayılan olarak KAPALIDIR; üye açarsa tercihi hatırlanır. Masaüstünde alt başlıklar kendi kartının içinde,
     // mobilde yatay kaydırılan menünün altında ikinci bir satır olarak açılır.
     var mqMob = window.matchMedia("(max-width: 900px)");
@@ -289,7 +289,7 @@
       chev.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); toggle(!open); });
       plansLink.addEventListener("click", function () { if (!open) toggle(true); });
       var wrapG = h("div", { class: "pm-gwrap" + (open ? " open" : "") }, h("div", { class: "pm-gin" }, group));
-      var rest = [["siparisler", "card", "Siparişlerim"], ["destek", "ticket", "Destek Taleplerim"], ["profil", "id", "Kişisel Bilgiler"], ["bildirimler", "bell", "Bildirimler"], ["hesap", "cog", "Hesap Ayarları"]].map(function (i) {
+      var rest = [["forum-ayarlari", "msg", "Forum Ayarları"], ["siparisler", "card", "Siparişlerim"], ["destek", "ticket", "Destek Taleplerim"], ["profil", "id", "Kişisel Bilgiler"], ["bildirimler", "bell", "Bildirimler"], ["hesap", "cog", "Hesap Ayarları"]].map(function (i) {
         var a = link("/panel/" + i[0], [AVF.icon(i[1]), h("span", { text: i[2] }), i[0] === "bildirimler" && unread ? h("span", { class: "badge", text: String(unread) }) : null]);
         if (i[0] === sub || (i[0] === "siparisler" && sub.indexOf("siparis/") === 0) || (i[0] === "destek" && sub.indexOf("destek/") === 0)) a.setAttribute("aria-current", "page"); return a;
       });
@@ -309,6 +309,7 @@
     function draw() {
       paintMenu();
       if (sub === "hesap") return accountView(content, u);
+      if (sub === "forum-ayarlari") return AVF.forumSettingsView(content);
       if (sub === "bildirimler") return notificationsView(content);
       if (sub === "siparisler") return AVF.ordersView(content);
       if (sub === "profil") return AVF.profileView(content);

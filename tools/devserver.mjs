@@ -36,7 +36,7 @@ async function load(file, prefix) {
   prefixes.push([routes, prefix]);
 }
 await load("auth.js", "/api/auth"); await load("twoFactor.js", "/api"); await load("account.js", "/api"); await load("notifications.js", "/api");
-await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("uploads.js", "/api"); await load("support.js", "/api"); await load("admin.js", "/api/admin");
+await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("uploads.js", "/api"); await load("support.js", "/api"); await load("forum.js", "/api"); await load("admin.js", "/api/admin");
 const { hideAdminApi, panelUser, sessionUser } = await import(join(root, "src/utils/panelSession.js"));
 
 function findRoute(method, full) {

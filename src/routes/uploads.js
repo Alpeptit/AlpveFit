@@ -20,7 +20,7 @@ export const FILE_COLS = `id, scope, slot, filename, mime, size_bytes, created_a
 export const BODY_SLOTS = ["front", "back", "right", "left"];
 
 // Ham gövde okuyucu: yalnız application/octet-stream; sınır aşılırsa okuma hemen kesilir (bellek şişmez).
-function raw(req, res, next) {
+export function raw(req, res, next) {
   if (Buffer.isBuffer(req.body)) return req.body.length > UPLOAD_MAX_BYTES ? res.status(400).json({ error: SIZE_ERROR }) : next();   // (yerel test sunucusu gövdeyi önceden okur)
   if (!/^application\/octet-stream\b/i.test(String(req.headers["content-type"] || ""))) return res.status(400).json({ error: "Dosya bulunamadı." });
   const chunks = []; let size = 0, done = false;

@@ -386,6 +386,30 @@ adminRouter.put("/members/:id/forum", requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 adminRouter.get("/forum/levels", requireAdmin, (req, res) => res.json(LEVELS));
+// Kurala aykırı forum kimliği öğesini kaldırma (avatar, imza görseli, imza metni, sosyal bağlantılar). Üyeye bildirim gider; denetim kaydına yazılır.
+const FORUM_ITEMS = { avatar: "avatarınız", sig: "imza görseliniz", signature: "imzanız", socials: "sosyal bağlantılarınız" };
+adminRouter.delete("/members/:id/forum/:item", requireAdmin, async (req, res) => {
+  const item = req.params.item;
+  if (!ID_RE.test(req.params.id) || !FORUM_ITEMS[item]) return res.status(404).json({ error: "Bulunamadı." });
+  const reason = String((req.body || {}).reason || "").trim();
+  if (reason.length < 5 || reason.length > 300) return bad(res, "Gerekçe 5–300 karakter olmalıdır.");
+  const u = await pool.query(`SELECT 1 FROM users WHERE id = $1`, [req.params.id]);
+  if (!u.rows.length) return res.status(404).json({ error: "Üye bulunamadı." });
+  if (item === "avatar" || item === "sig") await pool.query(`DELETE FROM attachments WHERE user_id = $1 AND scope = $2 RETURNING id`, [req.params.id, item]);
+  else await pool.query(`UPDATE forum_profiles SET ${item === "signature" ? "signature = ''" : "socials = '{}'::jsonb"}, updated_at = now() WHERE user_id = $1`, [req.params.id]);
+  await pool.query(`INSERT INTO notifications (user_id, type, text) VALUES ($1, 'forum', $2)`, [req.params.id, `Forum ${FORUM_ITEMS[item]} kurallara aykırı bulunduğu için kaldırıldı. Gerekçe: ${reason}`]).catch(() => {});
+  await logAudit(req.user.sub, "member_forum_item_remove", "user", req.params.id, { item, reason }, ip(req));
+  res.json({ ok: true });
+});
+// Yönetici için üyenin forum kimliği (avatar, imza, bağlantılar) — denetim amaçlı görüntüleme.
+adminRouter.get("/members/:id/forum", requireAdmin, async (req, res) => {
+  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Üye bulunamadı." });
+  const { rows } = await pool.query(`SELECT coalesce(f.signature, '') AS signature, coalesce(f.socials, '{}'::jsonb) AS socials,
+      (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'avatar') AS avatar_id, (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'sig') AS sig_image_id
+      FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1`, [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: "Üye bulunamadı." });
+  res.json(rows[0]);
+});
 
 
 // Blog yönetimi panelden kaldırıldı (yönetim forum alanına taşınacak). Herkese açık blog yazıları yerinde durur.

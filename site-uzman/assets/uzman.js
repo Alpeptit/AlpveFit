@@ -314,7 +314,7 @@
         h("td", { class: "mact" }, m.role === "user" ? h("button", { class: "btn sm", type: "button", onclick: function (e) {
           var b = e.currentTarget; AVF.busy(b, true, "Açılıyor…");
           api("GET", "/clients?id=" + m.id).then(function (rows) { var r = rows.filter(function (x) { return x.id === m.id; })[0]; AVF.busy(b, false); if (r) { sel = r; render(); window.scrollTo(0, 0); } else AVF.toast("Üye bulunamadı."); }, function (er) { AVF.busy(b, false); AVF.toast(AVF.errText(er)); });
-        } }, AVF.icon("notes", "bico"), "Profil ve planlar") : null, h("button", { class: "btn ghost sm", type: "button", "aria-expanded": "false", onclick: function (e) {
+        } }, AVF.icon("notes", "bico"), "Planlar") : null, h("button", { class: "btn ghost sm", type: "button", "aria-expanded": "false", onclick: function (e) {
           var open = detail.hidden; detail.hidden = !open; e.currentTarget.setAttribute("aria-expanded", String(open));
           if (open) manage(detail.firstChild, m);
         } }, AVF.icon("cog", "bico"), "Yönet")));
@@ -372,10 +372,28 @@
             if (y) api("DELETE", "/members/" + m.id, { reason: preason.value, token: code.value }).then(function () { done("Üye kalıcı olarak silindi ve yasaklandı."); }, fail);
           });
         } }, AVF.icon("trash", "bico"), "Kalıcı olarak sil")]);
-      var plansBtn = m.role === "user" ? h("button", { class: "btn sm", type: "button", onclick: function () {
-        api("GET", "/clients").then(function (rows) { var r = rows.filter(function (x) { return x.id === m.id; })[0]; if (r) { sel = r; render(); } }, fail);
-      } }, AVF.icon("list", "bico"), "Planlar ve kişisel bilgiler") : null;
-      AVF.mount(cell, h("div", { class: "mman" }, eb, plansBtn ? h("div", { class: "row", style: "margin-bottom:10px" }, plansBtn) : null, h("div", { class: "mgrid" }, roleSec, forumSec, stateSec, permaSec)));
+      // forum kimliği: avatar, imza, bağlantılar — kurala aykırıysa gerekçeyle kaldırılır (üyeye bildirim gider)
+      var fidBox = h("div", { class: "fid" }, AVF.skeleton(1)), freason = AVF.input("text", { maxlength: "300", placeholder: "Kaldırma gerekçesi (üyeye iletilir)", "aria-label": "Kaldırma gerekçesi" });
+      function rmItem(item, label) {
+        return h("button", { class: "btn ghost sm", type: "button", onclick: function () {
+          if (freason.value.trim().length < 5) return err(eb, { data: { error: "Kaldırma gerekçesi en az 5 karakter olmalıdır." } });
+          AVF.confirmDialog({ icon: "trash", danger: true, title: label + " kaldırılsın mı?", text: "Üyeye gerekçeyle birlikte bildirim gönderilir.", confirm: "Kaldır", cancel: "Vazgeç" }).then(function (y) {
+            if (y) api("DELETE", "/members/" + m.id + "/forum/" + item, { reason: freason.value.trim() }).then(function () { AVF.toast("Kaldırıldı."); paintFid(); }, fail);
+          });
+        } }, AVF.icon("x", "bico"), label + " kaldır");
+      }
+      function paintFid() {
+        api("GET", "/members/" + m.id + "/forum").then(function (f) {
+          var socs = Object.keys(f.socials || {});
+          AVF.mount(fidBox, h("div", { class: "fid-row" }, f.avatar_id ? h("img", { class: "fid-av", src: "/api/forum/media/" + f.avatar_id, alt: "Avatar" }) : h("span", { class: "hint", text: "Avatar yok" }),
+            h("div", { class: "fid-t" }, f.signature ? h("p", { "data-notr": "", text: f.signature }) : h("span", { class: "hint", text: "İmza yok" }), f.sig_image_id ? h("img", { class: "fid-sig", src: "/api/forum/media/" + f.sig_image_id, alt: "İmza görseli" }) : null,
+              socs.length ? h("small", { "data-notr": "", text: socs.map(function (k) { return k + ": " + f.socials[k]; }).join(" · ") }) : null)),
+            f.avatar_id || f.signature || f.sig_image_id || socs.length ? [freason, h("div", { class: "row" }, f.avatar_id ? rmItem("avatar", "Avatarı") : null, f.signature ? rmItem("signature", "İmzayı") : null, f.sig_image_id ? rmItem("sig", "İmza görselini") : null, socs.length ? rmItem("socials", "Bağlantıları") : null)] : null);
+        }, function (e2) { err(fidBox, e2); });
+      }
+      paintFid();
+      var fidSec = msec("image", "Forum kimliği", "Avatar, imza ve bağlantılar herkese açıktır. Müstehcen, siyasi/ideolojik veya reklam içerenleri gerekçe yazarak kaldırın.", [fidBox]);
+      AVF.mount(cell, h("div", { class: "mman" }, eb, h("div", { class: "mgrid" }, roleSec, forumSec, fidSec, stateSec, permaSec)));
     }
     load();
   }
