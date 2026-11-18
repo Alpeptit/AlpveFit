@@ -178,13 +178,13 @@
       return h("button", { class: "btn sm", type: "button", onclick: function () { editor(null, avail); } }, AVF.icon("plus"), "Yeni plan");
     }
     function load() {
-      api("GET", "/clients/" + m.id + "/plans").then(function (rows) {
+      Promise.all([api("GET", "/clients/" + m.id + "/plans"), AVF.planCatalog(true).catch(function () { return null; })]).then(function (r) { var rows = r[0];
         if (!rows.length) return AVF.mount(list, AVF.state("list", "Bu üye için plan yok", "“Yeni plan” ile bir plan hazırlayabilirsiniz."));
         AVF.mount(list, rows.map(function (p) {
           var st = STATUS[p.status];
           return AVF.accordion({ icon: AVF.KIND[p.kind].icon, title: p.title, sub: AVF.KIND[p.kind].label + " · " + st[0] + " · Hazırlayan: " + p.author_name, content: [
             h("div", { class: "meta" }, h("span", { class: st[1], text: st[0] }), h("span", null, "Oluşturma: " + AVF.fmtDateTime(p.created_at)), h("span", null, "Güncelleme: " + AVF.fmtDateTime(p.updated_at)), p.published_at ? h("span", null, "Yayın: " + AVF.fmtDateTime(p.published_at) + " (" + (p.published_by_name || "—") + ")") : null),
-            h("div", { class: "plan-body", text: p.body || "(içerik yok)" }),
+            p.data && AVF.planDataView ? AVF.planDataView(p.kind, p.data) : null, p.body || !p.data ? h("div", { class: "plan-body", text: p.body || "(içerik yok)" }) : null,
             h("div", { class: "row", style: "margin-top:14px" },
               p.status !== "archived" ? h("button", { class: "btn ghost sm", type: "button", onclick: function () { editor(p, [p.kind]); } }, "Düzenle") : null,
               p.status === "draft" ? h("button", { class: "btn sm", type: "button", onclick: function () { act(p, "publish", "Plan üyenin panelinde yayınlanacak ve üyeye bildirim gidecek. Onaylıyor musunuz?"); } }, "Yayınla") : null,
@@ -202,20 +202,28 @@
       var kind = h("select", { class: "inp", id: "k" + Date.now(), disabled: !!p }, avail.map(function (k) { return h("option", { value: k, text: AVF.KIND[k].label, selected: p && p.kind === k }); }));
       var title = AVF.input("text", { maxlength: "140", value: p ? p.title : "", placeholder: "Plan başlığı" });
       var s = AVF.input("date", { value: p && p.starts_on ? String(p.starts_on).slice(0, 10) : "" }), e2 = AVF.input("date", { value: p && p.ends_on ? String(p.ends_on).slice(0, 10) : "" });
-      var body = h("textarea", { class: "inp", id: "b" + Date.now(), maxlength: "20000", placeholder: "Plan içeriği (siz yazarsınız; sistem içerik üretmez)" }); body.value = p ? p.body : "";
-      var ebox = h("div"), btn = h("button", { class: "btn", type: "submit" }, "Taslağı kaydet");
+      var body = h("textarea", { class: "inp", id: "b" + Date.now(), maxlength: "20000", placeholder: "Ek açıklama (isteğe bağlı; siz yazarsınız, sistem içerik üretmez)" }); body.value = p ? p.body : "";
+      var ebox = h("div"), btn = h("button", { class: "btn", type: "submit" }, "Taslağı kaydet"), bld = h("div", { class: "pl-bld" }, AVF.skeleton(2)), ed = null;
+      function build() {
+        AVF.planCatalog(true).then(function () {
+          ed = AVF.planEditor(kind.value, p && p.kind === kind.value ? p.data : null);
+          AVF.mount(bld, h("h4", { class: "pl-bh" }, AVF.icon(AVF.KIND[kind.value].icon), AVF.KIND[kind.value].label + " oluşturucu"), ed);
+        }, function (e2) { ed = null; AVF.mount(bld, h("div", { class: "note err", role: "alert", text: "Plan kataloğu yüklenemedi: " + AVF.errText(e2) })); });
+      }
+      kind.addEventListener("change", function () { if (!ed || window.confirm("Tür değişirse oluşturucudaki seçimler silinir. Devam edilsin mi?")) build(); });
       AVF.mount(box, h("form", { class: "card", style: "padding:20px;margin-bottom:14px", novalidate: true, onsubmit: function (ev) {
         ev.preventDefault(); AVF.mount(ebox, null);
         if (!title.value.trim()) return err(ebox, { data: { error: "Plan başlığı gerekli." } });
         AVF.busy(btn, true, "Kaydediliyor…");
         var pl = { title: title.value.trim(), body: body.value, startsOn: s.value || null, endsOn: e2.value || null };
+        if (ed) pl.data = ed.get();
         var rq = p ? api("PATCH", "/plans/" + p.id, pl) : api("POST", "/plans", Object.assign({ memberId: m.id, kind: kind.value }, pl));
         rq.then(function () { AVF.mount(box, null); AVF.toast("Kaydedildi."); load(); }, function (er) { AVF.busy(btn, false); err(ebox, er); });
       } }, h("h3", { style: "margin-bottom:12px", text: p ? "Planı düzenle" : "Yeni plan" }),
         AVF.field("Tür", kind, { optional: true }), AVF.field("Başlık", title, { optional: true }),
         h("div", { class: "row" }, h("div", { style: "flex:1;min-width:150px" }, AVF.field("Başlangıç", s, { optional: true })), h("div", { style: "flex:1;min-width:150px" }, AVF.field("Bitiş", e2, { optional: true }))),
-        AVF.field("İçerik", body, { optional: true }), ebox, h("div", { class: "row" }, btn, h("button", { class: "btn ghost", type: "button", onclick: function () { AVF.mount(box, null); } }, "Vazgeç"))));
-      title.focus();
+        bld, AVF.field("Ek açıklama", body, { optional: true, icon: "notes" }), ebox, h("div", { class: "row" }, btn, h("button", { class: "btn ghost", type: "button", onclick: function () { AVF.mount(box, null); } }, "Vazgeç"))));
+      build(); title.focus();
     }
     load();
   }
@@ -303,7 +311,10 @@
         h("td", { "data-l": "Forum" }, h("span", { class: "lvl" }, AVF.icon("award"), h("span", { text: m.forumLevel.name })), m.forumLevel.manual ? h("small", { class: "sub", text: "elle verildi" }) : null,
           h("span", { class: "fstats" }, h("span", { title: "Şikâyet" }, AVF.icon("flag"), String(m.reports_received)), h("span", { title: "Beğeni" }, AVF.icon("like"), String(m.likes)), h("span", { title: "Beğenmeme" }, AVF.icon("dislike"), String(m.dislikes)))),
         h("td", { "data-l": "Durum" }, h("span", { class: st[1] }, AVF.icon(st[2]), st[0]), m.state === "banned" && m.locked_until ? h("small", { class: "sub", text: "Bitiş: " + AVF.fmtDateTime(m.locked_until) }) : null),
-        h("td", null, h("button", { class: "btn ghost sm", type: "button", "aria-expanded": "false", onclick: function (e) {
+        h("td", { class: "mact" }, m.role === "user" ? h("button", { class: "btn sm", type: "button", onclick: function (e) {
+          var b = e.currentTarget; AVF.busy(b, true, "Açılıyor…");
+          api("GET", "/clients?id=" + m.id).then(function (rows) { var r = rows.filter(function (x) { return x.id === m.id; })[0]; AVF.busy(b, false); if (r) { sel = r; render(); window.scrollTo(0, 0); } else AVF.toast("Üye bulunamadı."); }, function (er) { AVF.busy(b, false); AVF.toast(AVF.errText(er)); });
+        } }, AVF.icon("notes", "bico"), "Profil ve planlar") : null, h("button", { class: "btn ghost sm", type: "button", "aria-expanded": "false", onclick: function (e) {
           var open = detail.hidden; detail.hidden = !open; e.currentTarget.setAttribute("aria-expanded", String(open));
           if (open) manage(detail.firstChild, m);
         } }, AVF.icon("cog", "bico"), "Yönet")));

@@ -347,13 +347,13 @@
     if (kind === "supplement" || kind === "pharmacology") el.insertBefore(h("div", { class: "note" }, "Bu bölümde yalnızca tarafımızca girilen içerik gösterilir."), list);
     function load() {
       AVF.mount(list, AVF.skeleton(2));
-      AVF.api("GET", "/plans?kind=" + kind).then(function (rows) {
+      Promise.all([AVF.api("GET", "/plans?kind=" + kind), AVF.planCatalog ? AVF.planCatalog(false).catch(function () { return null; }) : null]).then(function (r) { var rows = r[0];
         if (!rows.length) return AVF.mount(list, AVF.state(m.icon, "Henüz yayınlanmış plan yok", "Bir plan yayınlandığında burada görünür ve size bildirim gelir."));
         AVF.mount(list, rows.map(function (p, i) {
           var when = p.starts_on || p.ends_on ? [p.starts_on ? AVF.fmtDate(p.starts_on) : "…", p.ends_on ? AVF.fmtDate(p.ends_on) : "…"].join(" – ") : "";
           return AVF.accordion({ icon: m.icon, open: i === 0, title: p.title, sub: "Hazırlayan: " + p.author_name + " · " + AVF.fmtDate(p.published_at),
             content: [h("div", { class: "meta" }, h("span", null, "Hazırlayan: ", h("b", { text: p.author_name })), h("span", null, "Hazırlanma: " + AVF.fmtDate(p.created_at)), h("span", null, "Yayın: " + AVF.fmtDate(p.published_at) + (p.published_by_name && p.published_by_name !== p.author_name ? " (" + p.published_by_name + ")" : "")),
-              p.updated_at && new Date(p.updated_at) - new Date(p.published_at) > 60000 ? h("span", null, "Son güncelleme: " + AVF.fmtDate(p.updated_at)) : null, when ? h("span", null, "Dönem: " + when) : null), h("div", { class: "plan-body", text: p.body })] });
+              p.updated_at && new Date(p.updated_at) - new Date(p.published_at) > 60000 ? h("span", null, "Son güncelleme: " + AVF.fmtDate(p.updated_at)) : null, when ? h("span", null, "Dönem: " + when) : null), p.data && AVF.planDataView ? AVF.planDataView(kind, p.data) : null, p.body ? h("div", { class: "plan-body", text: p.body }) : null] });
         }));
       }, function (e) { AVF.mount(list, AVF.state("alert", "Planlar yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: load }, "Tekrar dene"))); });
     }

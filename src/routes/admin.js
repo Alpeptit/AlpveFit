@@ -17,6 +17,8 @@ import { PROFILE_COLS } from "./profile.js";
 import { FILE_COLS, sendAttachment, withAttachments, checkTicketAttachments, linkAttachments } from "./uploads.js";
 import { forumLevel, LEVELS } from "../utils/forumLevels.js";
 import { verifyTotpOnce } from "../utils/totpOnce.js";
+import { validatePlanData, planDataHasContent } from "../utils/planData.js";
+import { catalog as planCatalog } from "../utils/planCatalog.js";
 
 export const adminRouter = withAsyncErrors(express.Router());
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -62,6 +64,7 @@ function validatePlanFields(b, { partial = false } = {}) {
 }
 
 // ---------- panel bilgisi ----------
+adminRouter.get("/plan-catalog", (req, res) => { res.setHeader("Cache-Control", "private, max-age=300"); res.json(planCatalog()); });
 adminRouter.get("/me", async (req, res) => {
   res.json({ role: req.adminRole, name: req.panelName, kinds: req.adminRole === "admin" ? PLAN_KINDS : req.panelKinds, kindLabels: KIND_LABELS });
 });
@@ -76,12 +79,12 @@ adminRouter.get("/clients", async (req, res) => {
                 (SELECT row_to_json(o) FROM (SELECT package_key, weeks, pharmacology, paid_at, plans_due_at FROM orders WHERE user_id = u.id AND status = 'paid' ORDER BY paid_at DESC LIMIT 1) o) AS package,
                 (SELECT coalesce(json_agg(json_build_object('coachId', c.coach_id, 'coachName', cu.full_name, 'delivery', c.delivery)), '[]')
                    FROM coach_clients c JOIN users cu ON cu.id = c.coach_id WHERE c.member_id = u.id) AS coaches
-           FROM users u WHERE u.role = 'user' ORDER BY u.created_at DESC LIMIT 500`
+           FROM users u WHERE u.role = 'user' AND ($1::text = '' OR u.id::text = $1) ORDER BY u.created_at DESC LIMIT 500`
       : `SELECT u.id, u.full_name, u.user_code, u.email_verified_at IS NOT NULL AS verified, c.delivery,
                 (SELECT coalesce(json_agg(kind ORDER BY kind), '[]') FROM member_access a WHERE a.member_id = u.id) AS access,
                 (SELECT row_to_json(o) FROM (SELECT package_key, weeks, pharmacology, paid_at, plans_due_at FROM orders WHERE user_id = u.id AND status = 'paid' ORDER BY paid_at DESC LIMIT 1) o) AS package
            FROM coach_clients c JOIN users u ON u.id = c.member_id WHERE c.coach_id = $1 AND u.role = 'user' ORDER BY u.full_name LIMIT 500`,
-    admin ? [] : [req.user.sub]
+    admin ? [ID_RE.test(String(req.query.id || "")) ? String(req.query.id) : ""] : [req.user.sub]   // ?id= : tek üye (yönetim listesinden açılır)
   );
   res.json(rows);
 });
@@ -91,7 +94,7 @@ adminRouter.get("/clients/:id/plans", async (req, res) => {
   if (!ID_RE.test(req.params.id) || !(await canAccessMember(req, req.params.id))) return res.status(404).json({ error: "Üye bulunamadı." });
   const kinds = req.adminRole === "admin" ? PLAN_KINDS : req.panelKinds;
   const { rows } = await pool.query(
-    `SELECT id, kind, title, body, starts_on, ends_on, status, author_name, published_by_name, published_at, created_at, updated_at
+    `SELECT id, kind, title, body, data, starts_on, ends_on, status, author_name, published_by_name, published_at, created_at, updated_at
        FROM plans WHERE member_id = $1 AND kind = ANY($2::text[]) ORDER BY updated_at DESC LIMIT 200`,
     [req.params.id, kinds]
   );
@@ -107,10 +110,12 @@ adminRouter.post("/plans", async (req, res) => {
   if (!acc.rows.length) return res.status(409).json({ error: `Üyenin "${KIND_LABELS[kind]}" için erişim izni yok. Önce yönetici erişim izni vermelidir.`, code: "no_access" });
   const v = validatePlanFields(req.body);
   if (v.error) return bad(res, v.error);
+  const pd = validatePlanData(kind, req.body.data);
+  if (pd.error) return bad(res, pd.error);
   const { rows } = await pool.query(
-    `INSERT INTO plans (member_id, kind, title, body, starts_on, ends_on, author_id, author_name)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-    [memberId, kind, v.out.title, v.out.body, v.out.starts_on, v.out.ends_on, req.user.sub, req.panelName]
+    `INSERT INTO plans (member_id, kind, title, body, starts_on, ends_on, author_id, author_name, data)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+    [memberId, kind, v.out.title, v.out.body, v.out.starts_on, v.out.ends_on, req.user.sub, req.panelName, pd.data ? JSON.stringify(pd.data) : null]
   );
   await logAudit(req.user.sub, "plan_create", "plan", rows[0].id, { kind, memberId }, ip(req));
   res.status(201).json({ id: rows[0].id });
@@ -131,6 +136,11 @@ adminRouter.patch("/plans/:id", async (req, res) => {
   if (plan.status === "archived") return res.status(409).json({ error: "Arşivlenmiş plan düzenlenemez." });
   const v = validatePlanFields(req.body || {}, { partial: true });
   if (v.error) return bad(res, v.error);
+  if (req.body && req.body.data !== undefined) {
+    const pd = validatePlanData(plan.kind, req.body.data);
+    if (pd.error) return bad(res, pd.error);
+    v.out.data = pd.data ? JSON.stringify(pd.data) : null;
+  }
   const cols = Object.keys(v.out);
   if (!cols.length) return bad(res, "Değiştirilecek alan yok.");
   const set = cols.map((c, i) => `${c} = $${i + 2}`).join(", ");
@@ -143,7 +153,7 @@ adminRouter.post("/plans/:id/publish", async (req, res) => {
   const plan = await loadPlan(req, res); if (!plan) return;
   if (plan.status === "published") return res.json({ ok: true, already: true });
   if (plan.status === "archived") return res.status(409).json({ error: "Arşivlenmiş plan yayınlanamaz." });
-  if (!plan.body.trim()) return bad(res, "İçeriği boş plan yayınlanamaz.");
+  if (!plan.body.trim() && !planDataHasContent(plan.kind, plan.data)) return bad(res, "İçeriği boş plan yayınlanamaz.");
   const acc = await pool.query(`SELECT 1 FROM member_access WHERE member_id = $1 AND kind = $2`, [plan.member_id, plan.kind]);
   if (!acc.rows.length) return res.status(409).json({ error: "Üyenin bu tür için erişim izni yok.", code: "no_access" });
   await pool.query(

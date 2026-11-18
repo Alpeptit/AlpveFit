@@ -5,16 +5,20 @@ import { withAsyncErrors } from "../utils/asyncRoutes.js";
 import { pool } from "../db/pool.js";
 import { requireAuth } from "../middleware/auth.js";
 import { PLAN_KINDS, KIND_LABELS, isPlanKind } from "../utils/permissions.js";
+import { catalog as planCatalog } from "../utils/planCatalog.js";
 
 export const plansRouter = withAsyncErrors(express.Router());
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const PUBLIC_COLS = `p.id, p.kind, p.title, p.body, p.starts_on, p.ends_on, p.author_name, p.published_by_name, p.published_at, p.created_at, p.updated_at`;
+const PUBLIC_COLS = `p.id, p.kind, p.title, p.body, p.data, p.starts_on, p.ends_on, p.author_name, p.published_by_name, p.published_at, p.created_at, p.updated_at`;
 // Üyenin görebileceği satırlar: kendi planı + yayınlanmış + o tür için erişim izni var.
 const VISIBLE = `p.member_id = $1 AND p.status = 'published'
   AND EXISTS (SELECT 1 FROM member_access a WHERE a.member_id = p.member_id AND a.kind = p.kind)`;
 
 // Panelin açılış verisi: hangi türler açık, kaç yayınlanmış plan var, koçluk biçimi.
+// Plan kataloğu (besin değerleri, kas grupları, supplement / madde listeleri) — planın gösterimi ve hesapları için.
+plansRouter.get("/plan-catalog", requireAuth, (req, res) => { res.setHeader("Cache-Control", "private, max-age=300"); res.json(planCatalog()); });
+
 plansRouter.get("/plans/overview", requireAuth, async (req, res) => {
   const uid = req.user.sub;
   const [acc, cnt, svc] = await Promise.all([
