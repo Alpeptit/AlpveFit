@@ -1,7 +1,7 @@
 // Yapılandırılmış planlar: katalog, türe göre doğrulama (yalnız listedeki besin/hareket/supplement/madde), kayıt ve üyeye gösterim.
 //   node --import ./tools/authsim/register.mjs tests/e2e/plans.mjs   (devserver açıkken)
 process.env.SIM_DB ||= "avfsim"; process.env.DATABASE_URL ||= "postgres://local/avfsim";
-import { signup, enableTotp, sql, chk, finish } from "./lib.mjs";
+import { signup, enableTotp, sql, chk, finish, BASE } from "./lib.mjs";
 
 const A = await signup("Plan Yonetici", "padm"), M = await signup("Plan Uye", "pmbr");
 sql(`UPDATE users SET role='admin' WHERE id='${A.id}'`); await enableTotp(A);
@@ -62,10 +62,20 @@ r = await A.c.call("PATCH", "/admin/plans/" + nid, { data: { meals: [{ items: [{
 r = await A.c.call("PATCH", "/admin/plans/" + nid, { data: { meals: [{ items: [{ food: "banana", qty: 0 }] }] } }); chk("güncellemede de doğrulanır", r.status === 400, r.body);
 r = await A.c.call("PATCH", "/admin/plans/" + nid, { data: "x" }); chk("geçersiz veri tipi reddedilir", r.status === 400, r.body);
 r = await A.c.call("GET", `/admin/clients/${M.id}/plans`); chk("panel listesinde veri döner", r.body.some((p) => p.id === nid && p.data && p.data.meals[0].items[0].food === "banana"), null);
-r = await M.c.call("GET", "/plans?kind=nutrition"); chk("yayınlanmamış plan üyeye görünmez", r.status === 200 && r.body.length === 0, r.body);
-await A.c.call("POST", `/admin/plans/${nid}/publish`, {}); await A.c.call("POST", `/admin/plans/${xid}/publish`, {});
-r = await M.c.call("GET", "/plans?kind=nutrition"); chk("yayınlanan plan verisiyle üyeye döner", r.body.length === 1 && r.body[0].data.meals[0].items[0].qty === 120, r.body);
+r = await M.c.call("GET", "/plans?kind=nutrition"); chk("kaydedilen plan ayrı yayınlama olmadan üyede görünür", r.body.length === 1 && r.body[0].data.meals[0].items[0].qty === 120, r.body);
+// Bildirim birleştirilir: bir okunmamış "planlarınız güncellendi" bildirimi, bir e-posta (gecikmeli).
+r = await M.c.call("GET", "/notifications");
+const pn = r.body.filter((n) => n.type === "plan_updated");
+chk("çok sayıda kayıtta tek panel bildirimi", pn.length === 1 && pn[0].data.kinds.length >= 4, pn);
+chk("e-posta hemen gitmez (birleştirilir)", sql(`SELECT plan_mail_due_at IS NOT NULL FROM users WHERE id='${M.id}'`) === "t", null);
+sql(`UPDATE users SET plan_mail_due_at = now() - interval '1 minute' WHERE id='${M.id}'`);
+let fl = await (await fetch(BASE + "/__flush-plan-mails")).json();
+const pm = await (await fetch(BASE + "/__mails?to=" + encodeURIComponent(M.email))).json();
+chk("tek birleştirilmiş e-posta gönderilir", fl.n === 1 && /Planlarınız Güncellendi|Planlarınızda güncelleme/.test(pm.text) && /Beslenme programı/.test(pm.text), pm && pm.text.slice(0, 200));
+fl = await (await fetch(BASE + "/__flush-plan-mails")).json(); chk("ikinci kez gönderilmez", fl.n === 0, fl);
 r = await M.c.call("GET", "/plans?kind=notes"); chk("değerli notlar üyeye döner", r.body[0].data.values.water === "4 L" && r.body[0].data.notes.water === "Antrenmanda 1 L", r.body);
 r = await M.c.call("POST", "/admin/plans", { memberId: M.id, kind: "notes", title: "x" }); chk("üye plan oluşturamaz", r.status === 404 || r.status === 403, r.status);
-r = await post("supplement", { items: [] }); r = await A.c.call("POST", `/admin/plans/${r.body.id}/publish`, {}); chk("boş plan yayınlanamaz", r.status === 400, r.body);
+r = await post("supplement", { items: [] }); chk("boş plan taslak kalır", r.body.status === "draft", r.body); r = await A.c.call("POST", `/admin/plans/${r.body.id}/publish`, {}); chk("boş plan yayınlanamaz", r.status === 400, r.body);
+r = await post("pharmacology", { items: [{ group: "oral", name: "Oksandrolon (Anavar)", dose: 20, unit: "mg", freq: "daily", tabMg: 10 }] }); chk("oral tablet mg kaydedilir", r.status === 201 && JSON.parse(sql(`SELECT data::text FROM plans WHERE id='${r.body.id}'`)).items[0].tabMg === 10, r.body);
+r = await A.c.call("GET", "/admin/plan-catalog"); chk("katalogda kalem görselleri ve sunumlar", r.body.suppGlyph["Vitamin D3"][1] === "D3" && r.body.pharmaInfo["Testosteron Enantat"][1] === 250 && r.body.pharmaInfo["BPC-157"][1].includes(5) && r.body.suppMacros["Whey Protein"].m[1] === 78 && /Himalaya/.test(r.body.notes.salt.label), null);
 finish();

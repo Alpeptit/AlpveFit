@@ -54,9 +54,8 @@ function training(d) {
           const sets = int(e.sets, 1, 20); if (sets === null) fail(`${name}: set sayısı 1–20 olmalıdır.`);
           const reps = String(e.reps ?? "").trim();
           if (!/^(\d{1,3}(-\d{1,3})?|MAX|TÜKENİŞ)$/i.test(reps)) fail(`${name}: tekrar sayısı (ör. 10 veya 8-12) geçersiz.`);
-          const weight = e.weight === "" || e.weight == null ? null : num(e.weight, 0, 1000, 1);
-          if (e.weight !== "" && e.weight != null && weight === null) fail(`${name}: ağırlık 0–1000 kg olmalıdır.`);
-          return { group: g.key, name, custom: !!e.custom, sets, reps: reps.toUpperCase(), weight, note: text(e.note, 200) };
+          // Antrenman planında ağırlık (kg) tutulmaz; üye ağırlıklarını "Ağırlık takibi"nden kendisi girer.
+          return { group: g.key, name, custom: !!e.custom, sets, reps: reps.toUpperCase(), note: text(e.note, 200) };
         }),
         note: text(dy && dy.note),
       };
@@ -98,6 +97,7 @@ function pharmacology(d) {
       if (it.weeks !== "" && it.weeks != null && weeks === null) fail(`${it.name}: süre 1–52 hafta olmalıdır.`);
       const out = { group: g.key, name: it.name, dose, unit, freq, weeks, note: text(it.note, 200) };
       if (g.mode === "inj") { out.conc = it.conc === "" || it.conc == null ? null : num(it.conc, 0.1, 1000, 2); if (it.conc !== "" && it.conc != null && out.conc === null) fail(`${it.name}: konsantrasyon (mg/mL) geçersiz.`); }
+      if (g.mode === "oral") { out.tabMg = it.tabMg === "" || it.tabMg == null ? null : num(it.tabMg, 0.01, 1000, 2); if (it.tabMg !== "" && it.tabMg != null && out.tabMg === null) fail(`${it.name}: tablet mg değeri geçersiz.`); }
       if (g.mode === "pep") {
         out.vialMg = it.vialMg === "" || it.vialMg == null ? null : num(it.vialMg, 0.01, 10000, 2);
         out.bacMl = it.bacMl === "" || it.bacMl == null ? null : num(it.bacMl, 0.1, 10, 2);

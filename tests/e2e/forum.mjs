@@ -78,5 +78,13 @@ r = await U.c.call("DELETE", "/forum/me/media/sig"); chk("üye imza görselini k
 
 // ---- seviye
 sql(`UPDATE forum_profiles SET posts=40, likes=30 WHERE user_id='${U.id}'`);
-r = await U.c.call("GET", "/forum/me"); chk("puan 170 → Pump Avcısı, mesajlaşma açılır", r.body.level.name === "Pump Avcısı" && r.body.messagingUnlocked && r.body.nextLevel.name === "Demir Eri", r.body.level);
+r = await U.c.call("GET", "/forum/me"); chk("puan 170 → Pump Avcısı, mesajlaşma açılır", r.body.level.name === "Pump Avcısı" && r.body.messagingUnlocked, r.body.level);
+chk("seviye mantığı üyeye açıklanmaz (puan / eşik / elle verildi yok)", r.body.level.score === undefined && r.body.level.manual === undefined && r.body.levels.every((l) => l.min === undefined) && r.body.nextLevel === undefined, r.body);
+r = await U.c.call("GET", "/notifications"); const lu = r.body.find((n) => n.type === "level_up");
+chk("seviye yükselince bildirim (kutlama verisiyle)", lu && lu.data.name === "Pump Avcısı" && lu.data.popup === true, r.body.map((n) => n.type));
+const lm = await (await fetch(BASE + "/__mails?to=" + encodeURIComponent(U.email))).json(); chk("seviye yükselince e-posta", lm && /Pump Avcısı/.test(lm.text), lm && lm.text.slice(0, 120));
+r = await U.c.call("GET", "/forum/me"); r = await U.c.call("GET", "/notifications"); chk("kutlama bir kez oluşur", r.body.filter((n) => n.type === "level_up").length === 1, null);
+r = await A.c.call("PUT", `/admin/members/${U.id}/forum`, { levelOverride: 5 }); r = await U.c.call("GET", "/notifications");
+chk("yönetici seviye verince de kutlama (elle verildiği yazmaz)", r.body.some((n) => n.type === "level_up" && n.data.name === "Hacim Ustası" && !/yönetici|elle/i.test(n.text)), r.body.map((n) => n.text));
+chk("elle verilen seviye denetim kaydında", Number(sql(`SELECT count(*) FROM audit_log WHERE action='member_forum_set' AND target_id='${U.id}'`)) === 1, null);
 finish();

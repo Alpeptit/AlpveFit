@@ -18,6 +18,7 @@ export const PENDING_MAX = 8;   // henüz bir mesaja bağlanmamış (bekleyen) t
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const FILE_COLS = `id, scope, slot, filename, mime, size_bytes, created_at`;
 export const BODY_SLOTS = ["front", "back", "right", "left"];
+export const BLOOD_MAX = 2;
 
 // Ham gövde okuyucu: yalnız application/octet-stream; sınır aşılırsa okuma hemen kesilir (bellek şişmez).
 export function raw(req, res, next) {
@@ -35,7 +36,7 @@ export function raw(req, res, next) {
 }
 
 uploadsRouter.post("/uploads/:scope", requireAuth, async (req, res, next) => {
-  if (!["ticket", "profile", "body"].includes(req.params.scope)) return res.status(404).json({ error: "Bulunamadı." });
+  if (!["ticket", "profile", "body", "blood"].includes(req.params.scope)) return res.status(404).json({ error: "Bulunamadı." });
   if (req.params.scope === "body" && !BODY_SLOTS.includes(String(req.query.slot || ""))) return res.status(400).json({ error: "Geçersiz vücut formu yönü." });
   // Sınır, gövde belleğe alınmadan ÖNCE uygulanır.
   if (!(await checkHourlyActionLimit(`upload:${req.user.sub}`, "attachment_upload", UPLOADS_PER_HOUR))) {
@@ -59,12 +60,18 @@ uploadsRouter.post("/uploads/:scope", requireAuth, async (req, res, next) => {
 
   // Vücut formu: yalnız görsel (PNG/JPG/JPEG); her yön için tek görsel — yenisi eskisinin yerini alır.
   if (scope === "body" && !/^image\//.test(kindOf(filename).mime)) return res.status(400).json({ error: "Vücut formu için yalnızca PNG, JPG veya JPEG görsel eklenebilir." });
-  if (scope === "profile" || scope === "body") {
+  // Kan tahlili: en fazla 2 dosya; yalnız PNG / JPG / JPEG görsel veya PDF (sağlık verisi — açık rıza gerekir).
+  if (scope === "blood" && !/^image\/(png|jpeg)$|^application\/pdf$/.test(kindOf(filename).mime)) return res.status(400).json({ error: "Kan tahlili için yalnızca PNG, JPG, JPEG veya PDF eklenebilir." });
+  if (scope === "profile" || scope === "body" || scope === "blood") {
     const c = await pool.query(`SELECT health_consent_at FROM member_profiles WHERE user_id = $1`, [req.user.sub]);
     if (!c.rows[0] || !c.rows[0].health_consent_at) return res.status(400).json({ error: "Dosya eklemeden önce açık rızanızı onaylayıp bilgilerinizi kaydedin.", code: "consent_required" });
     if (scope === "profile") {
       const n = await pool.query(`SELECT count(*)::int AS n FROM attachments WHERE user_id = $1 AND scope = 'profile'`, [req.user.sub]);
       if (n.rows[0].n >= ATTACH_MAX) return res.status(400).json({ error: COUNT_ERROR });
+    }
+    if (scope === "blood") {
+      const n = await pool.query(`SELECT count(*)::int AS n FROM attachments WHERE user_id = $1 AND scope = 'blood'`, [req.user.sub]);
+      if (n.rows[0].n >= BLOOD_MAX) return res.status(400).json({ error: `Kan tahlili için en fazla ${BLOOD_MAX} dosya eklenebilir.` });
     }
   } else {
     // Bir günden eski, hiçbir mesaja bağlanmamış ekler temizlenir; bekleyen ek sayısı sınırlıdır.
@@ -81,7 +88,7 @@ uploadsRouter.post("/uploads/:scope", requireAuth, async (req, res, next) => {
 });
 
 uploadsRouter.get("/uploads/:scope", requireAuth, async (req, res) => {
-  if (req.params.scope !== "profile" && req.params.scope !== "body") return res.status(404).json({ error: "Bulunamadı." });
+  if (!["profile", "body", "blood"].includes(req.params.scope)) return res.status(404).json({ error: "Bulunamadı." });
   const { rows } = await pool.query(`SELECT ${FILE_COLS} FROM attachments WHERE user_id = $1 AND scope = $2 ORDER BY created_at`, [req.user.sub, req.params.scope]);
   res.json(rows);
 });
@@ -114,7 +121,7 @@ uploadsRouter.get("/attachments/:id", requireAuth, async (req, res) => {
 // Yalnız henüz bir mesaja bağlanmamış ticket eki veya kişisel bilgi eki silinebilir (gönderilmiş mesajın eki değişmez).
 uploadsRouter.delete("/attachments/:id", requireAuth, async (req, res) => {
   if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: "Dosya bulunamadı." });
-  const { rowCount } = await pool.query(`DELETE FROM attachments WHERE id = $1 AND user_id = $2 AND message_id IS NULL RETURNING id`, [req.params.id, req.user.sub]);
+  const { rowCount } = await pool.query(`DELETE FROM attachments WHERE id = $1 AND user_id = $2 AND message_id IS NULL AND scope IN ('ticket', 'profile', 'body', 'blood') RETURNING id`, [req.params.id, req.user.sub]);
   if (!rowCount) return res.status(404).json({ error: "Dosya bulunamadı." });
   res.json({ ok: true });
 });

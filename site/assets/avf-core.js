@@ -40,6 +40,9 @@
     instagram: "M4 8a4 4 0 014-4h8a4 4 0 014 4v8a4 4 0 01-4 4H8a4 4 0 01-4-4zM12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM17 7h.01",
     tiktok: "M14 3v11.5a3.5 3.5 0 11-3.5-3.5M14 3a5 5 0 005 5",
     facebook: "M14 21v-7h3l.5-3.5H14V8.5c0-1 .4-1.6 1.7-1.6H17.6V3.8A20 20 0 0015 3.6c-2.6 0-4.3 1.6-4.3 4.4v2.5H8V14h2.7v7", xlogo: "M4 4h4.5L20 20h-4.5zM19.5 4l-6.6 7.3M4.5 20l6.6-7.3",
+    more: "M12 6h.01M12 12h.01M12 18h.01", checks: "M2 13l4 4L16 7M10 15l2 2L22 7",
+    unlock: "M6 11h12v10H6zM8 11V7a4 4 0 017.7-1.5", sun: "M12 16a4 4 0 100-8 4 4 0 000 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4", moon: "M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z",
+    chart: "M4 20V10M10 20V4M16 20v-7M22 20H2", trash2: "M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3",
     atsign: "M16 12a4 4 0 10-1.2 2.8M16 8v5a2.5 2.5 0 005 0v-1a9 9 0 10-3.5 7.1", pen: "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4",
   };
   AVF.icon = function (n, cls) {
@@ -647,12 +650,13 @@
   // o: { scope, files: [mevcut], max, base ("/api/attachments/" | "/api/admin/attachments/"), readOnly, locked (metin), onChange }
   AVF.fileBox = function (o) {
     var h = AVF.h, U = AVF.UPLOAD, max = o.max || U.max, files = (o.files || []).slice(), base = o.base || "/api/attachments/";
-    var gif = o.scope === "ticket", exts = gif ? U.exts.concat(["gif"]) : U.exts, typesText = gif ? "PNG, JPG, JPEG, GIF, PDF, XLSX, DOCX" : "PNG, JPG, JPEG, PDF, XLSX, DOCX";
+    var gif = o.scope === "ticket", blood = o.scope === "blood";
+    var exts = gif ? U.exts.concat(["gif"]) : blood ? ["png", "jpg", "jpeg", "pdf"] : U.exts, typesText = gif ? "PNG, JPG, JPEG, GIF, PDF, XLSX, DOCX" : blood ? "PNG, JPG, JPEG, PDF" : "PNG, JPG, JPEG, PDF, XLSX, DOCX";
     var list = h("ul", { class: "fb-list" }), msg = h("div", { class: "fb-msg", role: "alert" });
-    var pick = h("input", { type: "file", accept: U.accept + (gif ? ",.gif,image/gif" : ""), multiple: "", hidden: "", tabindex: "-1" });
+    var pick = h("input", { type: "file", accept: blood ? ".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf" : U.accept + (gif ? ",.gif,image/gif" : ""), multiple: "", hidden: "", tabindex: "-1" });
     var count = h("span", { class: "fb-n" });
-    var addBtn = h("button", { class: "fb-add", type: "button" }, h("span", { class: "tile" }, AVF.icon("image")),
-      h("span", { class: "t" }, h("b", { text: "Görsel / dosya ekle" }), h("small", { text: typesText + " · en fazla 4 MB · en fazla " + max + " dosya" })), count);
+    var addBtn = h("button", { class: "fb-add", type: "button" }, h("span", { class: "tile" }, AVF.icon(o.icon || "image")),
+      h("span", { class: "t" }, h("b", { text: o.label || "Görsel / dosya ekle" }), h("small", { text: typesText + " · en fazla 4 MB · en fazla " + max + " dosya" })), count);
     var el = h("div", { class: "fbox" + (o.locked ? " off" : "") }, o.readOnly ? null : addBtn, o.readOnly ? null : pick, msg, list);
     if (o.locked) addBtn.setAttribute("aria-disabled", "true");
     function isImg(f) { return f.mime === "image/png" || f.mime === "image/jpeg" || f.mime === "image/gif"; }
@@ -755,4 +759,21 @@
     pop.addEventListener("keydown", function (e) { if (e.key === "Escape") { close(); btn.focus(); } });
     wrap.appendChild(btn); wrap.appendChild(pop); return wrap;
   };
+  // ---------- tema (aydınlık / karanlık / cihaz) ----------
+  var TH = window.AVF_THEME || { get: function () { return "system"; }, current: function () { return "light"; }, set: function () {} };
+  AVF.theme = TH;
+  /** Üst çubuktaki tek dokunuşla tema düğmesi: aydınlık ↔ karanlık. */
+  AVF.themeButton = function () {
+    var dark = TH.current() === "dark";
+    return AVF.h("button", { class: "ibtn plain thm", type: "button", "aria-label": AVF.t(dark ? "Aydınlık temaya geç" : "Karanlık temaya geç"), title: AVF.t(dark ? "Aydınlık tema" : "Karanlık tema"),
+      onclick: function () { TH.set(TH.current() === "dark" ? "light" : "dark"); } }, AVF.icon(dark ? "sun" : "moon"));
+  };
+  /** Menülerde üç seçenekli tema satırı. */
+  AVF.themeRow = function () {
+    var cur = TH.get();
+    return AVF.h("div", { class: "um-theme", role: "radiogroup", "aria-label": AVF.t("Tema") }, [["light", "sun", "Aydınlık"], ["dark", "moon", "Karanlık"], ["system", "cog", "Cihaz"]].map(function (x) {
+      return AVF.h("button", { type: "button", role: "radio", "aria-checked": String(cur === x[0]), onclick: function (e) { e.stopPropagation(); TH.set(x[0]); } }, AVF.icon(x[1]), AVF.h("span", { text: x[2] }));
+    }));
+  };
+  AVF.onTheme = function () { if (AVF.renderChrome) AVF.renderChrome(); document.dispatchEvent(new CustomEvent("avf:theme")); };
 })();

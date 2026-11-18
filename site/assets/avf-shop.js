@@ -206,7 +206,7 @@
   function psec(icon, title, sub, kids) { return h("section", { class: "card psec" }, h("div", { class: "psh" }, h("span", { class: "tile" }, AVF.icon(icon)), h("span", { class: "t" }, h("b", { text: title }), sub ? h("small", { text: sub }) : null)), h("div", { class: "psb" }, kids)); }
   AVF.profileView = function (el) {
     AVF.mount(el, h("h2", { class: "ptitle", text: "Kişisel Bilgiler" }), AVF.skeleton(2));
-    Promise.all([AVF.api("GET", "/profile"), AVF.api("GET", "/uploads/profile").then(null, function () { return []; }), AVF.api("GET", "/uploads/body").then(null, function () { return []; })]).then(function (res) {
+    Promise.all([AVF.api("GET", "/profile"), AVF.api("GET", "/uploads/profile").then(null, function () { return []; }), AVF.api("GET", "/uploads/body").then(null, function () { return []; }), AVF.api("GET", "/uploads/blood").then(null, function () { return []; })]).then(function (res) {
       var pr = res[0], P = pr || {}, f = {}, D = AVF.draft("profile"), restoring = false;
       function changed() { if (!restoring) D.set(snapshot()); }
       f.gender = AVF.choice({ label: "Cinsiyet", value: P.gender || "", clearable: true, onChange: changed, items: [{ value: "female", label: "Kadın", icon: "female" }, { value: "male", label: "Erkek", icon: "male" }] });
@@ -230,6 +230,7 @@
       var consented = !!P.health_consent_at;
       f.files = AVF.fileBox({ scope: "profile", files: res[1] || [], locked: consented ? "" : "Dosya eklemek için önce açık rızanızı onaylayıp bilgilerinizi kaydedin." });
       f.body = AVF.bodyForm({ files: res[2] || [], locked: consented ? "" : "Görsel eklemek için önce açık rızanızı onaylayıp bilgilerinizi kaydedin." });
+      f.bloodFiles = AVF.fileBox({ scope: "blood", max: 2, icon: "drop", label: "Kan tahlili ekle", files: res[3] || [], locked: consented ? "" : "Kan tahlili eklemek için önce açık rızanızı onaylayıp bilgilerinizi kaydedin." });
 
       function snapshot() {
         return { gender: f.gender.get(), birth: f.birth.raw(), work: f.work.raw(), height: f.height.raw(), weight: f.weight.raw(), arm: f.arm.raw(), shoulder: f.shoulder.raw(), waist: f.waist.raw(), neck: f.neck.raw(), tdays: f.tdays.get(), meals: f.meals.get(), blood: f.blood.get(), goal: f.goal.get(), steps: f.steps.get(), occupation: f.occupation.value, notes: f.notes.value, consent: consent.checked };
@@ -272,6 +273,8 @@
         psec("target", "Hedefiniz", "Şu an için öncelikli hedefiniz", [f.goal]),
         psec("steps", "Günlük Ortalama Adım", "Bir günde yaklaşık kaç adım attığınız", [f.steps]),
         psec("alert", "Sağlık ve Sakatlık Durumu", "Koçunuzun bilmesi gereken sağlık bilgileri ve görselleri", [f.notes, h("div", { class: "row between", style: "margin-top:6px" }, cnt), f.files]),
+        psec("drop", "Kan Tahlili", "Son kan tahlili sonuçlarınız (en fazla 2 dosya) — koçunuz programınızı buna göre düzenler", [
+          h("p", { class: "hint", text: "Sonuç sayfasının net, okunaklı ve tam görünen bir fotoğrafını veya PDF'ini ekleyin. Kimlik numarası gibi gereksiz kişisel bilgileri kapatabilirsiniz." }), f.bloodFiles]),
         consented ? h("p", { class: "hint", text: "Açık rızanız " + AVF.fmtDate(P.health_consent_at) + " tarihinde alındı." }) :
           h("label", { class: "chk", for: "pf-consent" }, consent, h("span", {}, ["Sağlık ve koçluk bilgilerimin, program hazırlanması amacıyla koçum tarafından işlenmesine ", h("a", { href: "/yasal/kvkk", target: "_blank", rel: "noopener" }, "KVKK Aydınlatma Metni"), " kapsamında açık rıza veriyorum."])),
         msg, h("div", { class: "row", style: "gap:10px;flex-wrap:wrap;margin-top:6px" }, save, pr ? h("button", { class: "btn ghost", type: "button", onclick: function () {
@@ -289,7 +292,7 @@
         if (f.birth.partial()) return fail("Doğum tarihini gün, ay ve yıl olarak tamamlayın.");
         var me = f.height.error() || f.weight.error(); if (me) return fail(me);
         var wi = f.work.incomplete(); if (wi) return fail(wi);
-        if (f.files.busy()) return fail("Dosyalar yükleniyor; lütfen yükleme bitince kaydedin.");
+        if (f.files.busy() || f.bloodFiles.busy()) return fail("Dosyalar yükleniyor; lütfen yükleme bitince kaydedin.");
         var body = payload();
         var any = Object.keys(body).some(function (k) { return body[k] !== "" && body[k] !== null; });
         if (!any) return fail(pr ? "Kaydedilecek bilgi yok. Tüm bilgilerinizi kaldırmak için “Bilgilerimi sil” seçeneğini kullanın." : "Kaydetmek için en az bir bilgi girin.");

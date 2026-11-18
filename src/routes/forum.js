@@ -7,9 +7,11 @@ import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/auditLog.js";
 import { checkHourlyActionLimit } from "../utils/rateLimit.js";
 import { verifyPassword } from "../utils/password.js";
-import { LEVELS, MESSAGING_LEVEL, forumLevel } from "../utils/forumLevels.js";
+import { LEVELS, MESSAGING_LEVEL, forumLevel, publicLevel } from "../utils/forumLevels.js";
+import { syncLevel } from "../utils/levelSync.js";
 import { forumUsernameError, USERNAME_RULES, USERNAME_COOLDOWN_DAYS, signatureError, SIGNATURE_RULES, SIGNATURE_MAX, SOCIALS, socialsIn, NOTIFY, notifyIn, AVATAR_RULES, MEDIA, imageInfo } from "../utils/forumRules.js";
 import { raw, sendAttachment } from "./uploads.js";
+import { giphyEnabled, giphySearch, giphyDownload } from "../utils/giphy.js";
 
 export const forumRouter = withAsyncErrors(express.Router());
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,12 +29,11 @@ async function state(userId) {
             (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'sig') AS sig_image_id
        FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1`, [userId]);
   const r = rows[0];
-  const level = forumLevel(r, r.role);
-  const next = level.assigned || level.manual ? null : LEVELS.find((l) => l.min > (level.score || 0)) || null;
+  const level = publicLevel(forumLevel(r, r.role));
   const nextChange = r.username_changed_at ? new Date(new Date(r.username_changed_at).getTime() + USERNAME_COOLDOWN_DAYS * 864e5) : null;
   return {
     username: r.username, usernameNextChangeAt: nextChange && nextChange > new Date() ? nextChange.toISOString() : null,
-    level, nextLevel: next, levels: LEVELS, messagingLevel: MESSAGING_LEVEL, messagingUnlocked: level.assigned || level.n >= MESSAGING_LEVEL,
+    level, levels: LEVELS.map((l) => ({ n: l.n, name: l.name })), messagingLevel: MESSAGING_LEVEL, messagingUnlocked: level.assigned || level.n >= MESSAGING_LEVEL,
     stats: { topics: r.topics || 0, posts: r.posts || 0, likes: r.likes || 0, dislikes: r.dislikes || 0, reports: r.reports_received || 0 },
     signature: r.signature, socials: r.socials || {}, notify: notifyIn(r.notify), rulesAcceptedAt: r.rules_accepted_at,
     avatarId: r.avatar_id, sigImageId: r.sig_image_id,
@@ -41,12 +42,13 @@ async function state(userId) {
 
 forumRouter.get("/forum/me", requireAuth, async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
+  await syncLevel(req.user.sub);
   res.json(await state(req.user.sub));
 });
 forumRouter.get("/forum/rules", (req, res) => {
   res.json({ username: USERNAME_RULES, usernameCooldownDays: USERNAME_COOLDOWN_DAYS, signature: SIGNATURE_RULES, signatureMax: SIGNATURE_MAX, avatar: AVATAR_RULES,
     socials: Object.fromEntries(Object.entries(SOCIALS).map(([k, v]) => [k, { label: v.label, url: v.url }])), notify: NOTIFY.map(([k, label, def]) => ({ key: k, label, default: def, locked: k === "moderation" })),
-    levels: LEVELS, messagingLevel: MESSAGING_LEVEL });
+    levels: LEVELS.map((l) => ({ n: l.n, name: l.name })), messagingLevel: MESSAGING_LEVEL });
 });
 
 // İmza, sosyal bağlantılar ve bildirim tercihleri (gönderilmeyen alan değişmez). Kurallar kabul edilmeden imza ve bağlantı kaydedilmez.
@@ -100,13 +102,9 @@ forumRouter.put("/forum/me/username", requireAuth, async (req, res) => {
 });
 
 // Avatar ve imza görseli: tek dosya, yenisi eskisinin yerini alır. Tür ve boyut dosyanın gerçek içeriğinden okunur.
-forumRouter.post("/forum/me/media/:media", requireAuth, async (req, res, next) => {
-  if (!["avatar", "sig"].includes(req.params.media)) return res.status(404).json({ error: "Bulunamadı." });
-  if (!(await checkHourlyActionLimit(`fmedia:${req.user.sub}`, "forum_media_upload", 20))) return res.status(429).json({ error: "Kısa sürede çok fazla görsel yüklendi. Lütfen bir süre sonra tekrar deneyin." });
-  if (Number(req.headers["content-length"] || 0) > MEDIA[req.params.media].max) return res.status(400).json({ error: "Görsel en fazla 1 MB olabilir." });
-  next();
-}, raw, async (req, res) => {
-  const kind = req.params.media, M = MEDIA[kind], buf = req.body;
+/** Doğrulanmış görseli kaydeder (avatar / imza görseli tek dosyadır, yenisi eskisinin yerini alır). */
+async function storeMedia(req, res, kind, buf, accept, via) {
+  const M = MEDIA[kind];
   if (!Buffer.isBuffer(buf) || !buf.length) return res.status(400).json({ error: "Dosya bulunamadı." });
   if (buf.length > M.max) return res.status(400).json({ error: "Görsel en fazla 1 MB olabilir." });
   const info = imageInfo(buf);
@@ -114,14 +112,40 @@ forumRouter.post("/forum/me/media/:media", requireAuth, async (req, res, next) =
   if (!M.check(info.w, info.h)) return res.status(400).json({ error: M.dimErr + ` (yüklenen: ${info.w}×${info.h})` });
   await ensureProfile(req.user.sub);
   const ok = await pool.query(`SELECT rules_accepted_at FROM forum_profiles WHERE user_id = $1`, [req.user.sub]);
-  if (!ok.rows[0].rules_accepted_at && req.query.acceptRules !== "1") return res.status(400).json({ error: "Görsel eklemek için forum kurallarını onaylayın.", code: "rules_required" });
-  if (req.query.acceptRules === "1") await pool.query(`UPDATE forum_profiles SET rules_accepted_at = coalesce(rules_accepted_at, now()) WHERE user_id = $1`, [req.user.sub]);
+  if (!ok.rows[0].rules_accepted_at && !accept) return res.status(400).json({ error: "Görsel eklemek için forum kurallarını onaylayın.", code: "rules_required" });
+  if (accept) await pool.query(`UPDATE forum_profiles SET rules_accepted_at = coalesce(rules_accepted_at, now()) WHERE user_id = $1`, [req.user.sub]);
   const ext = info.mime === "image/png" ? "png" : info.mime === "image/gif" ? "gif" : "jpg";
   await pool.query(`DELETE FROM attachments WHERE user_id = $1 AND scope = $2 RETURNING id`, [req.user.sub, kind]);
   const { rows } = await pool.query(`INSERT INTO attachments (user_id, scope, filename, mime, size_bytes, data) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
     [req.user.sub, kind, `${kind}.${ext}`, info.mime, buf.length, buf]);
-  await logAudit(req.user.sub, kind === "avatar" ? "forum_avatar_set" : "forum_sig_image_set", "attachment", rows[0].id, { w: info.w, h: info.h, mime: info.mime }, ip(req));
+  await logAudit(req.user.sub, kind === "avatar" ? "forum_avatar_set" : "forum_sig_image_set", "attachment", rows[0].id, { w: info.w, h: info.h, mime: info.mime, via: via || "upload" }, ip(req));
   res.status(201).json(await state(req.user.sub));
+}
+forumRouter.post("/forum/me/media/:media", requireAuth, async (req, res, next) => {
+  if (!["avatar", "sig"].includes(req.params.media)) return res.status(404).json({ error: "Bulunamadı." });
+  if (!(await checkHourlyActionLimit(`fmedia:${req.user.sub}`, "forum_media_upload", 20))) return res.status(429).json({ error: "Kısa sürede çok fazla görsel yüklendi. Lütfen bir süre sonra tekrar deneyin." });
+  if (Number(req.headers["content-length"] || 0) > MEDIA[req.params.media].max) return res.status(400).json({ error: "Görsel en fazla 1 MB olabilir." });
+  next();
+}, raw, (req, res) => storeMedia(req, res, req.params.media, req.body, req.query.acceptRules === "1"));
+
+// GIPHY'den imza GIF'i: arama sunucu üzerinden yapılır (API anahtarı tarayıcıya gitmez); seçilen GIF sunucuya indirilir ve
+// kendi alan adımızdan sunulur (forumu okuyanlar üçüncü tarafa bağlanmaz). GIPHY_API_KEY yoksa özellik kapalıdır.
+forumRouter.get("/giphy/status", requireAuth, (req, res) => res.json({ enabled: giphyEnabled() }));
+forumRouter.get("/giphy/search", requireAuth, async (req, res) => {
+  if (!giphyEnabled()) return res.status(404).json({ error: "GIF araması şu an kullanılamıyor." });
+  if (!(await checkHourlyActionLimit(`giphy:${req.user.sub}`, "giphy_search", 120))) return res.status(429).json({ error: "Çok fazla arama yapıldı. Lütfen biraz sonra tekrar deneyin." });
+  try { res.json(await giphySearch(String(req.query.q || ""), Number(req.query.offset) || 0, req.query.lang === "en" ? "en" : "tr")); }
+  catch (e) { res.status(502).json({ error: "GIF araması şu an yanıt vermiyor. Lütfen biraz sonra tekrar deneyin." }); }
+});
+forumRouter.post("/forum/me/media/sig/giphy", requireAuth, async (req, res) => {
+  if (!giphyEnabled()) return res.status(404).json({ error: "GIF araması şu an kullanılamıyor." });
+  const id = String((req.body || {}).id || "");
+  if (!/^[A-Za-z0-9]{5,40}$/.test(id)) return res.status(400).json({ error: "Geçersiz GIF." });
+  if (!(await checkHourlyActionLimit(`fmedia:${req.user.sub}`, "forum_media_upload", 20))) return res.status(429).json({ error: "Kısa sürede çok fazla görsel yüklendi. Lütfen bir süre sonra tekrar deneyin." });
+  let buf;
+  try { buf = await giphyDownload(id, MEDIA.sig.max); }
+  catch (e) { return res.status(400).json({ error: e.userMessage || "GIF indirilemedi. Lütfen başka bir GIF seçin." }); }
+  return storeMedia(req, res, "sig", buf, (req.body || {}).acceptRules === true, "giphy");
 });
 forumRouter.delete("/forum/me/media/:media", requireAuth, async (req, res) => {
   if (!["avatar", "sig"].includes(req.params.media)) return res.status(404).json({ error: "Bulunamadı." });

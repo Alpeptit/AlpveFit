@@ -478,7 +478,8 @@ authRouter.post("/reset-password", async (req, res) => {
 // ---------- Oturum gerektiren: profil bilgisi ----------
 authRouter.get("/me", requireAuth, async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT id, full_name, username, email, totp_enabled, COALESCE(array_length(backup_codes, 1), 0) AS recovery_codes_left, role, plan_kinds, member_status, user_code, last_name_change_at, created_at FROM users WHERE id = $1`,
+    `SELECT id, full_name, username, email, totp_enabled, COALESCE(array_length(backup_codes, 1), 0) AS recovery_codes_left, role, plan_kinds, member_status, user_code, last_name_change_at, created_at,
+            (SELECT a.id FROM attachments a WHERE a.user_id = users.id AND a.scope = 'avatar') AS avatar_id FROM users WHERE id = $1`,
     [req.user.sub]
   );
   if (!rows[0]) return res.status(401).json({ error: "Oturum geçersiz veya süresi dolmuş.", sessionExpired: true });

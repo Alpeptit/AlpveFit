@@ -123,7 +123,7 @@ profileRouter.put("/profile", requireAuth, async (req, res) => {
 // Rıza geri alma: profil bilgileri silinir.
 profileRouter.delete("/profile", requireAuth, async (req, res) => {
   await pool.query(`DELETE FROM member_profiles WHERE user_id = $1`, [req.user.sub]);
-  await pool.query(`DELETE FROM attachments WHERE user_id = $1 AND scope IN ('profile', 'body')`, [req.user.sub]);   // sağlık ve vücut formu görselleri de silinir
+  await pool.query(`DELETE FROM attachments WHERE user_id = $1 AND scope IN ('profile', 'body', 'blood')`, [req.user.sub]);   // sağlık, vücut formu ve kan tahlili dosyaları da silinir
   await logAudit(req.user.sub, "profile_delete", "user", req.user.sub, {}, req.ip || null);
   res.json({ ok: true });
 });

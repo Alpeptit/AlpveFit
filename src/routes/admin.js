@@ -18,6 +18,9 @@ import { FILE_COLS, sendAttachment, withAttachments, checkTicketAttachments, lin
 import { forumLevel, LEVELS } from "../utils/forumLevels.js";
 import { verifyTotpOnce } from "../utils/totpOnce.js";
 import { validatePlanData, planDataHasContent } from "../utils/planData.js";
+import { notePlanChange } from "../utils/planNotify.js";
+import { syncLevel } from "../utils/levelSync.js";
+import { allowedExercises, memberLogs } from "./progress.js";
 import { catalog as planCatalog } from "../utils/planCatalog.js";
 
 export const adminRouter = withAsyncErrors(express.Router());
@@ -66,7 +69,7 @@ function validatePlanFields(b, { partial = false } = {}) {
 // ---------- panel bilgisi ----------
 adminRouter.get("/plan-catalog", (req, res) => { res.setHeader("Cache-Control", "private, max-age=300"); res.json(planCatalog()); });
 adminRouter.get("/me", async (req, res) => {
-  res.json({ role: req.adminRole, name: req.panelName, kinds: req.adminRole === "admin" ? PLAN_KINDS : req.panelKinds, kindLabels: KIND_LABELS });
+  res.json({ id: req.user.sub, role: req.adminRole, name: req.panelName, kinds: req.adminRole === "admin" ? PLAN_KINDS : req.panelKinds, kindLabels: KIND_LABELS });
 });
 
 // ---------- üyeler ----------
@@ -101,6 +104,13 @@ adminRouter.get("/clients/:id/plans", async (req, res) => {
   res.json(rows);
 });
 
+// Üyenin ağırlık takibi (yalnız görüntüleme): yönetici veya atanmış uzman.
+adminRouter.get("/clients/:id/progress", async (req, res) => {
+  if (!ID_RE.test(req.params.id) || !(await canAccessMember(req, req.params.id))) return res.status(404).json({ error: "Üye bulunamadı." });
+  const [exercises, logs] = await Promise.all([allowedExercises(req.params.id), memberLogs(req.params.id, null)]);
+  res.json({ exercises, logs });
+});
+
 adminRouter.post("/plans", async (req, res) => {
   const { memberId, kind } = req.body || {};
   if (!ID_RE.test(String(memberId || "")) || !isPlanKind(kind)) return bad(res, "Üye ve plan türü gerekli.");
@@ -118,7 +128,13 @@ adminRouter.post("/plans", async (req, res) => {
     [memberId, kind, v.out.title, v.out.body, v.out.starts_on, v.out.ends_on, req.user.sub, req.panelName, pd.data ? JSON.stringify(pd.data) : null]
   );
   await logAudit(req.user.sub, "plan_create", "plan", rows[0].id, { kind, memberId }, ip(req));
-  res.status(201).json({ id: rows[0].id });
+  // Kaydetmek = yayınlamak: içeriği olan plan doğrudan üyenin paneline düşer (ayrıca "yayınla" adımı yok). Bildirim birleştirilir.
+  const live = (v.out.body || "").trim() || planDataHasContent(kind, pd.data);
+  if (live) {
+    await pool.query(`UPDATE plans SET status = 'published', published_at = now(), published_by = $2, published_by_name = $3 WHERE id = $1`, [rows[0].id, req.user.sub, req.panelName]);
+    await notePlanChange(memberId, kind);
+  }
+  res.status(201).json({ id: rows[0].id, status: live ? "published" : "draft" });
 });
 
 /** Düzenlenecek/işlem yapılacak plan: kapsam (üye + tür) denetlenir; yetkisizse "bulunamadı". */
@@ -146,7 +162,15 @@ adminRouter.patch("/plans/:id", async (req, res) => {
   const set = cols.map((c, i) => `${c} = $${i + 2}`).join(", ");
   await pool.query(`UPDATE plans SET ${set}, updated_at = now() WHERE id = $1`, [plan.id, ...cols.map((c) => v.out[c])]);
   await logAudit(req.user.sub, "plan_update", "plan", plan.id, { fields: cols }, ip(req));
-  res.json({ ok: true });
+  // Yayındaki plan güncellenince üye bilgilendirilir; içeriği yeni dolan taslak (erişim varsa) doğrudan yayına alınır.
+  const fresh = (await pool.query(`SELECT status, body, data FROM plans WHERE id = $1`, [plan.id])).rows[0];
+  let status = fresh.status;
+  if (status === "draft" && ((fresh.body || "").trim() || planDataHasContent(plan.kind, fresh.data))) {
+    const acc = await pool.query(`SELECT 1 FROM member_access WHERE member_id = $1 AND kind = $2`, [plan.member_id, plan.kind]);
+    if (acc.rows.length) { await pool.query(`UPDATE plans SET status = 'published', published_at = now(), published_by = $2, published_by_name = $3 WHERE id = $1`, [plan.id, req.user.sub, req.panelName]); status = "published"; }
+  }
+  if (status === "published") await notePlanChange(plan.member_id, plan.kind);
+  res.json({ ok: true, status });
 });
 
 adminRouter.post("/plans/:id/publish", async (req, res) => {
@@ -160,11 +184,8 @@ adminRouter.post("/plans/:id/publish", async (req, res) => {
     `UPDATE plans SET status = 'published', published_at = now(), published_by = $2, published_by_name = $3, updated_at = now() WHERE id = $1`,
     [plan.id, req.user.sub, req.panelName]
   );
-  await pool.query(`INSERT INTO notifications (user_id, type, text, plan_id, data) VALUES ($1, 'plan_published', $2, $3, $4)`,
-    [plan.member_id, `Yeni plan yayınlandı: ${KIND_LABELS[plan.kind]} — ${plan.title}`, plan.id, JSON.stringify({ kind: plan.kind, title: plan.title })]);
+  await notePlanChange(plan.member_id, plan.kind);
   await logAudit(req.user.sub, "plan_publish", "plan", plan.id, { kind: plan.kind, memberId: plan.member_id }, ip(req));
-  const { rows } = await pool.query(`SELECT email, preferred_lang FROM users WHERE id = $1`, [plan.member_id]);
-  if (rows[0]) sendMail(rows[0].email, planPublishedMail(rows[0].preferred_lang, { kindLabel: KIND_LABELS[plan.kind], authorName: plan.author_name })).catch(() => {});
   res.json({ ok: true });
 });
 
@@ -251,7 +272,7 @@ adminRouter.put("/assignments", requireAdmin, async (req, res) => {
   const delivery = req.body?.delivery === undefined ? "online" : req.body.delivery;   // yalnız uzaktan eğitim (yüz yüze hizmet verilmez)
   if (!ID_RE.test(String(coachId || "")) || !ID_RE.test(String(memberId || ""))) return bad(res, "Uzman ve üye gerekli.");
   if (delivery !== "online") return bad(res, "Koçluk yalnız uzaktan (online) verilir.");
-  const chk = await pool.query(`SELECT (SELECT count(*) FROM users WHERE id = $1 AND role = 'coach')::int AS c, (SELECT count(*) FROM users WHERE id = $2 AND role = 'user')::int AS m`, [coachId, memberId]);
+  const chk = await pool.query(`SELECT (SELECT count(*) FROM users WHERE id = $1 AND role IN ('coach', 'admin'))::int AS c, (SELECT count(*) FROM users WHERE id = $2 AND role = 'user')::int AS m`, [coachId, memberId]);
   if (!chk.rows[0].c || !chk.rows[0].m) return res.status(404).json({ error: "Uzman veya üye bulunamadı." });
   await pool.query(
     `INSERT INTO coach_clients (coach_id, member_id, delivery, created_by) VALUES ($1,$2,$3,$4)
@@ -383,9 +404,66 @@ adminRouter.put("/members/:id/forum", requireAdmin, async (req, res) => {
   await pool.query(`INSERT INTO forum_profiles (user_id, level_override, forum_role, updated_at) VALUES ($1, $2, $3, now())
     ON CONFLICT (user_id) DO UPDATE SET level_override = $2, forum_role = $3, updated_at = now()`, [req.params.id, lv, fr]);
   await logAudit(req.user.sub, "member_forum_set", "user", req.params.id, { levelOverride: lv, forumRole: fr }, ip(req));
+  await syncLevel(req.params.id);   // yükseldiyse üye kutlama + bildirim + e-posta alır ("elle verildi" bilgisi üyeye gösterilmez)
   res.json({ ok: true });
 });
 adminRouter.get("/forum/levels", requireAdmin, (req, res) => res.json(LEVELS));
+// ---------- özel mesaj şikâyetleri (yalnız şikâyet edilen mesaj ve öncesi/sonrası birkaç mesaj görülür; taraflara bildirilmez) ----------
+adminRouter.get("/dm-reports", requireAdmin, async (req, res) => {
+  const st = ["open", "upheld", "dismissed"].includes(req.query.status) ? req.query.status : "open";
+  const { rows } = await pool.query(
+    `SELECT r.id, r.reason, r.note, r.status, r.created_at, r.handled_at, m.id AS message_id, m.body, m.attachment_id, m.created_at AS message_at, m.removed_by_mod,
+            s.id AS sender_id, s.username AS sender, s.full_name AS sender_name, t.username AS recipient, rp.username AS reporter
+       FROM dm_reports r JOIN dm_messages m ON m.id = r.message_id JOIN users s ON s.id = m.sender_id JOIN users t ON t.id = m.recipient_id JOIN users rp ON rp.id = r.reporter_id
+      WHERE r.status = $1 ORDER BY r.created_at DESC LIMIT 200`, [st]);
+  res.json(rows);
+});
+adminRouter.get("/dm-reports/:id/context", requireAdmin, async (req, res) => {
+  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Şikâyet bulunamadı." });
+  const r = await pool.query(`SELECT m.sender_id, m.recipient_id, m.created_at FROM dm_reports r JOIN dm_messages m ON m.id = r.message_id WHERE r.id = $1`, [req.params.id]);
+  if (!r.rows[0]) return res.status(404).json({ error: "Şikâyet bulunamadı." });
+  const x = r.rows[0];
+  const { rows } = await pool.query(
+    `SELECT * FROM (
+       (SELECT m.id, m.body, m.attachment_id, m.created_at, u.username AS sender FROM dm_messages m JOIN users u ON u.id = m.sender_id
+         WHERE ((m.sender_id = $1 AND m.recipient_id = $2) OR (m.sender_id = $2 AND m.recipient_id = $1)) AND m.created_at <= $3::timestamptz ORDER BY m.created_at DESC LIMIT 6)
+       UNION ALL
+       (SELECT m.id, m.body, m.attachment_id, m.created_at, u.username AS sender FROM dm_messages m JOIN users u ON u.id = m.sender_id
+         WHERE ((m.sender_id = $1 AND m.recipient_id = $2) OR (m.sender_id = $2 AND m.recipient_id = $1)) AND m.created_at > $3::timestamptz ORDER BY m.created_at ASC LIMIT 5)) z
+     ORDER BY created_at`,
+    [x.sender_id, x.recipient_id, x.created_at]);
+  await logAudit(req.user.sub, "dm_report_view", "dm_report", req.params.id, {}, ip(req));
+  res.json(rows.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
+});
+adminRouter.get("/dm-media/:id", requireAdmin, async (req, res) => {
+  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Bulunamadı." });
+  // Yalnız şikâyet edilmiş bir sohbetteki görseller (bağlam dahil) yöneticiye açılır.
+  const { rows } = await pool.query(
+    `SELECT a.filename, a.mime, a.data FROM attachments a JOIN dm_messages m ON m.attachment_id = a.id
+      WHERE a.id = $1 AND a.scope = 'dm' AND EXISTS (SELECT 1 FROM dm_reports r JOIN dm_messages rm ON rm.id = r.message_id
+        WHERE least(rm.sender_id, rm.recipient_id) = least(m.sender_id, m.recipient_id) AND greatest(rm.sender_id, rm.recipient_id) = greatest(m.sender_id, m.recipient_id))`, [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: "Bulunamadı." });
+  sendAttachment(res, rows[0]);
+});
+adminRouter.post("/dm-reports/:id", requireAdmin, async (req, res) => {
+  if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Şikâyet bulunamadı." });
+  const action = (req.body || {}).action, remove = !!(req.body || {}).removeMessage;
+  if (!["uphold", "dismiss"].includes(action)) return bad(res, "Geçersiz işlem.");
+  const { rows } = await pool.query(
+    `UPDATE dm_reports SET status = $2, handled_by = $3, handled_at = now() WHERE id = $1 AND status = 'open' RETURNING message_id, reporter_id`,
+    [req.params.id, action === "uphold" ? "upheld" : "dismissed", req.user.sub]);
+  if (!rows[0]) return res.status(409).json({ error: "Şikâyet zaten sonuçlandırılmış." });
+  const m = await pool.query(`SELECT sender_id FROM dm_messages WHERE id = $1`, [rows[0].message_id]);
+  if (action === "uphold" && m.rows[0]) {
+    await pool.query(`INSERT INTO forum_profiles (user_id, reports_upheld) VALUES ($1, 1) ON CONFLICT (user_id) DO UPDATE SET reports_upheld = forum_profiles.reports_upheld + 1`, [m.rows[0].sender_id]);
+    if (remove) await pool.query(`UPDATE dm_messages SET removed_by_mod = true WHERE id = $1`, [rows[0].message_id]);
+    await syncLevel(m.rows[0].sender_id);
+  }
+  // Şikâyet eden yalnız "incelendi" bilgisini alır (ayrıntı verilmez).
+  await pool.query(`INSERT INTO notifications (user_id, type, text, data) VALUES ($1, 'forum', 'Şikâyetiniz incelendi. Bildirdiğiniz için teşekkür ederiz.', '{}')`, [rows[0].reporter_id]).catch(() => {});
+  await logAudit(req.user.sub, action === "uphold" ? "dm_report_uphold" : "dm_report_dismiss", "dm_report", req.params.id, { removeMessage: remove && action === "uphold" }, ip(req));
+  res.json({ ok: true });
+});
 // Kurala aykırı forum kimliği öğesini kaldırma (avatar, imza görseli, imza metni, sosyal bağlantılar). Üyeye bildirim gider; denetim kaydına yazılır.
 const FORUM_ITEMS = { avatar: "avatarınız", sig: "imza görseliniz", signature: "imzanız", socials: "sosyal bağlantılarınız" };
 adminRouter.delete("/members/:id/forum/:item", requireAdmin, async (req, res) => {
@@ -422,7 +500,7 @@ adminRouter.get("/clients/:id/profile", async (req, res) => {
 });
 adminRouter.get("/clients/:id/files", async (req, res) => {
   if (!ID_RE.test(req.params.id) || !(await canAccessMember(req, req.params.id))) return res.status(404).json({ error: "Üye bulunamadı." });
-  const { rows } = await pool.query(`SELECT ${FILE_COLS} FROM attachments WHERE user_id = $1 AND scope IN ('profile', 'body') ORDER BY created_at`, [req.params.id]);
+  const { rows } = await pool.query(`SELECT ${FILE_COLS} FROM attachments WHERE user_id = $1 AND scope IN ('profile', 'body', 'blood') ORDER BY created_at`, [req.params.id]);
   res.json(rows);
 });
 // Ek görüntüleme: kişisel bilgi eki → yönetici veya üyeye atanmış uzman; destek talebi eki → yalnız yönetici (talepleri yalnız yönetici görür).
@@ -430,7 +508,7 @@ adminRouter.get("/attachments/:id", async (req, res) => {
   if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Dosya bulunamadı." });
   const { rows } = await pool.query(`SELECT user_id, scope, message_id, filename, mime, data FROM attachments WHERE id = $1`, [req.params.id]);
   const a = rows[0];
-  const ok = a && (a.scope === "profile" || a.scope === "body" ? await canAccessMember(req, a.user_id) : req.adminRole === "admin" && (a.message_id || a.user_id === req.user.sub));
+  const ok = a && (a.scope === "profile" || a.scope === "body" || a.scope === "blood" ? await canAccessMember(req, a.user_id) : req.adminRole === "admin" && (a.message_id || a.user_id === req.user.sub));
   if (!ok) return res.status(404).json({ error: "Dosya bulunamadı." });
   sendAttachment(res, a);
 });
@@ -478,6 +556,18 @@ adminRouter.post("/orders/:id/approve", requireAdmin, async (req, res) => {
     if (e.code === "23505") return "dup"; throw e; });
   if (ok === "dup") return res.status(409).json({ error: "Bu ödeme referansı başka bir siparişte kayıtlı." });
   if (!ok) return res.status(409).json({ error: "Bu sipariş onaylanabilir durumda değil.", code: "not_approvable" });
+  // Üyenin uzmanı yoksa onaylayan yönetici uzmanı olarak atanır (tek koç düzeni; atama olmadan süreç beklemez).
+  {
+    const o = await pool.query(`SELECT user_id FROM orders WHERE id = $1`, [req.params.id]);
+    const uid = o.rows[0] && o.rows[0].user_id;
+    if (uid) {
+      const has = await pool.query(`SELECT 1 FROM coach_clients WHERE member_id = $1`, [uid]);
+      if (!has.rows.length) {
+        await pool.query(`INSERT INTO coach_clients (coach_id, member_id, delivery, created_by) VALUES ($1,$2,'online',$1) ON CONFLICT DO NOTHING`, [req.user.sub, uid]);
+        await logAudit(req.user.sub, "assignment_set", "user", uid, { coachId: req.user.sub, via: "order_approve" }, ip(req));
+      }
+    }
+  }
   // Onayda hangi plan bölümlerinin açılacağı seçildiyse üyenin erişimi tam olarak bu seçime ayarlanır (aksi hâlde paketin varsayılanı).
   if (Array.isArray(req.body && req.body.kinds)) {
     const kinds = normalizeKinds(req.body.kinds);
@@ -502,7 +592,7 @@ adminRouter.get("/tickets", requireAdmin, async (req, res) => {
   const subject = typeof req.query.subject === "string" && req.query.subject.length <= 60 ? req.query.subject : "";
   const from = DATE_RE.test(String(req.query.from || "")) ? req.query.from : null, to = DATE_RE.test(String(req.query.to || "")) ? req.query.to : null;
   const { rows } = await pool.query(
-    `SELECT t.id, t.ticket_number, t.title, t.subject, t.status, t.created_at, t.updated_at, t.closed_by, u.full_name, u.username, u.email, u.user_code
+    `SELECT t.id, t.ticket_number, t.title, t.subject, t.plan_kind, t.status, t.created_at, t.updated_at, t.closed_by, u.full_name, u.username, u.email, u.user_code
        FROM tickets t JOIN users u ON u.id = t.user_id
       WHERE ($1 = '' OR t.ticket_number ILIKE '%' || $1 || '%' OR t.title ILIKE '%' || $1 || '%' OR u.full_name ILIKE '%' || $1 || '%' OR u.username ILIKE '%' || $1 || '%' OR u.email ILIKE '%' || $1 || '%')
         AND ($2::text IS NULL OR t.status = $2) AND ($3 = '' OR t.subject = $3)
@@ -513,7 +603,7 @@ adminRouter.get("/tickets", requireAdmin, async (req, res) => {
 adminRouter.get("/tickets/:id", requireAdmin, async (req, res) => {
   if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Destek talebi bulunamadı." });
   const t = await pool.query(
-    `SELECT t.id, t.ticket_number, t.title, t.subject, t.status, t.created_at, t.updated_at, t.closed_by, u.full_name, u.username, u.email, u.user_code
+    `SELECT t.id, t.ticket_number, t.title, t.subject, t.plan_kind, t.status, t.created_at, t.updated_at, t.closed_by, u.full_name, u.username, u.email, u.user_code
        FROM tickets t JOIN users u ON u.id = t.user_id WHERE t.id = $1`, [req.params.id]);
   if (!t.rows[0]) return res.status(404).json({ error: "Destek talebi bulunamadı." });
   const m = await pool.query(`SELECT id, from_role, body, created_at FROM ticket_messages WHERE ticket_id = $1 ORDER BY created_at ASC, id ASC`, [req.params.id]);

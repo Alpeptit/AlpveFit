@@ -21,7 +21,7 @@ export const SITE_CSP = [
   "script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
-  "img-src 'self' data: blob: https://www.gstatic.com",
+  "img-src 'self' data: blob: https://www.gstatic.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://i.giphy.com",
   "connect-src 'self' https://www.google.com/recaptcha/",
   "frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/",
   "frame-ancestors 'none'",

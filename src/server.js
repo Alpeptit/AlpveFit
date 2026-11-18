@@ -13,6 +13,8 @@ import { authRouter } from "./routes/auth.js";
 import { twoFactorRouter } from "./routes/twoFactor.js";
 import { adminRouter } from "./routes/admin.js";
 import { plansRouter } from "./routes/plans.js";
+import { progressRouter } from "./routes/progress.js";
+import { friendsRouter } from "./routes/friends.js";
 import { privacyRouter } from "./routes/privacy.js";
 import { accountRouter } from "./routes/account.js";
 import { notificationsRouter } from "./routes/notifications.js";
@@ -22,6 +24,7 @@ import { blogRouter } from "./routes/blog.js";
 import { supportRouter } from "./routes/support.js";
 import { uploadsRouter } from "./routes/uploads.js";
 import { forumRouter } from "./routes/forum.js";
+import { startPlanMailJob } from "./utils/planNotify.js";
 import { startDataRetentionJob } from "./services/dataRetention.js";
 import { normalizeOrigin } from "./utils/originCheck.js";
 import { clientIpMiddleware, originGuardMiddleware, cloudflareOnlyMiddleware, isCloudflareIp, viaCloudflare, edgePeerIp } from "./utils/clientIp.js";
@@ -210,6 +213,8 @@ app.use("/api/admin", adminLimiter);
 app.use("/api/auth", authRouter);
 app.use("/api", twoFactorRouter);
 app.use("/api/admin", adminRouter);   // uzman/yönetici paneli (hideAdminApi yukarıda)
+app.use("/api", progressRouter);      // /api/progress — ağırlık takibi
+app.use("/api", friendsRouter);       // /api/friends*, /api/messages* — arkadaşlar ve özel mesajlar
 app.use("/api", plansRouter);         // /api/plans/* — üyenin kendi yayınlanmış planları
 app.use("/api", privacyRouter);       // /api/me/request-delete, /api/me/confirm-delete
 app.use("/api", accountRouter);       // /api/account/* (ad/e-posta/şifre değişikliği)
@@ -287,7 +292,7 @@ process.on("uncaughtException", (err) => {
 let jobsStarted = false;
 function startBackgroundJobs() {   // 180 gün veri saklama — migration bittikten sonra, bir kez
   if (jobsStarted || process.env.RUN_BACKGROUND_JOBS === "false") return;
-  jobsStarted = true; startDataRetentionJob();
+  jobsStarted = true; startDataRetentionJob(); startPlanMailJob();
 }
 export const dbMigrations = { state: "pending", detail: "açılışta uygulanacak" };
 async function applyMigrationsOnBoot() {

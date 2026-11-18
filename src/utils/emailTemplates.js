@@ -260,6 +260,37 @@ export function planPublishedMail(lang, o) {
   return { subject: subj(en ? "New Plan Published" : "Yeni Plan Yayınlandı"), html, text };
 }
 
+/** Plan güncellemesi — belirli bir süredeki tüm değişiklikler için tek e-posta. o: { kinds: [{ kind, label }] } */
+export function planUpdatedMail(lang, o) {
+  const lg = L(lang), en = lg === "en", base = siteBase();
+  const EN = { nutrition: "Nutrition program", training: "Training program", supplement: "Supplement / vitamin / mineral plan", pharmacology: "Pharmacology plan", notes: "Valuable notes" };
+  const t = en ? "Your plans have been updated" : "Planlarınızda güncelleme var";
+  const list = (o.kinds || []).map((k) => (en ? EN[k.kind] || k.label : k.label)).join(", ");
+  const blocks = [
+    p(esc(en ? "Your coach has updated your plans. For your privacy, the content is not included in this email; sign in to your account to see the latest version."
+             : "Koçunuz planlarınızı güncelledi. Gizliliğiniz için içerik bu e-postada yer almaz; güncel hâlini görmek için hesabınıza giriş yapın.")),
+    list ? rows([[en ? "Updated" : "Güncellenen", list]]) : "",
+    button(en ? "View my plans" : "Planlarımı görüntüle", base ? `${base}/panel` : ""),
+  ];
+  const { html, text } = layout(lg, { preheader: t, eyebrow: en ? "Plan update" : "Plan güncellemesi", title: t, blocks });
+  return { subject: subj(en ? "Your Plans Were Updated" : "Planlarınız Güncellendi"), html, text };
+}
+
+/** Forum seviyesi yükseldi. o: { name } */
+export function levelUpMail(lang, o) {
+  const lg = L(lang), en = lg === "en", base = siteBase();
+  const EN = { "Yeni Başlayan": "Beginner", "Barın Çırağı": "Bar Apprentice", "Pump Avcısı": "Pump Hunter", "Demir Eri": "Iron Soldier", "Hacim Ustası": "Volume Master", "Sahne Savaşçısı": "Stage Warrior", "Demir Efsanesi": "Iron Legend", "Ayna Tanrısı": "Mirror God", "Moderatör": "Moderator", "Admin": "Admin" };
+  const name = en ? EN[o.name] || o.name : o.name;
+  const t = en ? "Congratulations — you reached a new level!" : "Tebrikler — yeni bir seviyeye ulaştınız!";
+  const blocks = [
+    p(esc(en ? "Your forum activity paid off. Your new title is shown next to your username." : "Forumdaki emeğiniz karşılığını buldu. Yeni unvanınız kullanıcı adınızın yanında görünür.")),
+    rows([[en ? "New level" : "Yeni seviye", name]]),
+    button(en ? "See my forum profile" : "Forum profilimi gör", base ? `${base}/panel/forum-ayarlari/seviye` : ""),
+  ];
+  const { html, text } = layout(lg, { preheader: t, eyebrow: en ? "Forum" : "Forum", title: t, blocks });
+  return { subject: subj(en ? "New Forum Level: " + name : "Yeni Forum Seviyesi: " + name), html, text };
+}
+
 /** Ödeme onaylandı. o: { orderNumber, dueAt } — planlar ödemeden itibaren 24 saat içinde hazırlanır. */
 export function orderPaidMail(lang, o) {
   const lg = L(lang), en = lg === "en", base = siteBase();

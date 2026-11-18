@@ -30,3 +30,7 @@ export function forumLevel(p, role) {
   for (const l of LEVELS) if (score >= l.min) cur = l;
   return { n: cur.n, name: cur.name, score };
 }
+
+/** Üyeye gösterilecek seviye bilgisi: yalnız ad ve sıra. Puan, eşik ve seviyenin elle mi verildiği DIŞARI verilmez
+ *  (seviye atlama mantığı görünmez; elle verilen seviye yalnız denetim kaydında görülür). */
+export function publicLevel(l) { return { n: l.n, name: l.name, assigned: !!l.assigned }; }

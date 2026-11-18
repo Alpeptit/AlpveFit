@@ -82,6 +82,36 @@ export const SUPP_GROUPS = [
   ["other", "Diğer", "spark", ["Kolajen", "Glukozamin + Kondroitin", "MSM", "Ashwagandha", "Rhodiola", "Melatonin", "Probiyotik", "Koenzim Q10", "Psyllium (Lif)", "Yeşil Çay Ekstresi", "Zerdeçal (Kurkumin)",
     "Alfa Lipoik Asit", "NAC", "Elektrolit Tozu", "Sindirim Enzimi"]],
 ].map(([key, name, icon, items]) => ({ key, name, icon, items }));
+// Her kalemin görsel kimliği: [biçim, kısa kod]. Biçim çizimi arayüzde (avf-glyphs.js) yapılır; kod rozet olarak yazılır.
+// Biçimler: tub (toz kutu), capsule, softgel, tablet, bottle (sıvı), leaf (bitkisel), element (mineral), vial, ampoule, blister.
+export const SUPP_GLYPH = {
+  "Whey Protein": ["tub", "WP"], "Whey Protein İzolat": ["tub", "ISO"], "Hidrolize Whey": ["tub", "HYD"], "Kazein": ["tub", "CAS"], "Yumurta Proteini": ["tub", "EGG"], "Vegan Protein (Bezelye / Pirinç)": ["tub", "VEG"], "Sığır Proteini": ["tub", "BEEF"],
+  "BCAA": ["tub", "BCAA"], "EAA": ["tub", "EAA"], "L-Glutamin": ["tub", "GLN"], "L-Karnitin": ["bottle", "CAR"], "Asetil L-Karnitin": ["capsule", "ALC"], "Beta-Alanin": ["tub", "βA"], "L-Sitrülin Malat": ["tub", "CIT"], "L-Arjinin": ["capsule", "ARG"],
+  "Taurin": ["tub", "TAU"], "Glisin": ["tub", "GLY"], "L-Tirozin": ["capsule", "TYR"], "HMB": ["capsule", "HMB"],
+  "Kreatin Monohidrat": ["tub", "CM"], "Kreatin HCl": ["capsule", "HCL"], "Kre-Alkalyn": ["capsule", "KRE"],
+  "Kafein": ["tablet", "CAF"], "Pre-Workout": ["tub", "PRE"], "Nitrat (Pancar Kökü)": ["tub", "NO3"], "Elektrolit": ["tub", "ELK"],
+  "Maltodekstrin": ["tub", "MAL"], "Dekstroz": ["tub", "DEX"], "Cyclic Dextrin": ["tub", "HBC"], "Waxy Maize": ["tub", "WXM"], "Gainer (Kilo alımı)": ["tub", "GNR"],
+  "Omega-3 (Balık Yağı)": ["softgel", "Ω3"], "Krill Yağı": ["softgel", "KRL"], "CLA": ["softgel", "CLA"], "MCT Yağı": ["bottle", "MCT"],
+  "Multivitamin": ["tablet", "MV"], "Vitamin A": ["capsule", "A"], "Vitamin B1 (Tiamin)": ["tablet", "B1"], "Vitamin B2 (Riboflavin)": ["tablet", "B2"], "Vitamin B3 (Niasin)": ["tablet", "B3"], "Vitamin B5 (Pantotenik asit)": ["tablet", "B5"],
+  "Vitamin B6": ["tablet", "B6"], "Vitamin B7 (Biotin)": ["tablet", "B7"], "Vitamin B9 (Folat)": ["tablet", "B9"], "Vitamin B12": ["tablet", "B12"], "B Kompleks": ["tablet", "B+"], "Vitamin C": ["tablet", "C"],
+  "Vitamin D3": ["softgel", "D3"], "Vitamin D3 + K2": ["softgel", "D3K2"], "Vitamin E": ["softgel", "E"], "Vitamin K2": ["softgel", "K2"],
+  "Magnezyum (Sitrat / Bisglisinat)": ["element", "Mg"], "Çinko": ["element", "Zn"], "ZMA": ["element", "ZMA"], "Kalsiyum": ["element", "Ca"], "Demir": ["element", "Fe"], "Potasyum": ["element", "K"], "Selenyum": ["element", "Se"],
+  "İyot": ["element", "I"], "Krom": ["element", "Cr"], "Bakır": ["element", "Cu"], "Manganez": ["element", "Mn"], "Sodyum (Tuz tableti)": ["element", "Na"],
+  "Kolajen": ["tub", "COL"], "Glukozamin + Kondroitin": ["tablet", "G+C"], "MSM": ["capsule", "MSM"], "Ashwagandha": ["leaf", "ASH"], "Rhodiola": ["leaf", "RHO"], "Melatonin": ["tablet", "MEL"], "Probiyotik": ["capsule", "PRO"],
+  "Koenzim Q10": ["softgel", "Q10"], "Psyllium (Lif)": ["leaf", "PSY"], "Yeşil Çay Ekstresi": ["leaf", "EGCG"], "Zerdeçal (Kurkumin)": ["leaf", "CUR"], "Alfa Lipoik Asit": ["capsule", "ALA"], "NAC": ["capsule", "NAC"],
+  "Elektrolit Tozu": ["tub", "ELK"], "Sindirim Enzimi": ["capsule", "ENZ"],
+};
+// Kalori içeren supplementlerin tipik besin değeri (100 g için [kcal, protein, karbonhidrat, yağ]) ve birim başına gram.
+// Ürüne göre değişir; planda "tipik değer" olarak gösterilir. unitG: ölçek / kapsül / mL için gram karşılığı.
+export const SUPP_MACROS = {
+  "Whey Protein": { m: [400, 78, 8, 6], unitG: { "ölçek": 30 } }, "Whey Protein İzolat": { m: [370, 90, 2, 1], unitG: { "ölçek": 30 } }, "Hidrolize Whey": { m: [380, 85, 4, 2], unitG: { "ölçek": 30 } },
+  "Kazein": { m: [360, 80, 6, 2], unitG: { "ölçek": 33 } }, "Yumurta Proteini": { m: [375, 80, 5, 1], unitG: { "ölçek": 30 } }, "Vegan Protein (Bezelye / Pirinç)": { m: [390, 76, 7, 7], unitG: { "ölçek": 30 } },
+  "Sığır Proteini": { m: [380, 90, 1, 1], unitG: { "ölçek": 30 } }, "Kolajen": { m: [360, 90, 0, 0], unitG: { "ölçek": 10 } },
+  "Maltodekstrin": { m: [380, 0, 95, 0], unitG: { "ölçek": 50 } }, "Dekstroz": { m: [365, 0, 91, 0], unitG: { "ölçek": 50 } }, "Cyclic Dextrin": { m: [380, 0, 95, 0], unitG: { "ölçek": 50 } },
+  "Waxy Maize": { m: [380, 0, 95, 0], unitG: { "ölçek": 50 } }, "Gainer (Kilo alımı)": { m: [380, 20, 75, 2], unitG: { "ölçek": 100 } },
+  "Omega-3 (Balık Yağı)": { m: [900, 0, 0, 100], unitG: { "kapsül": 1, "mL": 0.92 } }, "Krill Yağı": { m: [900, 0, 0, 100], unitG: { "kapsül": 0.5 } }, "CLA": { m: [900, 0, 0, 100], unitG: { "kapsül": 1 } },
+  "MCT Yağı": { m: [830, 0, 0, 100], unitG: { "mL": 0.94, "ölçek": 15 } },
+};
 export const SUPP_UNITS = ["g", "mg", "mcg", "IU", "kapsül", "tablet", "ölçek", "mL", "damla"];
 export const SUPP_STATE = [["fasted", "Açlık"], ["fed", "Tokluk"], ["any", "Farketmez"]];
 export const SUPP_WHEN = [["morning", "Sabah"], ["pre", "Antrenman öncesi"], ["intra", "Antrenman sırasında"], ["post", "Antrenman sonrası"], ["meal", "Öğünle"], ["night", "Yatmadan önce"]];
@@ -98,6 +128,21 @@ export const PHARMA_GROUPS = [
     "Semaglutide", "Tirzepatide", "Retatrutide", "AOD-9604", "MOTS-c", "GHK-Cu", "Epitalon", "Melanotan II", "PT-141", "Selank", "Semax", "Thymosin Alpha-1", "KPV", "SS-31", "NAD+", "IGF-1 LR3", "HCG"]],
   ["protect", "Koruyucular", "shield", "oral", ["Arimidex (Anastrozol)", "Tamoxifen (Nolvadex)", "Klomen (Klomifen)", "Proviron (Mesterolon)", "Dostinex (Kabergolin)", "Cialis (Tadalafil)", "Aspirin"]],
 ].map(([key, name, icon, mode, items]) => ({ key, name, icon, mode, items }));
+// Görsel kimlik ve klasik piyasa sunumu (etiket bilgisi — doz değildir):
+//   inj: [kod, mg/mL]  · oral/koruyucu: [kod, tablet başına mg]  · peptit: [kod, şişe seçenekleri (Alpeptit kataloğu), birim]
+export const PHARMA_INFO = {
+  "Testosteron Enantat": ["TE", 250], "Testosteron Sipionat": ["TC", 250], "Testosteron Propiyonat": ["TP", 100], "Sustanon 250": ["S250", 250], "Testosteron Undekanoat": ["TU", 250],
+  "Nandrolon Dekanoat": ["ND", 250], "Nandrolon Fenilpropiyonat (NPP)": ["NPP", 100], "Trenbolon Asetat": ["TA", 100], "Trenbolon Enantat": ["TRE", 200], "Trenbolon Hexahidrobenzilkarbonat": ["THX", 76.5],
+  "Drostanolon Propiyonat (Masteron P)": ["MP", 100], "Drostanolon Enantat (Masteron E)": ["ME", 200], "Metenolon Enantat (Primobolan Depot)": ["PRI", 100], "Boldenon Undesilenat": ["EQ", 250], "Stanozolol (Enjektabl)": ["WI", 50],
+  "Oksandrolon (Anavar)": ["VAR", 10], "Metandrostenolon (Dianabol)": ["DBL", 10], "Stanozolol (Oral)": ["WO", 10], "Oksimetolon (Anadrol)": ["ADR", 50], "Klorodehidrometiltestosteron (Turinabol)": ["TBL", 10],
+  "Metiltestosteron": ["MT", 25], "Fluoksimesteron (Halotestin)": ["HAL", 10], "Mesterolon (Proviron)": ["PRV", 25],
+  "Arimidex (Anastrozol)": ["ARI", 1], "Tamoxifen (Nolvadex)": ["NOL", 20], "Klomen (Klomifen)": ["CLO", 50], "Proviron (Mesterolon)": ["PRV", 25], "Dostinex (Kabergolin)": ["CAB", 0.5], "Cialis (Tadalafil)": ["CIA", 5], "Aspirin": ["ASP", 100],
+  "AOD-9604": ["AOD", [2, 5]], "BPC-157": ["BPC", [5, 10]], "BPC-157 + TB-500": ["B+T", [10, 20]], "CJC-1295 (DAC'sız)": ["CJC", [2, 5]], "CJC-1295 + Ipamorelin": ["C+I", [10]], "Epitalon": ["EPI", [10, 50]],
+  "GHK-Cu": ["GHK", [50, 100]], "GHRP-6": ["GH6", [5, 10]], "Hexarelin": ["HEX", [2, 5]], "HGH (Somatropin)": ["HGH", [10, 15, 24], "IU"], "Ipamorelin": ["IPA", [5, 10]], "KPV": ["KPV", [5, 10]],
+  "Melanotan II": ["MT2", [10]], "MOTS-c": ["MOT", [10, 40]], "NAD+": ["NAD", [100, 500]], "PT-141": ["PT", [10]], "Retatrutide": ["RET", [5, 10, 20]], "Selank": ["SEL", [5, 10]],
+  "Semaglutide": ["SEM", [2, 5, 10]], "Semax": ["SMX", [5, 10]], "Sermorelin": ["SER", [2, 5]], "SS-31": ["SS31", [10, 50]], "TB-500": ["TB", [5, 10]], "Tesamorelin": ["TES", [2, 5, 10]],
+  "Thymosin Alpha-1": ["TA1", [5, 10]], "Tirzepatide": ["TIR", [5, 10, 15, 20, 30]], "IGF-1 LR3": ["IGF", [1]], "HCG": ["HCG", [5000], "IU"],
+};
 export const PHARMA_FREQ = [["daily", "Her gün"], ["eod", "Gün aşırı"], ["e3d", "3 günde bir"], ["w1", "Haftada 1"], ["w2", "Haftada 2"], ["w3", "Haftada 3"], ["custom", "Özel (notta belirtin)"]];
 // haftalık uygulama sayısı (haftalık toplam mg hesabı için)
 export const FREQ_PER_WEEK = { daily: 7, eod: 3.5, e3d: 7 / 3, w1: 1, w2: 2, w3: 3, custom: null };
@@ -107,7 +152,7 @@ export const DOSE_UNITS = ["mg", "mcg", "IU"];
 export const NOTE_FIELDS = {
   rest: { label: "Set arası dinlenme", icon: "timer", options: ["30 sn", "45 sn", "60 sn", "75 sn", "90 sn", "2 dk", "2,5 dk", "3 dk", "4 dk", "5 dk"] },
   water: { label: "Günlük su", icon: "drop", options: ["1,5 L", "2 L", "2,5 L", "3 L", "3,5 L", "4 L", "4,5 L", "5 L", "5,5 L", "6 L"] },
-  salt: { label: "Günlük tuz", icon: "flask", options: ["Tuzsuz", "1 g", "2 g", "3 g", "4 g", "5 g", "6 g", "7 g", "8 g", "10 g", "12 g", "15 g"] },
+  salt: { label: "Günlük Himalaya tuzu", icon: "flask", options: ["Tuzsuz", "1 g", "2 g", "3 g", "4 g", "5 g", "6 g", "7 g", "8 g", "10 g", "12 g", "15 g"] },
   sleep: { label: "Uyku süresi", icon: "clock", options: ["6 saat", "6,5 saat", "7 saat", "7,5 saat", "8 saat", "8,5 saat", "9 saat", "9,5 saat", "10 saat"] },
   bedtime: { label: "Yatış saati", icon: "clock", options: ["21:00", "21:30", "22:00", "22:30", "23:00", "23:30", "00:00", "00:30", "01:00"] },
 };
@@ -116,5 +161,6 @@ export const NOTE_MAX = 500;
 export function catalog() {
   return { foods: FOODS, foodGroups: FOOD_GROUPS, mealsMax: MEALS_MAX, firstMeal: FIRST_MEAL, lastMeal: LAST_MEAL, groups: MUSCLE_GROUPS, daysMax: DAYS_MAX, exercisesMax: EXERCISES_PER_DAY_MAX,
     supps: SUPP_GROUPS, suppUnits: SUPP_UNITS, suppState: SUPP_STATE, suppWhen: SUPP_WHEN, itemsMax: ITEMS_MAX,
+    suppGlyph: SUPP_GLYPH, suppMacros: SUPP_MACROS, pharmaInfo: PHARMA_INFO,
     pharma: PHARMA_GROUPS, pharmaFreq: PHARMA_FREQ, freqPerWeek: FREQ_PER_WEEK, doseUnits: DOSE_UNITS, notes: NOTE_FIELDS, noteMax: NOTE_MAX };
 }

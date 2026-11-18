@@ -46,6 +46,7 @@
     var list = (root.querySelectorAll ? root.querySelectorAll(SEL) : []), i = 0;
     Array.prototype.forEach.call(list, function (el) {
       if (el.classList.contains("rv")) return;
+      if (el.closest && el.closest(".pbody,[data-norv]")) return;   // panel içeriği (planlar, mesajlar, tablolar) beklemeden görünür
       el.classList.add("rv"); el.style.transitionDelay = Math.min(i++ % 4, 3) * 70 + "ms"; io.observe(el);
     });
   }

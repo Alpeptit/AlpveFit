@@ -36,7 +36,7 @@ async function load(file, prefix) {
   prefixes.push([routes, prefix]);
 }
 await load("auth.js", "/api/auth"); await load("twoFactor.js", "/api"); await load("account.js", "/api"); await load("notifications.js", "/api");
-await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("uploads.js", "/api"); await load("support.js", "/api"); await load("forum.js", "/api"); await load("admin.js", "/api/admin");
+await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("uploads.js", "/api"); await load("support.js", "/api"); await load("forum.js", "/api"); await load("progress.js", "/api"); await load("friends.js", "/api"); await load("admin.js", "/api/admin");
 const { hideAdminApi, panelUser, sessionUser } = await import(join(root, "src/utils/panelSession.js"));
 
 function findRoute(method, full) {
@@ -56,6 +56,7 @@ http.createServer(async (rq, rs) => {
   const url = new URL(rq.url, "http://x"); const path = url.pathname.replace(/\/+$/, "") || "/";
   try {
     if (path === "/__mails") { const to = url.searchParams.get("to"); const m = [...mails].reverse().find((x) => !to || x.to === to); rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify(m || null)); }
+    if (path === "/__flush-plan-mails") { const { flushPlanMails } = await import("../src/utils/planNotify.js"); const n = await flushPlanMails(); rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify({ n })); }
     if (path === "/api/health") { rs.writeHead(200, { "content-type": "application/json" }); return rs.end('{"ok":true}'); }
     if (path === "/api/config") { rs.writeHead(200, { "content-type": "application/json" }); return rs.end('{"recaptchaSiteKey":""}'); }
     if (path.startsWith("/api/")) {

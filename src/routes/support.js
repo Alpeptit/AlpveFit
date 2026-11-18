@@ -24,7 +24,7 @@ export function ticketTitleError(title) {
 }
 
 // ---------- destek talebi (ticket) — yalnız üye ----------
-const TICKET_COLS = `id, ticket_number, title, subject, status, closed_at, closed_by, created_at, updated_at`;
+const TICKET_COLS = `id, ticket_number, title, subject, plan_kind, status, closed_at, closed_by, created_at, updated_at`;
 supportRouter.get("/tickets/subjects", (req, res) => res.json(TICKET_SUBJECTS));
 
 supportRouter.get("/tickets", requireAuth, async (req, res) => {
@@ -45,6 +45,13 @@ supportRouter.post("/tickets", requireAuth, async (req, res) => {
   const te = ticketTitleError(title);
   if (te) return res.status(400).json({ error: te });
   if (!TICKET_SUBJECTS.includes(subject)) return res.status(400).json({ error: "Lütfen listeden bir konu seçin." });
+  // "Plan ve Programım" konusunda hangi plan bölümüyle ilgili olduğu seçilir (yalnız üyenin erişimi olan bölümler).
+  let planKind = null;
+  if (subject === "Plan ve Programım") {
+    planKind = String(req.body.planKind || "");
+    const acc = await pool.query(`SELECT 1 FROM member_access WHERE member_id = $1 AND kind = $2`, [req.user.sub, planKind]);
+    if (!acc.rows.length) return res.status(400).json({ error: "Talebinizin ilgili olduğu planı seçin.", field: "planKind" });
+  }
   const me = messageError(message, "Mesaj zorunludur.");
   if (me) return res.status(400).json({ error: me });
   const att = await checkTicketAttachments(req.user.sub, req.body.attachments);
@@ -58,8 +65,8 @@ supportRouter.post("/tickets", requireAuth, async (req, res) => {
     const dup = await pool.query(`SELECT 1 FROM tickets WHERE ticket_number = $1`, [num]);
     if (dup.rows.length) continue;
     const { rows } = await pool.query(
-      `INSERT INTO tickets (ticket_number, user_id, title, subject) VALUES ($1, $2, $3, $4) RETURNING ${TICKET_COLS}`,
-      [num, req.user.sub, sanitizeText(title.trim()), subject]);
+      `INSERT INTO tickets (ticket_number, user_id, title, subject, plan_kind) VALUES ($1, $2, $3, $4, $5) RETURNING ${TICKET_COLS}`,
+      [num, req.user.sub, sanitizeText(title.trim()), subject, planKind]);
     ticket = rows[0];
   }
   if (!ticket) return res.status(500).json({ error: "Destek talebi oluşturulamadı, lütfen tekrar deneyin." });

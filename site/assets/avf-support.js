@@ -17,7 +17,7 @@
     AVF.api("GET", "/tickets").then(function (rows) {
       if (!rows.length) return AVF.mount(list, AVF.state("ticket", "Henüz destek talebiniz yok", "Sorularınız için yeni bir destek talebi oluşturabilir veya destek@alpvefit.com adresine yazabilirsiniz.", plink("/panel/destek/yeni", "Yeni talep oluştur", { class: "btn" })));
       AVF.mount(list, rows.map(function (t) {
-        return plink("/panel/destek/" + t.id, [h("span", { class: "tile" }, AVF.icon("ticket")), h("span", { class: "t" }, h("b", { "data-notr": "", text: t.title }), h("small", {}, t.ticket_number + " · " + t.subject + " · " + AVF.fmtDateTime(t.updated_at))), tchip(t.status), AVF.icon("chev", "chev")], { class: "card ordrow" });
+        return plink("/panel/destek/" + t.id, [h("span", { class: "tile" }, AVF.icon("ticket")), h("span", { class: "t" }, h("b", { "data-notr": "", text: t.title }), h("small", {}, t.ticket_number + " · " + t.subject + (t.plan_kind && AVF.KIND[t.plan_kind] ? " (" + AVF.t(AVF.KIND[t.plan_kind].label) + ")" : "") + " · " + AVF.fmtDateTime(t.updated_at))), tchip(t.status), AVF.icon("chev", "chev")], { class: "card ordrow" });
       }));
     }, function (e) { AVF.mount(list, AVF.state("alert", "Destek talepleri yüklenemedi", AVF.errText(e))); });
   };
@@ -31,7 +31,21 @@
     var subjBox = h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("list")), "Konu", h("span", { class: "req", text: "Zorunlu" })), AVF.skeleton(1)), subj = null;
     var files = AVF.fileBox({ scope: "ticket", files: d.files || [], onChange: function () { save(); } });
     function counts() { tcnt.textContent = title.value.length + "/244"; mcnt.textContent = msg.value.length + "/" + MAXLEN; mcnt.classList.toggle("near", msg.value.length > MAXLEN - 100); }
-    function save() { if (!title || !files) return; D.set({ title: title.value, message: msg.value, subject: subj ? subj.get() : d.subject || "", files: files.list() }); }
+    var pkBox = h("div", { class: "field", hidden: "" }), pkc = null, planKind = d.planKind || "";
+    function save() { if (!title || !files) return; D.set({ title: title.value, message: msg.value, subject: subj ? subj.get() : d.subject || "", planKind: planKind, files: files.list() }); }
+    // "Plan ve Programım" seçilince hangi planla ilgili olduğu sorulur (yalnız üyenin açık plan bölümleri).
+    function paintPk() {
+      var on = subj && subj.get() === "Plan ve Programım"; pkBox.hidden = !on; if (!on) return;
+      AVF.mount(pkBox, AVF.skeleton(1));
+      (AVF.overview ? Promise.resolve(AVF.overview) : AVF.api("GET", "/plans/overview")).then(function (o) {
+        AVF.overview = o;
+        var items = (o.kinds || []).map(function (k) { return { value: k.kind, label: AVF.KIND[k.kind].label, icon: AVF.KIND[k.kind].icon }; });
+        if (!items.length) return AVF.mount(pkBox, h("p", { class: "hint", text: "Hesabınızda henüz açık bir plan bölümü yok." }));
+        if (items.every(function (x) { return x.value !== planKind; })) planKind = "";
+        pkc = AVF.choice({ label: "İlgili plan", cols: 3, value: planKind, onChange: function (v) { planKind = v && v.value !== undefined ? v.value : (pkc ? pkc.get() : v); save(); }, items: items });
+        AVF.mount(pkBox, h("label", null, h("span", { class: "tile" }, AVF.icon("list")), "Hangi planınızla ilgili?", h("span", { class: "req", text: "Zorunlu" })), pkc);
+      }, function () { AVF.mount(pkBox, h("p", { class: "err", text: "Planlarınız yüklenemedi, sayfayı yenileyin." })); });
+    }
     title.value = d.title || ""; msg.value = d.message || ""; counts();
     title.addEventListener("input", function () { counts(); save(); }); msg.addEventListener("input", function () { counts(); save(); });
     var err = h("p", { class: "err", role: "alert" }), btn = h("button", { class: "btn", type: "submit" }, AVF.icon("send", "bico"), "Talebi gönder");
@@ -42,18 +56,19 @@
         e.preventDefault(); err.textContent = "";
         if (title.value.trim().length < 3) { err.textContent = "Lütfen en az 3 karakterlik bir başlık girin."; return title.focus(); }
         if (!subj || !subj.get()) { err.textContent = "Lütfen bir konu seçin."; return; }
+        if (subj.get() === "Plan ve Programım" && !(pkc && pkc.get())) { err.textContent = AVF.t("Talebinizin ilgili olduğu planı seçin."); return; }
         if (!msg.value.trim()) { err.textContent = "Mesaj zorunludur."; return msg.focus(); }
         if (files.busy()) { err.textContent = "Dosyalar yükleniyor; lütfen yükleme bitince gönderin."; return; }
         AVF.busy(btn, true);
-        AVF.api("POST", "/tickets", { title: title.value.trim(), subject: subj.get(), message: msg.value.trim(), attachments: files.ids() }).then(function (t) { D.clear(); AVF.toast("Destek talebiniz oluşturuldu."); AVF.go("/panel/destek/" + t.id); },
+        AVF.api("POST", "/tickets", { title: title.value.trim(), subject: subj.get(), planKind: subj.get() === "Plan ve Programım" && pkc ? pkc.get() : undefined, message: msg.value.trim(), attachments: files.ids() }).then(function (t) { D.clear(); AVF.toast("Destek talebiniz oluşturuldu."); AVF.go("/panel/destek/" + t.id); },
           function (e2) { AVF.busy(btn, false); err.textContent = AVF.errText(e2); });
       } }, h("div", { class: "field" }, h("label", { for: title.id }, h("span", { class: "tile" }, AVF.icon("file")), "Başlık", h("span", { class: "req", text: "Zorunlu" })), title, h("div", { class: "row between" }, h("span"), tcnt)),
-        subjBox,
+        subjBox, pkBox,
         h("div", { class: "field" }, h("label", { for: "tmsg" }, h("span", { class: "tile" }, AVF.icon("chat")), "Mesajınız", h("span", { class: "req", text: "Zorunlu" })), msg, h("div", { class: "row between" }, AVF.emojiPicker(msg), mcnt)),
         files, err, btn));
     AVF.api("GET", "/tickets/subjects").then(function (list) {
-      subj = AVF.choice({ label: "Konu", cols: 3, value: d.subject && list.indexOf(d.subject) >= 0 ? d.subject : "", onChange: save, items: list.map(function (x) { return { value: x, label: x, icon: SUBJ_ICON[x] || "help" }; }) });
-      AVF.mount(subjBox, subjBox.firstChild, subj);
+      subj = AVF.choice({ label: "Konu", cols: 3, value: d.subject && list.indexOf(d.subject) >= 0 ? d.subject : "", onChange: function () { save(); paintPk(); }, items: list.map(function (x) { return { value: x, label: x, icon: SUBJ_ICON[x] || "help" }; }) });
+      AVF.mount(subjBox, subjBox.firstChild, subj); paintPk();
     }, function () { AVF.mount(subjBox, subjBox.firstChild, h("p", { class: "err", text: "Konular yüklenemedi, sayfayı yenileyin." })); });
   }
   function attList(list) {
@@ -89,7 +104,7 @@
         } }, ta, h("div", { class: "row between", style: "margin:6px 0" }, AVF.emojiPicker(ta), h("span")), rfiles, err, h("div", { class: "row", style: "margin-top:10px" }, sb, rb));
       }
       AVF.mount(el, h("div", { class: "row between", style: "margin-bottom:14px;gap:10px;flex-wrap:wrap" }, h("h2", { class: "ptitle", style: "margin:0", "data-notr": "", text: t.title }), tchip(t.status)),
-        h("p", { class: "muted", style: "margin:0 0 16px" }, t.ticket_number + " · " + t.subject + " · " + AVF.fmtDateTime(t.created_at)),
+        h("p", { class: "muted", style: "margin:0 0 16px" }, t.ticket_number + " · " + t.subject + (t.plan_kind && AVF.KIND[t.plan_kind] ? " (" + AVF.t(AVF.KIND[t.plan_kind].label) + ")" : "") + " · " + AVF.fmtDateTime(t.created_at)),
         h("div", { class: "card", style: "padding:18px;margin-bottom:14px" }, thread),
         reply || h("div", { class: "note" }, "Bu destek talebi kapatıldı. Gerekirse yeni bir talep oluşturabilirsiniz."),
         h("div", { style: "margin-top:14px" }, plink("/panel/destek", "Taleplerime dön", { class: "btn ghost sm" })));
