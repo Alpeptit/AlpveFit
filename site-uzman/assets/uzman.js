@@ -201,7 +201,7 @@
     var slot = pf.querySelector(".pinfo");
     api("GET", "/clients/" + m.id + "/profile").then(function (P) {
       if (!P) return AVF.mount(slot, h("p", { class: "hint", text: "Üye henüz kişisel bilgi paylaşmadı (isteğe bağlıdır)." }));
-      var items = [["Boy (cm)", P.height_cm], ["Kilo (kg)", P.weight_kg], ["Cinsiyet", P.gender === "female" ? "Kadın" : P.gender === "male" ? "Erkek" : ""], ["Doğum tarihi", P.birth_date ? P.birth_date.split("-").reverse().join(".") : P.birth_year], ["Çalışma saati", AVF.workText ? AVF.workText(P.work_hours, P.work_schedule, P.work_note) : P.work_hours], ["Günlük adım aralığı", String(P.steps_range || "").replace("-", "–")], ["Meslek", P.occupation], ["Günlük adım", P.daily_steps], ["Haftalık antrenman günü", P.training_days], ["Kan grubu", P.blood_type]].filter(function (x) { return x[1] !== null && x[1] !== undefined && x[1] !== ""; });
+      var items = [["Boy (cm)", P.height_cm], ["Kilo (kg)", P.weight_kg], ["Kol çevresi (cm)", P.arm_cm], ["Omuz genişliği (cm)", P.shoulder_cm], ["Bel çevresi (cm)", P.waist_cm], ["Boyun çevresi (cm)", P.neck_cm], ["Günlük öğün", P.meals_per_day], ["Cinsiyet", P.gender === "female" ? "Kadın" : P.gender === "male" ? "Erkek" : ""], ["Doğum tarihi", P.birth_date ? P.birth_date.split("-").reverse().join(".") : P.birth_year], ["Çalışma saati", AVF.workText ? AVF.workText(P.work_hours, P.work_schedule, P.work_note) : P.work_hours], ["Günlük adım aralığı", String(P.steps_range || "").replace("-", "–")], ["Meslek", P.occupation], ["Günlük adım", P.daily_steps], ["Haftalık antrenman günü", P.training_days], ["Kan grubu", P.blood_type]].filter(function (x) { return x[1] !== null && x[1] !== undefined && x[1] !== ""; });
       AVF.mount(slot, h("ul", { class: "ticks" }, items.map(function (x) { return h("li", null, h("b", { text: x[0] + ": " }), h("span", { "data-notr": "", text: String(x[1]) })); })),
         P.goal ? h("p", null, h("b", { text: "Hedef: " }), h("span", { "data-notr": "", text: P.goal })) : null,
         P.health_notes ? h("p", null, h("b", { text: "Sağlık / sakatlık notları: " }), h("span", { "data-notr": "", text: P.health_notes })) : null,
@@ -209,7 +209,9 @@
         h("p", { class: "hint", text: "Bu bilgiler üyenin açık rızasıyla paylaşılmıştır; yalnızca program hazırlama amacıyla kullanın." }));
       var fs = slot.querySelector(".pfiles");
       api("GET", "/clients/" + m.id + "/files").then(function (list) {
-        if (list.length) AVF.mount(fs, h("p", null, h("b", { text: "Sağlık / sakatlık dosyaları:" })), AVF.fileBox({ files: list, readOnly: true, max: 4, base: "/api/admin/attachments/" }));
+        var docs = list.filter(function (x) { return x.scope === "profile"; }), body = list.filter(function (x) { return x.scope === "body"; });
+        AVF.mount(fs, body.length ? [h("p", null, h("b", { text: "Vücut formu:" })), AVF.bodyForm({ files: body, readOnly: true, base: "/api/admin/attachments/" })] : null,
+          docs.length ? [h("p", null, h("b", { text: "Sağlık / sakatlık dosyaları:" })), AVF.fileBox({ files: docs, readOnly: true, max: 4, base: "/api/admin/attachments/" })] : null);
       }, function () { /* sessiz */ });
     }, function () { AVF.mount(slot, h("p", { class: "hint", text: "Kişisel bilgiler yüklenemedi." })); });
   }

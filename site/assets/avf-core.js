@@ -454,13 +454,18 @@
 
   // Boy (cm ⇄ inç) ve kilo (kg ⇄ lbs): değer sunucuya HER ZAMAN cm / kg olarak gider; birim tercihi bu cihazda hatırlanır.
   var UNITS = {
-    height: { m: "cm", i: "inç", f: 2.54, dec: [0, 1], min: 100, max: 250, ph: ["Örn. 178", "Örn. 70"] },
-    weight: { m: "kg", i: "lbs", f: 0.45359237, dec: [1, 1], min: 30, max: 300, ph: ["Örn. 82.5", "Örn. 182"] },
+    height: { m: "cm", i: "inç", f: 2.54, dec: [0, 1], min: 100, max: 250, ph: ["Örn. 178", "Örn. 70"], label: "Boy" },
+    weight: { m: "kg", i: "lbs", f: 0.45359237, dec: [1, 1], min: 30, max: 300, ph: ["Örn. 82.5", "Örn. 182"], label: "Kilo" },
+    // isteğe bağlı çevre ölçüleri (sunucuyla aynı aralıklar: routes/profile.js MEASURES)
+    arm: { m: "cm", i: "inç", f: 2.54, dec: [1, 1], min: 15, max: 70, ph: ["Örn. 38", "Örn. 15"], label: "Kol çevresi", len: true },
+    shoulder: { m: "cm", i: "inç", f: 2.54, dec: [1, 1], min: 25, max: 80, ph: ["Örn. 46", "Örn. 18"], label: "Omuz genişliği", len: true },
+    waist: { m: "cm", i: "inç", f: 2.54, dec: [1, 1], min: 45, max: 200, ph: ["Örn. 84", "Örn. 33"], label: "Bel çevresi", len: true },
+    neck: { m: "cm", i: "inç", f: 2.54, dec: [1, 1], min: 20, max: 70, ph: ["Örn. 39", "Örn. 15"], label: "Boyun çevresi", len: true },
   };
   AVF.measure = function (kind, metricValue, onChange) {
     var h = AVF.h, U = UNITS[kind], unit = "m";
     try { if (localStorage.getItem("avf_u_" + kind) === "i") unit = "i"; } catch (e) { /* yok */ }
-    var inp = AVF.numInput({ placeholder: U.ph[unit === "m" ? 0 : 1], "aria-label": kind === "height" ? "Boy" : "Kilo" }, 1);
+    var inp = AVF.numInput({ placeholder: U.ph[unit === "m" ? 0 : 1], "aria-label": U.label }, 1);
     var hint = h("small", { class: "ms-h", "aria-live": "polite" });
     var bm = h("button", { type: "button", "data-u": "m", text: U.m }), bi = h("button", { type: "button", "data-u": "i", text: U.i });
     var seg = h("div", { class: "useg", role: "group", "aria-label": "Birim" }, bm, bi);
@@ -471,7 +476,7 @@
     el.getMetric = function () { var v = parseFloat(inp.value); if (!isFinite(v)) return ""; var m = toMetric(v); return kind === "height" ? Math.round(m) : round(m, 1); };
     el.error = function () {
       if (!inp.value) return ""; var m = toMetric(parseFloat(inp.value));
-      if (!(m >= U.min && m <= U.max)) return (kind === "height" ? "Boy " : "Kilo ") + (unit === "m" ? U.min + "–" + U.max + " " + U.m : round(U.min / U.f, 0) + "–" + round(U.max / U.f, 0) + " " + U.i) + " arasında olmalıdır.";
+      if (!(m >= U.min && m <= U.max)) return U.label + " " + (unit === "m" ? U.min + "–" + U.max + " " + U.m : round(U.min / U.f, 0) + "–" + round(U.max / U.f, 0) + " " + U.i) + " arasında olmalıdır.";
       return "";
     };
     function paint() {
@@ -482,6 +487,7 @@
       hint.className = "ms-h";
       if (m === "") { hint.textContent = ""; return; }
       if (kind === "height") { var tin = m / 2.54, ft = Math.floor(tin / 12), inch = Math.round(tin - ft * 12); if (inch === 12) { ft++; inch = 0; } hint.textContent = unit === "m" ? "≈ " + ft + " ft " + inch + " in" : "≈ " + m + " cm"; }
+      else if (U.len) hint.textContent = unit === "m" ? "≈ " + round(m / U.f, 1) + " in" : "≈ " + m + " cm";
       else hint.textContent = unit === "m" ? "≈ " + round(m / U.f, 1) + " lbs" : "≈ " + m + " kg";
     }
     function setUnit(nu) {
@@ -585,20 +591,20 @@
     function badDay() { for (var i = 0; i < rows.length; i++) { var r = rows[i]; if (r.cb.checked && (!r.a.value || !r.b.value || r.a.value === r.b.value)) return r.name; } return ""; }
     function paint() {
       var m = mode.get();
-      rw.classList.toggle("open", m === "fixed"); dw.classList.toggle("open", !!m && m !== "fixed");
+      rw.classList.toggle("open", m === "fixed"); dw.classList.toggle("open", m === "shift" || m === "flexible");   // "çalışmıyorum"da ek alan yok
       var t = "";
       if (m === "fixed" && st.value && en.value && st.value === en.value) t = "Başlangıç ve bitiş saati aynı olamaz.";
-      else if (m && m !== "fixed" && badDay()) t = badDay() + " için başlangıç ve bitiş saatini seçin (aynı olamaz).";
+      else if ((m === "shift" || m === "flexible") && badDay()) t = badDay() + " için başlangıç ve bitiş saatini seçin (aynı olamaz).";
       msg.textContent = t; msg.className = "ms-h" + (t ? " bad" : "");
     }
     el.get = function () { var m = mode.get(); if (m !== "fixed") return m || ""; return st.value && en.value && st.value !== en.value ? st.value + "-" + en.value : ""; };
     el.schedule = function () {
-      var m = mode.get(); if (!m || m === "fixed") return null;
+      var m = mode.get(); if (m !== "shift" && m !== "flexible") return null;
       var o2 = {}, any = false; rows.forEach(function (r) { if (r.cb.checked && r.a.value && r.b.value && r.a.value !== r.b.value) { o2[r.key] = r.a.value + "-" + r.b.value; any = true; } });
       return any ? o2 : null;
     };
-    el.note = function () { var m = mode.get(); return m && m !== "fixed" ? noteIn.value.trim() : ""; };
-    el.incomplete = function () { var m = mode.get(); return (m === "fixed" && !el.get()) ? "Çalışma saatiniz için başlangıç ve bitiş saatini seçin." : (m && m !== "fixed" && badDay()) ? badDay() + " için başlangıç ve bitiş saatini seçin (aynı olamaz)." : ""; };
+    el.note = function () { var m = mode.get(); return m === "shift" || m === "flexible" ? noteIn.value.trim() : ""; };
+    el.incomplete = function () { var m = mode.get(); return (m === "fixed" && !el.get()) ? "Çalışma saatiniz için başlangıç ve bitiş saatini seçin." : ((m === "shift" || m === "flexible") && badDay()) ? badDay() + " için başlangıç ve bitiş saatini seçin (aynı olamaz)." : ""; };
     function setSchedule(sc) {
       rows.forEach(function (r) { var v = sc && sc[r.key]; var q = /^(\d\d:\d\d)-(\d\d:\d\d)$/.exec(v || ""); r.cb.checked = !!q; r.a.value = q ? q[1] : ""; r.b.value = q ? q[2] : ""; r.sync(); });
     }
@@ -685,6 +691,43 @@
     el.list = function () { return files.filter(function (f) { return !f.pending; }); };
     el.busy = function () { return files.some(function (f) { return f.pending; }); };
     el.reset = function () { files = []; err(""); paint(); };
+    err(""); paint(); return el;
+  };
+  // Vücut formu: ön / arka / sağ / sol — her yön için tek görsel (PNG/JPG/JPEG, en fazla 4 MB). Yeni görsel eskisinin yerini alır.
+  var BODY_SVG = {
+    front: '<svg viewBox="0 0 64 96" aria-hidden="true"><circle cx="32" cy="12" r="8"/><path d="M20 26h24l6 30-6 2-3-18v54h-8V64h-2v30h-8V40l-3 18-6-2z"/></svg>',
+    back: '<svg viewBox="0 0 64 96" aria-hidden="true"><circle cx="32" cy="12" r="8"/><path d="M20 26h24l6 30-6 2-3-18v54h-8V64h-2v30h-8V40l-3 18-6-2z"/><path class="ln" d="M32 28v32"/></svg>',
+    right: '<svg viewBox="0 0 64 96" aria-hidden="true"><circle cx="33" cy="12" r="8"/><path d="M27 26h12l3 14 4 18-5 1-3-12v47h-8V68l-2 26h-6l2-40-2-14z"/><path class="ln" d="M40 12h5"/></svg>',
+    left: '<svg viewBox="0 0 64 96" aria-hidden="true"><g transform="translate(64 0) scale(-1 1)"><circle cx="33" cy="12" r="8"/><path d="M27 26h12l3 14 4 18-5 1-3-12v47h-8V68l-2 26h-6l2-40-2-14z"/><path class="ln" d="M40 12h5"/></g></svg>'
+  };
+  AVF.BODY_SLOTS = [["front", "Ön"], ["back", "Arka"], ["right", "Sağ"], ["left", "Sol"]];
+  AVF.bodyForm = function (o) {
+    var h = AVF.h, base = o.base || "/api/attachments/", files = {}, msg = h("div", { class: "fb-msg", role: "alert", style: "display:none" });
+    (o.files || []).forEach(function (f) { if (f.slot) files[f.slot] = f; });
+    var grid = h("div", { class: "bform" }), el = h("div", { class: "bform-wrap" + (o.locked ? " off" : "") }, grid, msg);
+    function err(t) { msg.textContent = t || ""; msg.style.display = t ? "" : "none"; }
+    function paint() {
+      AVF.mount(grid, AVF.BODY_SLOTS.map(function (sl) {
+        var f = files[sl[0]], pick = h("input", { type: "file", accept: ".png,.jpg,.jpeg,image/png,image/jpeg", hidden: "", tabindex: "-1" });
+        var fig = h("div", { class: "bf-fig" });
+        if (f && f.pending) fig.appendChild(h("span", { class: "spin" }));
+        else if (f) fig.appendChild(h("img", { src: base + f.id, alt: sl[1] + " görünüm", loading: "lazy" }));
+        else { var sv = h("span", { class: "bf-sil" }); sv.innerHTML = BODY_SVG[sl[0]]; fig.appendChild(sv); }   // sabit, güvenli SVG (kullanıcı verisi değil)
+        var add = o.readOnly ? null : h("button", { class: "bf-btn", type: "button", "aria-label": sl[1] + " görünüm ekle", onclick: function () { if (o.locked) return err(o.locked); pick.click(); } }, AVF.icon(f ? "refresh" : "plus"), h("span", { text: f ? "Değiştir" : "Ekle" }));
+        var rm = !o.readOnly && f && !f.pending ? h("button", { class: "bf-x", type: "button", "aria-label": sl[1] + " görseli kaldır", onclick: function () {
+          AVF.api("DELETE", "/attachments/" + f.id).then(function () { delete files[sl[0]]; paint(); }, function (e) { err(AVF.errText(e)); });
+        } }, AVF.icon("x")) : null;
+        pick.addEventListener("change", function () {
+          var file = pick.files && pick.files[0]; pick.value = ""; if (!file) return; err("");
+          var ext = (/\.([a-z0-9]+)$/i.exec(file.name) || [])[1]; ext = ext ? ext.toLowerCase() : "";
+          if (["png", "jpg", "jpeg"].indexOf(ext) < 0) return err("Vücut formu için yalnızca PNG, JPG veya JPEG görsel eklenebilir.");
+          if (file.size > AVF.UPLOAD.bytes) return err("Dosya en fazla 4 MB olabilir.");
+          var prev = files[sl[0]]; files[sl[0]] = { pending: true }; paint();
+          AVF.uploadFile("body?slot=" + sl[0], file).then(function (r) { files[sl[0]] = r; paint(); }, function (e) { if (prev) files[sl[0]] = prev; else delete files[sl[0]]; paint(); err(AVF.errText(e)); });
+        });
+        return h("div", { class: "bf-card" + (f && !f.pending ? " has" : "") }, fig, h("div", { class: "bf-foot" }, h("b", { text: sl[1] }), add, rm), pick);
+      }));
+    }
     err(""); paint(); return el;
   };
 })();

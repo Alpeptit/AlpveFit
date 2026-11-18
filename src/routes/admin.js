@@ -332,7 +332,7 @@ adminRouter.get("/clients/:id/profile", async (req, res) => {
 });
 adminRouter.get("/clients/:id/files", async (req, res) => {
   if (!ID_RE.test(req.params.id) || !(await canAccessMember(req, req.params.id))) return res.status(404).json({ error: "Üye bulunamadı." });
-  const { rows } = await pool.query(`SELECT ${FILE_COLS} FROM attachments WHERE user_id = $1 AND scope = 'profile' ORDER BY created_at`, [req.params.id]);
+  const { rows } = await pool.query(`SELECT ${FILE_COLS} FROM attachments WHERE user_id = $1 AND scope IN ('profile', 'body') ORDER BY created_at`, [req.params.id]);
   res.json(rows);
 });
 // Ek görüntüleme: kişisel bilgi eki → yönetici veya üyeye atanmış uzman; destek talebi eki → yalnız yönetici (talepleri yalnız yönetici görür).
@@ -340,7 +340,7 @@ adminRouter.get("/attachments/:id", async (req, res) => {
   if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Dosya bulunamadı." });
   const { rows } = await pool.query(`SELECT user_id, scope, message_id, filename, mime, data FROM attachments WHERE id = $1`, [req.params.id]);
   const a = rows[0];
-  const ok = a && (a.scope === "profile" ? await canAccessMember(req, a.user_id) : req.adminRole === "admin" && a.message_id);
+  const ok = a && (a.scope === "profile" || a.scope === "body" ? await canAccessMember(req, a.user_id) : req.adminRole === "admin" && a.message_id);
   if (!ok) return res.status(404).json({ error: "Dosya bulunamadı." });
   sendAttachment(res, a);
 });

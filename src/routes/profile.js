@@ -6,7 +6,7 @@ import { logAudit } from "../utils/auditLog.js";
 
 export const profileRouter = withAsyncErrors(express.Router());
 const BLOOD = ["A+", "A-", "B+", "B-", "AB+", "AB-", "0+", "0-"];
-export const PROFILE_COLS = `height_cm, weight_kg, birth_year, to_char(birth_date, 'YYYY-MM-DD') AS birth_date, gender, steps_range, work_hours, work_schedule, work_note, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, updated_at`;
+export const PROFILE_COLS = `height_cm, weight_kg, birth_year, to_char(birth_date, 'YYYY-MM-DD') AS birth_date, gender, steps_range, work_hours, work_schedule, work_note, meals_per_day, arm_cm::float AS arm_cm, shoulder_cm::float AS shoulder_cm, waist_cm::float AS waist_cm, neck_cm::float AS neck_cm, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, updated_at`;
 const GENDERS = ["female", "male"];
 const STEPS = ["0-2000", "2000-4000", "4000-6000", "6000-8000", "8000-10000", "10000+"];
 const GOALS = ["Yağ Yakımı", "Kas Kazanımı", "Güç Artışı"];
@@ -49,6 +49,15 @@ const clean = (v, max) => {
   const s = String(v ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").replace(/\r\n?/g, "\n").trim();
   return s.length > max ? null : s;
 };
+/** İsteğe bağlı çevre ölçüsü (cm, bir ondalık): boşsa null, aralık dışıysa hata. */
+function cmIn(v, lo, hi, label) {
+  if (v === "" || v === null || v === undefined) return { v: null };
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < lo || n > hi) return { err: `${label} ${lo}–${hi} cm arasında olmalıdır.` };
+  return { v: Math.round(n * 10) / 10 };
+}
+// İnsan için anlamlı en küçük / en büyük değerler (yetişkin): üst kol çevresi, omuz genişliği (omuz uçları arası), bel çevresi, boyun çevresi.
+export const MEASURES = { arm: [15, 70, "Kol çevresi"], shoulder: [25, 80, "Omuz genişliği"], waist: [45, 200, "Bel çevresi"], neck: [20, 70, "Boyun çevresi"] };
 function intIn(v, lo, hi, label) {
   if (v === "" || v === null || v === undefined) return { v: null };
   const n = Number(v);
@@ -65,14 +74,15 @@ profileRouter.get("/profile", requireAuth, async (req, res) => {
 
 profileRouter.put("/profile", requireAuth, async (req, res) => {
   const b = req.body || {};
-  const h = intIn(b.heightCm, 100, 250, "Boy"), bd = dateIn(b.birthDate), td = intIn(b.trainingDays, 0, 7, "Haftalık antrenman günü");
+  const h = intIn(b.heightCm, 100, 250, "Boy"), bd = dateIn(b.birthDate), td = intIn(b.trainingDays, 1, 6, "Haftalık antrenman günü"), meals = intIn(b.mealsPerDay, 1, 6, "Günlük öğün sayısı");
+  const ms = {}; for (const k of Object.keys(MEASURES)) ms[k] = cmIn(b[k + "Cm"], ...MEASURES[k]);
   const wh = workIn(b.workHours);
   // Gün gün saat ve not yalnız vardiyalı / esnek / çalışmıyorum düzeninde saklanır.
-  const flexMode = WORK_MODES.includes(wh.v);
+  const flexMode = wh.v === "shift" || wh.v === "flexible";   // "çalışmıyorum"da ek bilgi alınmaz
   const ws = flexMode ? scheduleIn(b.workSchedule) : { v: null };
   let workNote = null;
   if (flexMode && b.workNote) { workNote = clean(b.workNote, 300); if (workNote === null) return res.status(400).json({ error: "Çalışma notu en fazla 300 karakter olabilir." }); }
-  for (const x of [h, bd, td, wh, ws]) if (x.err) return res.status(400).json({ error: x.err });
+  for (const x of [h, bd, td, meals, wh, ws, ...Object.values(ms)]) if (x.err) return res.status(400).json({ error: x.err });
   const by = { v: bd.v ? bd.year : null };
   const gender = b.gender === "" || b.gender == null ? null : String(b.gender);
   if (gender !== null && !GENDERS.includes(gender)) return res.status(400).json({ error: "Geçersiz cinsiyet seçimi." });
@@ -93,19 +103,19 @@ profileRouter.put("/profile", requireAuth, async (req, res) => {
   if (b.healthNotes && notes === null) return res.status(400).json({ error: "Sağlık notları en fazla 1000 karakter olabilir." });
 
   // Sağlık verisi (KVKK m.6 özel nitelikli): kan grubu, kilo/boy dahil bu bölüm için AÇIK RIZA zorunlu. Rıza zamanı saklanır; geri alınabilir.
-  const hasAny = [h.v, w, by.v, bd.v, gender, stepsRange, wh.v, td.v, blood, occupation, goal, notes].some((x) => x !== null && x !== "");
+  const hasAny = [h.v, w, by.v, bd.v, gender, stepsRange, wh.v, td.v, meals.v, ms.arm.v, ms.shoulder.v, ms.waist.v, ms.neck.v, blood, occupation, goal, notes].some((x) => x !== null && x !== "");
   // Boş form kaydedilmez: hiçbir bilgi girilmeden "kaydedildi" denmez. Tüm bilgileri kaldırmak için ayrı silme işlemi vardır.
   if (!hasAny) return res.status(400).json({ error: "Kaydetmek için en az bir bilgi girin.", code: "empty" });
   const prior = await pool.query(`SELECT health_consent_at FROM member_profiles WHERE user_id = $1`, [req.user.sub]);
   const consentAt = prior.rows[0]?.health_consent_at || null;
   if (hasAny && !consentAt && b.healthConsent !== true) return res.status(400).json({ error: "Bu bilgileri kaydedebilmemiz için açık rızanızı onaylamanız gerekir.", code: "consent_required" });
   const { rows } = await pool.query(
-    `INSERT INTO member_profiles (user_id, height_cm, weight_kg, birth_year, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, birth_date, gender, steps_range, work_hours, work_schedule, work_note, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $11 THEN now() END, $12, $13, $14, $15, $16, $17, now())
+    `INSERT INTO member_profiles (user_id, height_cm, weight_kg, birth_year, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, birth_date, gender, steps_range, work_hours, work_schedule, work_note, meals_per_day, arm_cm, shoulder_cm, waist_cm, neck_cm, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $11 THEN now() END, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, now())
      ON CONFLICT (user_id) DO UPDATE SET height_cm=$2, weight_kg=$3, birth_year=$4, occupation=$5, daily_steps=$6, blood_type=$7, training_days=$8, goal=$9, health_notes=$10,
-       health_consent_at = COALESCE(member_profiles.health_consent_at, CASE WHEN $11 THEN now() END), birth_date=$12, gender=$13, steps_range=$14, work_hours=$15, work_schedule=$16, work_note=$17, updated_at = now()
+       health_consent_at = COALESCE(member_profiles.health_consent_at, CASE WHEN $11 THEN now() END), birth_date=$12, gender=$13, steps_range=$14, work_hours=$15, work_schedule=$16, work_note=$17, meals_per_day=$18, arm_cm=$19, shoulder_cm=$20, waist_cm=$21, neck_cm=$22, updated_at = now()
      RETURNING ${PROFILE_COLS}`,
-    [req.user.sub, h.v, w, by.v, occupation || null, st.v, blood, td.v, goal || null, notes || null, hasAny && b.healthConsent === true, bd.v, gender, stepsRange, wh.v, ws.v ? JSON.stringify(ws.v) : null, workNote]);
+    [req.user.sub, h.v, w, by.v, occupation || null, st.v, blood, td.v, goal || null, notes || null, hasAny && b.healthConsent === true, bd.v, gender, stepsRange, wh.v, ws.v ? JSON.stringify(ws.v) : null, workNote, meals.v, ms.arm.v, ms.shoulder.v, ms.waist.v, ms.neck.v]);
   await logAudit(req.user.sub, "profile_update", "user", req.user.sub, {}, req.ip || null);
   res.json(rows[0]);
 });
@@ -113,7 +123,7 @@ profileRouter.put("/profile", requireAuth, async (req, res) => {
 // Rıza geri alma: profil bilgileri silinir.
 profileRouter.delete("/profile", requireAuth, async (req, res) => {
   await pool.query(`DELETE FROM member_profiles WHERE user_id = $1`, [req.user.sub]);
-  await pool.query(`DELETE FROM attachments WHERE user_id = $1 AND scope = 'profile'`, [req.user.sub]);   // sağlık görselleri de silinir
+  await pool.query(`DELETE FROM attachments WHERE user_id = $1 AND scope IN ('profile', 'body')`, [req.user.sub]);   // sağlık ve vücut formu görselleri de silinir
   await logAudit(req.user.sub, "profile_delete", "user", req.user.sub, {}, req.ip || null);
   res.json({ ok: true });
 });

@@ -198,12 +198,15 @@
 
   // ---------- profil ----------
   var BLOOD = ["A+", "A-", "B+", "B-", "AB+", "AB-", "0+", "0-"];
+  // isteğe bağlı çevre ölçüleri: [anahtar, etiket, ikon, nasıl ölçülür]
+  var MEAS = [["arm", "Kol çevresi", "ruler", "Üst kolun en geniş yerinden, kol gevşekken."], ["shoulder", "Omuz genişliği", "ruler", "Omuz uçları arası düz ölçü."],
+    ["waist", "Bel çevresi", "ruler", "Göbek hizasından, nefes verilmişken."], ["neck", "Boyun çevresi", "ruler", "Gırtlağın hemen altından."]];
   var STEPS = [["0-2000", "0 – 2.000"], ["2000-4000", "2.000 – 4.000"], ["4000-6000", "4.000 – 6.000"], ["6000-8000", "6.000 – 8.000"], ["8000-10000", "8.000 – 10.000"], ["10000+", "10.000+"]];
   var GOALS = [["Yağ Yakımı", "flame"], ["Kas Kazanımı", "muscle"], ["Güç Artışı", "bolt"]];
   function psec(icon, title, sub, kids) { return h("section", { class: "card psec" }, h("div", { class: "psh" }, h("span", { class: "tile" }, AVF.icon(icon)), h("span", { class: "t" }, h("b", { text: title }), sub ? h("small", { text: sub }) : null)), h("div", { class: "psb" }, kids)); }
   AVF.profileView = function (el) {
     AVF.mount(el, h("h2", { class: "ptitle", text: "Kişisel Bilgiler" }), AVF.skeleton(2));
-    Promise.all([AVF.api("GET", "/profile"), AVF.api("GET", "/uploads/profile").then(null, function () { return []; })]).then(function (res) {
+    Promise.all([AVF.api("GET", "/profile"), AVF.api("GET", "/uploads/profile").then(null, function () { return []; }), AVF.api("GET", "/uploads/body").then(null, function () { return []; })]).then(function (res) {
       var pr = res[0], P = pr || {}, f = {}, D = AVF.draft("profile"), restoring = false;
       function changed() { if (!restoring) D.set(snapshot()); }
       f.gender = AVF.choice({ label: "Cinsiyet", value: P.gender || "", clearable: true, onChange: changed, items: [{ value: "female", label: "Kadın", icon: "female" }, { value: "male", label: "Erkek", icon: "male" }] });
@@ -211,6 +214,11 @@
       f.work = AVF.workHours(P.work_hours || "", changed, P.work_schedule || null, P.work_note || "");
       f.height = AVF.measure("height", P.height_cm, changed);
       f.weight = AVF.measure("weight", P.weight_kg, changed);
+      MEAS.forEach(function (m) { f[m[0]] = AVF.measure(m[0], P[m[0] + "_cm"], changed); });
+      f.tdays = AVF.choice({ label: "Haftada kaç gün antrenmana gidebilirsiniz", value: P.training_days ? String(P.training_days) : "", clearable: true, cols: 6, onChange: changed,
+        items: [1, 2, 3, 4, 5, 6].map(function (n) { return { value: String(n), label: n + " gün", icon: "dumb" }; }) });
+      f.meals = AVF.choice({ label: "Günde kaç öğün tüketebilirsiniz", value: P.meals_per_day ? String(P.meals_per_day) : "", clearable: true, cols: 6, onChange: changed,
+        items: [1, 2, 3, 4, 5, 6].map(function (n) { return { value: String(n), label: n + " öğün", icon: "apple" }; }) });
       f.blood = AVF.iconSelect({ label: "Kan grubu", icon: "drop", placeholder: "Kan grubunuzu seçin", value: P.blood_type || "", onChange: changed, items: BLOOD.map(function (x) { return { value: x, label: x + (x.slice(-1) === "+" ? " · Rh pozitif" : " · Rh negatif"), icon: "drop" }; }) });
       f.goal = AVF.choice({ label: "Hedefiniz", value: P.goal || "", clearable: true, onChange: changed, items: GOALS.map(function (g) { return { value: g[0], label: g[0], icon: g[1] }; }) });
       f.steps = AVF.iconSelect({ label: "Günlük ortalama adım sayısı", icon: "steps", placeholder: "Adım aralığınızı seçin", value: P.steps_range || "", onChange: changed, items: STEPS.map(function (x, i) { return { value: x[0], label: x[1] + " adım", icon: "steps", level: i / (STEPS.length - 1) }; }) });
@@ -221,18 +229,20 @@
       f.occupation.addEventListener("input", changed); f.notes.addEventListener("input", function () { count(); changed(); });
       var consented = !!P.health_consent_at;
       f.files = AVF.fileBox({ scope: "profile", files: res[1] || [], locked: consented ? "" : "Dosya eklemek için önce açık rızanızı onaylayıp bilgilerinizi kaydedin." });
+      f.body = AVF.bodyForm({ files: res[2] || [], locked: consented ? "" : "Görsel eklemek için önce açık rızanızı onaylayıp bilgilerinizi kaydedin." });
 
       function snapshot() {
-        return { gender: f.gender.get(), birth: f.birth.raw(), work: f.work.raw(), height: f.height.raw(), weight: f.weight.raw(), blood: f.blood.get(), goal: f.goal.get(), steps: f.steps.get(), occupation: f.occupation.value, notes: f.notes.value, consent: consent.checked };
+        return { gender: f.gender.get(), birth: f.birth.raw(), work: f.work.raw(), height: f.height.raw(), weight: f.weight.raw(), arm: f.arm.raw(), shoulder: f.shoulder.raw(), waist: f.waist.raw(), neck: f.neck.raw(), tdays: f.tdays.get(), meals: f.meals.get(), blood: f.blood.get(), goal: f.goal.get(), steps: f.steps.get(), occupation: f.occupation.value, notes: f.notes.value, consent: consent.checked };
       }
       function apply(d) {
         restoring = true;
-        f.gender.set(d.gender || ""); f.birth.set(d.birth || ""); f.work.setRaw(d.work || ""); f.height.setRaw(d.height); f.weight.setRaw(d.weight);
+        f.gender.set(d.gender || ""); f.birth.set(d.birth || ""); f.work.setRaw(d.work || ""); f.height.setRaw(d.height); f.weight.setRaw(d.weight); MEAS.forEach(function (m) { f[m[0]].setRaw(d[m[0]]); }); f.tdays.set(d.tdays || ""); f.meals.set(d.meals || "");
         f.blood.set(d.blood || ""); f.goal.set(d.goal || ""); f.steps.set(d.steps || ""); f.occupation.value = d.occupation || ""; f.notes.value = d.notes || ""; consent.checked = !!d.consent; count();
         restoring = false;
       }
       function payload() {
-        return { heightCm: f.height.getMetric(), weightKg: f.weight.getMetric(), birthDate: f.birth.get(), gender: f.gender.get(), stepsRange: f.steps.get(), workHours: f.work.get(), workSchedule: f.work.schedule(), workNote: f.work.note(), bloodType: f.blood.get(),
+        return { heightCm: f.height.getMetric(), weightKg: f.weight.getMetric(), armCm: f.arm.getMetric(), shoulderCm: f.shoulder.getMetric(), waistCm: f.waist.getMetric(), neckCm: f.neck.getMetric(),
+          trainingDays: f.tdays.get() ? Number(f.tdays.get()) : "", mealsPerDay: f.meals.get() ? Number(f.meals.get()) : "", birthDate: f.birth.get(), gender: f.gender.get(), stepsRange: f.steps.get(), workHours: f.work.get(), workSchedule: f.work.schedule(), workNote: f.work.note(), bloodType: f.blood.get(),
           occupation: f.occupation.value.trim(), goal: f.goal.get(), healthNotes: f.notes.value.trim() };
       }
       var consent = h("input", { type: "checkbox", id: "pf-consent" }); consent.addEventListener("change", changed);
@@ -251,7 +261,14 @@
           h("div", { class: "fgrid" },
             h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("ruler")), "Boy"), f.height),
             h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("weight")), "Kilo"), f.weight)),
-          h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("drop")), "Kan grubu"), f.blood)]),
+          h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("drop")), "Kan grubu"), f.blood),
+          h("p", { class: "wh-sub" }, AVF.icon("ruler"), h("span", { text: "Çevre ölçüleri (isteğe bağlı)" })),
+          h("div", { class: "fgrid" }, MEAS.map(function (m) { return h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon(m[2])), m[1], h("span", { class: "opt", text: "İsteğe bağlı" })), f[m[0]], h("small", { class: "hint", text: m[3] })); }))]),
+        psec("users", "Vücut Formu", "Ön, arka, sağ ve sol görünüm — koçunuz gelişiminizi bu görsellerle takip eder", [
+          h("p", { class: "hint", text: "Sade bir arka planda, iyi ışıkta ve aynı mesafeden çekilmiş görseller önerilir. Görselleri yalnızca siz ve koçunuz görebilirsiniz." }), f.body]),
+        psec("dumb", "Antrenman ve Beslenme Düzeni", "Programınız bu düzene göre hazırlanır", [
+          h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("dumb")), "Haftada kaç gün antrenmana gidebilirsiniz?"), f.tdays),
+          h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("apple")), "Günde kaç öğün tüketebilirsiniz?"), f.meals)]),
         psec("target", "Hedefiniz", "Şu an için öncelikli hedefiniz", [f.goal]),
         psec("steps", "Günlük Ortalama Adım", "Bir günde yaklaşık kaç adım attığınız", [f.steps]),
         psec("alert", "Sağlık ve Sakatlık Durumu", "Koçunuzun bilmesi gereken sağlık bilgileri ve görselleri", [f.notes, h("div", { class: "row between", style: "margin-top:6px" }, cnt), f.files]),

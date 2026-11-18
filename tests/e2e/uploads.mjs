@@ -19,6 +19,7 @@ async function up(p, scope, name, buf, type = "") {
   return { status: r.status, body };
 }
 const get = (p, path) => fetch(BASE + path, { headers: { cookie: p.c.cookieHeader() } });
+let g;
 
 // ---- boş profil kaydedilmez; çalışma saati ----
 let r = await M1.c.call("PUT", "/profile", { healthConsent: true }); chk("boş kişisel bilgi formu kaydedilmez (400)", r.status === 400 && r.body.code === "empty", r);
@@ -36,8 +37,25 @@ chk("vardiyalıda gün gün saat ve not kaydedilir", r.status === 200 && r.body.
 r = await M1.c.call("PUT", "/profile", { workHours: "shift", workSchedule: { xyz: "08:00-16:00" }, heightCm: 180 }); chk("bilinmeyen gün anahtarı reddedilir", r.status === 400, r);
 r = await M1.c.call("PUT", "/profile", { workHours: "flexible", workSchedule: { mon: "08:00-08:00" }, heightCm: 180 }); chk("gün içinde başlangıç = bitiş reddedilir", r.status === 400, r);
 r = await M1.c.call("PUT", "/profile", { workHours: "flexible", workSchedule: ["x"], heightCm: 180 }); chk("dizi biçimli çizelge reddedilir", r.status === 400, r);
-r = await M1.c.call("PUT", "/profile", { workHours: "none", workNote: "x".repeat(301), heightCm: 180 }); chk("300 karakteri aşan not reddedilir", r.status === 400, r);
+r = await M1.c.call("PUT", "/profile", { workHours: "flexible", workNote: "x".repeat(301), heightCm: 180 }); chk("300 karakteri aşan not reddedilir", r.status === 400, r);
 r = await M1.c.call("PUT", "/profile", { workHours: "09:00-18:00", workSchedule: { mon: "08:00-16:00" }, workNote: "yok sayılır", heightCm: 180 }); chk("sabit saatte çizelge/not saklanmaz", r.status === 200 && r.body.work_schedule === null && r.body.work_note === null, r.body);
+
+// ---- öğün / antrenman günü / çevre ölçüleri; "çalışmıyorum"da ek bilgi saklanmaz ----
+r = await M1.c.call("PUT", "/profile", { mealsPerDay: 4, trainingDays: 5, armCm: 38.5, shoulderCm: 46, waistCm: 84.2, neckCm: 39, heightCm: 180 });
+chk("öğün, antrenman günü ve çevre ölçüleri kaydedilir", r.status === 200 && r.body.meals_per_day === 4 && r.body.training_days === 5 && r.body.arm_cm === 38.5 && r.body.waist_cm === 84.2, r.body);
+for (const [k, v] of [["mealsPerDay", 7], ["mealsPerDay", 0], ["trainingDays", 7], ["armCm", 10], ["shoulderCm", 120], ["waistCm", 30], ["neckCm", 90]]) {
+  r = await M1.c.call("PUT", "/profile", { [k]: v, heightCm: 180 }); chk(`${k}=${v} aralık dışı reddedilir`, r.status === 400, r);
+}
+r = await M1.c.call("PUT", "/profile", { workHours: "none", workSchedule: { mon: "08:00-16:00" }, workNote: "not", heightCm: 180 }); chk("çalışmıyorum: çizelge ve not saklanmaz", r.status === 200 && r.body.work_schedule === null && r.body.work_note === null, r.body);
+
+// ---- vücut formu (ön/arka/sağ/sol) ----
+r = await up(M1, "body?slot=top", "on.png", PNG, "image/png"); chk("geçersiz yön reddedilir", r.status === 400, r);
+r = await up(M1, "body?slot=front", "on.pdf", PDF, "application/pdf"); chk("vücut formunda PDF reddedilir", r.status === 400, r);
+const bf1 = await up(M1, "body?slot=front", "on.png", PNG, "image/png"); chk("ön görünüm yüklenir", bf1.status === 201 && bf1.body.slot === "front", bf1);
+const bf2 = await up(M1, "body?slot=front", "on2.png", PNG, "image/png"); chk("aynı yöne yeni görsel eskisinin yerini alır", bf2.status === 201, bf2);
+await up(M1, "body?slot=back", "arka.png", PNG, "image/png");
+r = await M1.c.call("GET", "/uploads/body"); chk("vücut formu listesinde her yön tek görsel", r.status === 200 && r.body.length === 2 && r.body.filter((x) => x.slot === "front").length === 1, r.body);
+g = await get(M2, "/api/attachments/" + bf2.body.id); chk("başka üye vücut formu görselini göremez", g.status === 404, g.status);
 
 // ---- tür / içerik / boyut doğrulaması ----
 r = await up(M1, "profile", "virus.exe", EXE); chk("izin verilmeyen uzantı reddedilir", r.status === 400, r);
@@ -55,14 +73,14 @@ r = await up(M1, "profile", "e.png", PNG, "image/png"); chk("kişisel bilgilerde
 r = await M1.c.call("GET", "/uploads/profile"); chk("üye kendi dosya listesini görür", r.status === 200 && r.body.length === 4 && !("data" in r.body[0]), r.body);
 
 // ---- erişim ----
-let g = await get(M1, "/api/attachments/" + ids[0]);
+g = await get(M1, "/api/attachments/" + ids[0]);
 const gb = Buffer.from(await g.clone().arrayBuffer()); chk("indirilen dosya yüklenenle bayt bayt aynı", gb.equals(PNG), gb.length);
 chk("sahibi dosyayı görür (güvenli başlıklarla)", g.status === 200 && g.headers.get("content-type") === "image/png" && g.headers.get("x-content-type-options") === "nosniff" && /sandbox/.test(g.headers.get("content-security-policy") || ""), g.status);
 g = await get(M1, "/api/attachments/" + ids[1]); chk("görsel dışı dosya indirme olarak sunulur", /^attachment/.test(g.headers.get("content-disposition") || ""), g.headers.get("content-disposition"));
 g = await get(M2, "/api/attachments/" + ids[0]); chk("başka üye dosyayı GÖREMEZ (404)", g.status === 404, g.status);
 g = await get(M2, "/api/admin/attachments/" + ids[0]); chk("üye yönetim ucundan da göremez (404)", g.status === 404, g.status);
 g = await get(A, "/api/admin/attachments/" + ids[0]); chk("yönetici kişisel bilgi ekini görür", g.status === 200, g.status);
-r = await A.c.call("GET", `/admin/clients/${M1.id}/files`); chk("yönetici üyenin dosya listesini görür", r.status === 200 && r.body.length === 4, r.body);
+r = await A.c.call("GET", `/admin/clients/${M1.id}/files`); chk("yönetici üyenin dosya listesini görür (4 belge + 2 vücut formu)", r.status === 200 && r.body.length === 6, r.body);
 r = await M2.c.call("DELETE", "/attachments/" + ids[0]); chk("başka üye dosyayı silemez", r.status === 404, r);
 r = await M1.c.call("DELETE", "/attachments/" + ids[3]); chk("sahibi dosyasını siler", r.status === 200, r);
 

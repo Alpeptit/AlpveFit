@@ -4,6 +4,30 @@
   var AVF = (window.AVF = window.AVF || {});
   AVF.DICT = AVF.DICT || {}; AVF.PATTERNS = AVF.PATTERNS || [];
   var D = {
+    "Çevre ölçüleri (isteğe bağlı)": "Body measurements (optional)",
+    "Kol çevresi": "Arm circumference",
+    "Omuz genişliği": "Shoulder width",
+    "Üst kolun en geniş yerinden, kol gevşekken.": "Around the widest part of the upper arm, relaxed.",
+    "Omuz uçları arası düz ölçü.": "Straight line between the shoulder tips.",
+    "Göbek hizasından, nefes verilmişken.": "At navel level, after breathing out.",
+    "Gırtlağın hemen altından.": "Just below the Adam's apple.",
+    "Vücut Formu": "Body Shape",
+    "Ön, arka, sağ ve sol görünüm — koçunuz gelişiminizi bu görsellerle takip eder": "Front, back, right and left views — your coach tracks your progress with these images",
+    "Sade bir arka planda, iyi ışıkta ve aynı mesafeden çekilmiş görseller önerilir. Görselleri yalnızca siz ve koçunuz görebilirsiniz.": "Photos taken against a plain background, in good light and from the same distance are recommended. Only you and your coach can see them.",
+    "Ön": "Front",
+    "Arka": "Back",
+    "Sağ": "Right",
+    "Sol": "Left",
+    "Ekle": "Add",
+    "Değiştir": "Change",
+    "Görsel eklemek için önce açık rızanızı onaylayıp bilgilerinizi kaydedin.": "To add images, first give your explicit consent and save your details.",
+    "Vücut formu için yalnızca PNG, JPG veya JPEG görsel eklenebilir.": "Only PNG, JPG or JPEG images can be added for body shape.",
+    "Geçersiz vücut formu yönü.": "Invalid body view.",
+    "Antrenman ve Beslenme Düzeni": "Training and Eating Routine",
+    "Programınız bu düzene göre hazırlanır": "Your program is prepared around this routine",
+    "Haftada kaç gün antrenmana gidebilirsiniz?": "How many days a week can you train?",
+    "Günde kaç öğün tüketebilirsiniz?": "How many meals a day can you eat?",
+    "Vücut formu:": "Body shape:",
     "Panodan yapıştır": "Paste from clipboard",
     "Kod yapıştırıldı.": "Code pasted.",
     "Panoda 6 haneli bir kod bulunamadı.": "No 6-digit code found on the clipboard.",
@@ -1346,6 +1370,8 @@
 };
   for (var k in D) if (Object.prototype.hasOwnProperty.call(D, k)) AVF.DICT[k] = D[k];
   AVF.PATTERNS.push(
+    [/^(\d) gün$/, "$1 days"], [/^(\d) öğün$/, "$1 meals"],
+    [/^(Kol çevresi|Omuz genişliği|Bel çevresi|Boyun çevresi) ([\d.]+–[\d.]+) (cm|inç) arasında olmalıdır\.$/, function (m, a, r, u) { var M = { "Kol çevresi": "Arm circumference", "Omuz genişliği": "Shoulder width", "Bel çevresi": "Waist circumference", "Boyun çevresi": "Neck circumference" }; return M[a] + " must be between " + r + " " + (u === "inç" ? "in" : u) + "."; }],
     [/^(.+) için başlangıç ve bitiş saatini seçin \(aynı olamaz\)\.$/, function (m, d) { var M = { "Pazartesi": "Monday", "Salı": "Tuesday", "Çarşamba": "Wednesday", "Perşembe": "Thursday", "Cuma": "Friday", "Cumartesi": "Saturday", "Pazar": "Sunday" }; return "Select a start and end time for " + (M[d] || d) + " (they cannot be the same)."; }],
     [/^(A|B|AB|0)([+-]) · Rh (pozitif|negatif)$/, function (m, a, b, c) { return a + b + " · Rh " + (c === "pozitif" ? "positive" : "negative"); }],
     [/^([\d.]+ – [\d.]+|10\.000\+) adım$/, "$1 steps"],

@@ -16,7 +16,8 @@ export const uploadsRouter = withAsyncErrors(express.Router());
 export const UPLOADS_PER_HOUR = 30;
 export const PENDING_MAX = 8;   // henüz bir mesaja bağlanmamış (bekleyen) ticket eki sınırı
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export const FILE_COLS = `id, scope, filename, mime, size_bytes, created_at`;
+export const FILE_COLS = `id, scope, slot, filename, mime, size_bytes, created_at`;
+export const BODY_SLOTS = ["front", "back", "right", "left"];
 
 // Ham gövde okuyucu: yalnız application/octet-stream; sınır aşılırsa okuma hemen kesilir (bellek şişmez).
 function raw(req, res, next) {
@@ -34,7 +35,8 @@ function raw(req, res, next) {
 }
 
 uploadsRouter.post("/uploads/:scope", requireAuth, async (req, res, next) => {
-  if (req.params.scope !== "ticket" && req.params.scope !== "profile") return res.status(404).json({ error: "Bulunamadı." });
+  if (!["ticket", "profile", "body"].includes(req.params.scope)) return res.status(404).json({ error: "Bulunamadı." });
+  if (req.params.scope === "body" && !BODY_SLOTS.includes(String(req.query.slot || ""))) return res.status(400).json({ error: "Geçersiz vücut formu yönü." });
   // Sınır, gövde belleğe alınmadan ÖNCE uygulanır.
   if (!(await checkHourlyActionLimit(`upload:${req.user.sub}`, "attachment_upload", UPLOADS_PER_HOUR))) {
     return res.status(429).json({ error: "Kısa sürede çok fazla dosya yüklendi. Lütfen bir süre sonra tekrar deneyin." });
@@ -54,25 +56,32 @@ uploadsRouter.post("/uploads/:scope", requireAuth, async (req, res, next) => {
   const ce = contentTypeError(buf, filename);
   if (ce) return res.status(400).json({ error: ce });
 
-  if (scope === "profile") {
+  // Vücut formu: yalnız görsel (PNG/JPG/JPEG); her yön için tek görsel — yenisi eskisinin yerini alır.
+  if (scope === "body" && !/^image\//.test(kindOf(filename).mime)) return res.status(400).json({ error: "Vücut formu için yalnızca PNG, JPG veya JPEG görsel eklenebilir." });
+  if (scope === "profile" || scope === "body") {
     const c = await pool.query(`SELECT health_consent_at FROM member_profiles WHERE user_id = $1`, [req.user.sub]);
     if (!c.rows[0] || !c.rows[0].health_consent_at) return res.status(400).json({ error: "Dosya eklemeden önce açık rızanızı onaylayıp bilgilerinizi kaydedin.", code: "consent_required" });
-    const n = await pool.query(`SELECT count(*)::int AS n FROM attachments WHERE user_id = $1 AND scope = 'profile'`, [req.user.sub]);
-    if (n.rows[0].n >= ATTACH_MAX) return res.status(400).json({ error: COUNT_ERROR });
+    if (scope === "profile") {
+      const n = await pool.query(`SELECT count(*)::int AS n FROM attachments WHERE user_id = $1 AND scope = 'profile'`, [req.user.sub]);
+      if (n.rows[0].n >= ATTACH_MAX) return res.status(400).json({ error: COUNT_ERROR });
+    }
   } else {
     // Bir günden eski, hiçbir mesaja bağlanmamış ekler temizlenir; bekleyen ek sayısı sınırlıdır.
     await pool.query(`DELETE FROM attachments WHERE user_id = $1 AND scope = 'ticket' AND message_id IS NULL AND created_at < now() - interval '1 day'`, [req.user.sub]);
     const n = await pool.query(`SELECT count(*)::int AS n FROM attachments WHERE user_id = $1 AND scope = 'ticket' AND message_id IS NULL`, [req.user.sub]);
     if (n.rows[0].n >= PENDING_MAX) return res.status(400).json({ error: "Gönderilmemiş çok fazla dosya var. Lütfen önce mesajınızı gönderin veya dosyaları kaldırın." });
   }
+  const slot = scope === "body" ? String(req.query.slot) : null;
+  if (slot) await pool.query(`DELETE FROM attachments WHERE user_id = $1 AND scope = 'body' AND slot = $2 RETURNING id`, [req.user.sub, slot]);
   const { rows } = await pool.query(
-    `INSERT INTO attachments (user_id, scope, filename, mime, size_bytes, data) VALUES ($1, $2, $3, $4, $5, $6) RETURNING ${FILE_COLS}`,
-    [req.user.sub, scope, filename, kindOf(filename).mime, buf.length, buf]);
+    `INSERT INTO attachments (user_id, scope, slot, filename, mime, size_bytes, data) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING ${FILE_COLS}`,
+    [req.user.sub, scope, slot, filename, kindOf(filename).mime, buf.length, buf]);
   res.status(201).json(rows[0]);
 });
 
-uploadsRouter.get("/uploads/profile", requireAuth, async (req, res) => {
-  const { rows } = await pool.query(`SELECT ${FILE_COLS} FROM attachments WHERE user_id = $1 AND scope = 'profile' ORDER BY created_at`, [req.user.sub]);
+uploadsRouter.get("/uploads/:scope", requireAuth, async (req, res) => {
+  if (req.params.scope !== "profile" && req.params.scope !== "body") return res.status(404).json({ error: "Bulunamadı." });
+  const { rows } = await pool.query(`SELECT ${FILE_COLS} FROM attachments WHERE user_id = $1 AND scope = $2 ORDER BY created_at`, [req.user.sub, req.params.scope]);
   res.json(rows);
 });
 
