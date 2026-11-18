@@ -8,7 +8,7 @@
 
   // Kod adımı: giriş + onayla + yeniden gönder. confirm(code) → Promise; sonuç parent'a bırakılır.
   function codeStep(o) {
-    var code = AVF.input("text", { class: "codeinp", inputmode: "numeric", autocomplete: "one-time-code", maxlength: "6", placeholder: "••••••", "aria-label": "Onay kodu" });
+    var code = AVF.codeInput({ "aria-label": "Onay kodu" });
     var box = h("div"), btn = h("button", { class: "btn", type: "submit" }, o.button || "Onayla");
     var f = h("form", { novalidate: true, onsubmit: function (e) {
       e.preventDefault(); msg(box, "");
@@ -133,7 +133,7 @@
       }
     }
     function setup(r, activatePath, extra) {
-      var code = AVF.input("text", { class: "codeinp", inputmode: "numeric", maxlength: "6", placeholder: "••••••", autocomplete: "one-time-code" }), box = h("div"), btn = h("button", { class: "btn", type: "submit" }, "Doğrula ve Etkinleştir");
+      var code = AVF.codeInput({}), box = h("div"), btn = h("button", { class: "btn", type: "submit" }, "Doğrula ve Etkinleştir");
       AVF.mount(p, h("p", { class: "hint", text: "1) Google Authenticator'da “+” ile QR kodu okutun. 2) Uygulamadaki 6 haneli kodu aşağıya girin." }),
         h("img", { class: "qr", src: r.qrDataUrl, alt: "Authenticator QR kodu" }), h("p", { class: "hint center" }, "Okutamıyorsanız anahtarı elle girin: ", h("b", { text: r.secret })),
         h("form", { novalidate: true, onsubmit: function (e) {

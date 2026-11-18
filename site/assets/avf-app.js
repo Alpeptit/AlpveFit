@@ -10,7 +10,12 @@
     attrs = attrs || {}; attrs.href = href; attrs["data-link"] = "";
     return h("a", attrs, children);
   }
-  function go(path, replace) { if (location.pathname === path) { route(); return; } history[replace ? "replaceState" : "pushState"](null, "", path); route(); window.scrollTo(0, 0); }
+  function go(path, replace) {
+    if (location.pathname === path) { route(); return; }
+    history[replace ? "replaceState" : "pushState"](null, "", path); route();
+    // Sayfa geçişinde yumuşak kaydırma kullanılmaz (mobilde dokunuşla çakışıp yenileme hareketini tetikleyebiliyordu).
+    var de = document.documentElement; de.style.scrollBehavior = "auto"; window.scrollTo(0, 0); de.style.scrollBehavior = "";
+  }
   AVF.go = go;
 
   // ---------- kabuk ----------
@@ -269,7 +274,9 @@
     function paintMenu() {
       var granted = (kinds || []).map(function (k) { return k.kind; });
       var onKind = Object.keys(AVF.KIND).some(function (k) { return AVF.KIND[k].slug === sub; });
-      var open = pmOpen() || onKind;
+      // Plan bölümündeyken alt sekmeler açık ve sabit kalır; Planlarım dışındaki bir sekmeye geçilince kendiliğinden kapanır.
+      if (onKind) setPmOpen(true); else if (sub !== "") setPmOpen(false);
+      var open = onKind || (sub === "" && pmOpen());
       var group = h("div", { class: "pm-group", id: "pm-plans", role: "group", "aria-label": "Plan bölümleri" }, Object.keys(AVF.KIND).map(function (k) {
         var a = link("/panel/" + AVF.KIND[k].slug, [AVF.icon(AVF.KIND[k].icon), h("span", { text: AVF.KIND[k].label }), kinds && granted.indexOf(k) < 0 ? AVF.icon("lock", "pm-lock") : null], { class: "pm-sub" });
         if (sub === AVF.KIND[k].slug) a.setAttribute("aria-current", "page"); return a;
@@ -288,10 +295,16 @@
       });
       var row = h("div", { class: "pm-row" }, head, rest, h("button", { class: "pm-out", type: "button", onclick: logout }, AVF.icon("out"), h("span", { text: "Güvenli Çıkış Yap" })));
       function place() { if (mqMob.matches) { if (wrapG.previousSibling !== row) menuEl.appendChild(wrapG); } else if (head.nextSibling !== wrapG) row.insertBefore(wrapG, head.nextSibling); }
-      AVF.mount(menuEl, row); place();
+      wrapG.classList.add("still"); AVF.mount(menuEl, row); place();
+      requestAnimationFrame(function () { requestAnimationFrame(function () { wrapG.classList.remove("still"); }); });   // ilk çizimde açılma animasyonu oynamaz
       if (!menuEl._mq) { menuEl._mq = true; var pl = function () { paintMenu(); }; if (mqMob.addEventListener) mqMob.addEventListener("change", pl); else if (mqMob.addListener) mqMob.addListener(pl); }
       // mobilde etkin sekme görünür alana kaydırılır
-      setTimeout(function () { var cur = row.querySelector("[aria-current]"); if (mqMob.matches && cur && row.scrollWidth > row.clientWidth) row.scrollLeft = Math.max(0, cur.offsetLeft - 16); }, 0);
+      setTimeout(function () {
+        if (!mqMob.matches) return;
+        var cur = row.querySelector(":scope > a[aria-current]") || (onKind || sub === "" ? head : null);
+        if (cur && row.scrollWidth > row.clientWidth) row.scrollLeft = Math.max(0, cur.offsetLeft - 16);
+        var sc = group.querySelector("[aria-current]"); if (sc && group.scrollWidth > group.clientWidth) group.scrollLeft = Math.max(0, sc.offsetLeft - 16);
+      }, 0);
     }
     function draw() {
       paintMenu();

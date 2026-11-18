@@ -150,7 +150,7 @@
   // ---------- KAYIT KODU ----------
   function regCode(msg) {
     shell(); var v = view("E-postanızı doğrulayın", msg || "E-posta adresinize 6 haneli bir doğrulama kodu gönderdik. Kod 5 dakika geçerlidir.");
-    var code = AVF.input("text", { class: "codeinp", inputmode: "numeric", autocomplete: "one-time-code", maxlength: "6", placeholder: "••••••", "aria-label": "Doğrulama kodu" });
+    var code = AVF.codeInput({ "aria-label": "Doğrulama kodu" });
     var box = h("div"); var btn = h("button", { class: "btn block", type: "submit" }, "Doğrula");
     var resend = h("button", { type: "button", class: "lnk", onclick: function () {
       AVF.api("POST", "/auth/register/resend", { userId: S.userId }).then(function () { AVF.toast("Yeni kod gönderildi."); err(box, ""); }, function (e) { err(box, AVF.errText(e)); });
@@ -169,7 +169,7 @@
   // ---------- İKİNCİ ADIM: Authenticator / kurtarma kodu ----------
   function totp(useRecovery) {
     shell(); var v = view("İki adımlı doğrulama", useRecovery ? "Hesabınızın 12 karakterli kurtarma kodlarından birini girin. Her kod yalnız bir kez kullanılır." : "Google Authenticator uygulamanızdaki 6 haneli kodu girin.");
-    var code = AVF.input("text", useRecovery ? { autocomplete: "off", maxlength: "20", autocapitalize: "characters", placeholder: "Kurtarma kodu", spellcheck: "false" } : { class: "codeinp", inputmode: "numeric", autocomplete: "one-time-code", maxlength: "6", placeholder: "••••••" });
+    var code = useRecovery ? AVF.input("text", { autocomplete: "off", maxlength: "20", autocapitalize: "characters", placeholder: "Kurtarma kodu", spellcheck: "false" }) : AVF.codeInput({});
     var box = h("div"); var btn = h("button", { class: "btn block", type: "submit" }, "Doğrula");
     v.appendChild(h("form", { novalidate: true, onsubmit: function (e) {
       e.preventDefault(); err(box, ""); var val = code.value.trim();
@@ -198,7 +198,7 @@
   }
   function resetCode(msg) {
     shell(); var v = view("Kodu girin", msg || "E-postanıza gelen 6 haneli kodu girin veya e-postadaki bağlantıya tıklayın. Kod 15 dakika geçerlidir.");
-    var code = AVF.input("text", { class: "codeinp", inputmode: "numeric", autocomplete: "one-time-code", maxlength: "6", placeholder: "••••••" });
+    var code = AVF.codeInput({ });
     var box = h("div"); var btn = h("button", { class: "btn block", type: "submit" }, "Devam");
     v.appendChild(h("form", { novalidate: true, onsubmit: function (e) {
       e.preventDefault(); err(box, ""); if (!/^\d{6}$/.test(code.value)) return err(box, "Lütfen 6 haneli kodu girin.");

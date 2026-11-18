@@ -31,6 +31,13 @@ r = await M1.c.call("PUT", "/profile", { workHours: "gece", healthConsent: true 
 r = await up(M1, "profile", "tahlil.png", PNG, "image/png"); chk("rıza yokken kişisel bilgi eki reddedilir", r.status === 400 && r.body.code === "consent_required", r);
 r = await M1.c.call("PUT", "/profile", { workHours: "09:00-18:00", heightCm: 180, healthConsent: true }); chk("çalışma saati kaydedilir", r.status === 200 && r.body.work_hours === "09:00-18:00", r);
 r = await M1.c.call("PUT", "/profile", { workHours: "shift", heightCm: 180 }); chk("vardiyalı düzen kaydedilir", r.status === 200 && r.body.work_hours === "shift", r);
+r = await M1.c.call("PUT", "/profile", { workHours: "shift", workSchedule: { mon: "08:00-16:00", sat: "22:00-06:00" }, workNote: "İki hafta gece vardiyası", heightCm: 180 });
+chk("vardiyalıda gün gün saat ve not kaydedilir", r.status === 200 && r.body.work_schedule.sat === "22:00-06:00" && r.body.work_note === "İki hafta gece vardiyası", r.body);
+r = await M1.c.call("PUT", "/profile", { workHours: "shift", workSchedule: { xyz: "08:00-16:00" }, heightCm: 180 }); chk("bilinmeyen gün anahtarı reddedilir", r.status === 400, r);
+r = await M1.c.call("PUT", "/profile", { workHours: "flexible", workSchedule: { mon: "08:00-08:00" }, heightCm: 180 }); chk("gün içinde başlangıç = bitiş reddedilir", r.status === 400, r);
+r = await M1.c.call("PUT", "/profile", { workHours: "flexible", workSchedule: ["x"], heightCm: 180 }); chk("dizi biçimli çizelge reddedilir", r.status === 400, r);
+r = await M1.c.call("PUT", "/profile", { workHours: "none", workNote: "x".repeat(301), heightCm: 180 }); chk("300 karakteri aşan not reddedilir", r.status === 400, r);
+r = await M1.c.call("PUT", "/profile", { workHours: "09:00-18:00", workSchedule: { mon: "08:00-16:00" }, workNote: "yok sayılır", heightCm: 180 }); chk("sabit saatte çizelge/not saklanmaz", r.status === 200 && r.body.work_schedule === null && r.body.work_note === null, r.body);
 
 // ---- tür / içerik / boyut doğrulaması ----
 r = await up(M1, "profile", "virus.exe", EXE); chk("izin verilmeyen uzantı reddedilir", r.status === 400, r);

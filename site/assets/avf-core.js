@@ -256,12 +256,35 @@
   };
   AVF.field = function (label, input, opts) {
     opts = opts || {};
-    return AVF.h("div", { class: "field" }, AVF.h("label", { for: input.id }, opts.icon ? AVF.h("span", { class: "tile" }, AVF.icon(opts.icon)) : null, label, opts.optional ? null : AVF.h("span", { class: "req", text: "Zorunlu" })), input, opts.hint ? AVF.h("p", { class: "hint", text: opts.hint }) : null);
+    return AVF.h("div", { class: "field" }, AVF.h("label", { for: (input.input || input).id }, opts.icon ? AVF.h("span", { class: "tile" }, AVF.icon(opts.icon)) : null, label, opts.optional ? null : AVF.h("span", { class: "req", text: "Zorunlu" })), input, opts.hint ? AVF.h("p", { class: "hint", text: opts.hint }) : null);
   };
   var uid = 0;
   AVF.input = function (type, attrs) {
     attrs = attrs || {}; attrs.id = attrs.id || "f" + ++uid; attrs.class = "inp" + (attrs.class ? " " + attrs.class : ""); attrs.type = type;
     return AVF.h("input", attrs);
+  };
+  // Doğrulama kodu alanı: yalnız rakam; boşluklu/tireli/metin içinde gelen kod yapıştırılınca ilk 6 rakam alınır (maxlength
+  // yapıştırılan metni ÖNCEDEN kırpıp kodu bozmasın diye kullanılmaz). Yanında "Panodan yapıştır" düğmesi vardır (tarayıcı izin verirse).
+  function codeDigits(t) { t = String(t || ""); var m = /(^|\D)(\d{6})(?!\d)/.exec(t); return m ? m[2] : t.replace(/\D/g, "").slice(0, 6); }
+  AVF.codeInput = function (attrs) {
+    attrs = attrs || {}; attrs.class = "codeinp" + (attrs.class ? " " + attrs.class : ""); attrs.inputmode = "numeric"; attrs.autocomplete = "one-time-code";
+    attrs.placeholder = attrs.placeholder || "••••••"; attrs.spellcheck = "false"; attrs.autocapitalize = "off";
+    var inp = AVF.input("text", attrs);
+    function set(v) { inp.value = codeDigits(v); inp.dispatchEvent(new Event("change")); }
+    inp.addEventListener("paste", function (e) { var t = e.clipboardData && e.clipboardData.getData("text"); if (t) { e.preventDefault(); set(t); } });
+    inp.addEventListener("input", function () { var c = inp.value.replace(/\D/g, ""); if (c.length > 6) c = codeDigits(inp.value); if (c !== inp.value) inp.value = c; });
+    var canRead = !!(navigator.clipboard && navigator.clipboard.readText);
+    var pb = canRead ? AVF.h("button", { class: "code-paste", type: "button", onclick: function () {
+      navigator.clipboard.readText().then(function (t) {
+        var c = codeDigits(t);
+        if (c.length !== 6) return AVF.toast("Panoda 6 haneli bir kod bulunamadı.", "err");
+        set(c); AVF.toast("Kod yapıştırıldı.");
+      }, function () { AVF.toast("Tarayıcı panoya erişim izni vermedi; kodu alana uzun basıp yapıştırabilirsiniz.", "err"); });
+    } }, AVF.icon("clipboard"), AVF.h("span", { text: "Panodan yapıştır" })) : null;
+    var w = AVF.h("div", { class: "codewrap" }, inp, pb); w.input = inp;
+    Object.defineProperty(w, "value", { get: function () { return inp.value; }, set: function (v) { inp.value = v; } });
+    w.focus = function () { inp.focus(); };
+    return w;
   };
   AVF.passwordInput = function (attrs) {
     var inp = AVF.input("password", attrs); var shown = false;
@@ -283,6 +306,23 @@
   };
   // Açılır pencerelerde arka plan kaymaz: sayfa konumu sabitlenir (iOS dahil), masaüstünde kaydırma çubuğu genişliği korunur.
   var lockN = 0, lockY = 0;
+  // Mobil klavye açıkken görünen alan (visual viewport) küçülür ve kayar; pencere örtüsü bu alana oturtulur ki başlık/düğme
+  // ekran dışına taşmasın ve arkadaki sayfa (ör. siyah alt bilgi) pencerenin altından görünüp "karışmasın".
+  var vvH = null;
+  function vvSync() {
+    var v = window.visualViewport, de = document.documentElement; if (!v) return;
+    de.style.setProperty("--vvh", v.height + "px"); de.style.setProperty("--vvt", v.offsetTop + "px");
+  }
+  function vvOn(on) {
+    var v = window.visualViewport; if (!v) return;
+    if (on) { if (vvH) return; vvH = vvSync; v.addEventListener("resize", vvH); v.addEventListener("scroll", vvH); vvSync(); }
+    else { if (!vvH) return; v.removeEventListener("resize", vvH); v.removeEventListener("scroll", vvH); vvH = null; document.documentElement.style.removeProperty("--vvh"); document.documentElement.style.removeProperty("--vvt"); }
+  }
+  // Pencere içindeki bir alana odaklanınca (klavye açılınca) alan pencerenin içinde görünür konuma kaydırılır.
+  document.addEventListener("focusin", function (e) {
+    var t = e.target; if (!t || !t.closest || !t.closest(".dlg") || !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    setTimeout(function () { vvSync(); try { t.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (x) { /* eski tarayıcı */ } }, 320);
+  });
   AVF.lockScroll = function (on) {
     var b = document.body, de = document.documentElement;
     if (on) {
@@ -290,17 +330,20 @@
       lockY = window.scrollY || 0; var sw = window.innerWidth - de.clientWidth;
       b.style.position = "fixed"; b.style.top = -lockY + "px"; b.style.left = "0"; b.style.right = "0"; b.style.width = "100%";
       if (sw > 0) b.style.paddingRight = sw + "px";
-      de.classList.add("locked");
+      de.classList.add("locked"); vvOn(true);
     } else {
       if (lockN === 0 || --lockN > 0) return;
       b.style.position = b.style.top = b.style.left = b.style.right = b.style.width = b.style.paddingRight = "";
-      de.classList.remove("locked"); de.style.scrollBehavior = "auto"; window.scrollTo(0, lockY); de.style.scrollBehavior = "";
+      de.classList.remove("locked"); vvOn(false); de.style.scrollBehavior = "auto"; window.scrollTo(0, lockY); de.style.scrollBehavior = "";
     }
   };
+  // Düğme meşgul durumu. Kapatılırken (on=false) etiket verilmese de ÖNCEKİ İÇERİK HER ZAMAN geri yüklenir — aksi hâlde hata
+  // sonrası düğme "Kaydediliyor…/Doğrulanıyor…" yazısında takılı kalıyordu.
   AVF.busy = function (btn, on, label) {
     btn.disabled = !!on;
+    if (!on && btn._kids) { AVF.clear(btn); btn._kids.forEach(function (k) { btn.appendChild(k); }); btn._kids = null; return; }
     if (label === undefined) return;
-    if (on) { btn._kids = Array.prototype.slice.call(btn.childNodes); AVF.clear(btn); btn.appendChild(document.createTextNode(label)); }
+    if (on) { if (btn._kids) return; btn._kids = Array.prototype.slice.call(btn.childNodes); AVF.clear(btn); btn.appendChild(document.createTextNode(label)); }
     else if (btn._kids) { AVF.clear(btn); btn._kids.forEach(function (k) { btn.appendChild(k); }); btn._kids = null; }
   };
 
@@ -456,35 +499,128 @@
     paint(); return el;
   };
 
-  // Çalışma saati: düzen (sabit / vardiyalı / esnek / çalışmıyorum) + sabit düzende başlangıç ve bitiş saati (30 dakikalık).
-  AVF.workHours = function (value, onChange) {
-    var h = AVF.h, times = []; for (var i = 0; i < 48; i++) times.push(String(Math.floor(i / 2)).padStart(2, "0") + ":" + (i % 2 ? "30" : "00"));
-    function sel(label) { var s = h("select", { class: "inp", "aria-label": label }, h("option", { value: "" }, label)); times.forEach(function (t) { s.appendChild(h("option", { value: t }, t)); }); return s; }
-    var st = sel("Başlangıç"), en = sel("Bitiş"), msg = h("small", { class: "ms-h" });
-    var range = h("div", { class: "wh-range" }, h("span", { class: "tile" }, AVF.icon("clock")), st, h("span", { class: "wh-dash", text: "—" }), en);
-    var mode = AVF.choice({ label: "Çalışma düzeni", cols: 4, clearable: true, items: [{ value: "fixed", label: "Sabit saatler", icon: "clock" }, { value: "shift", label: "Vardiyalı", icon: "refresh" }, { value: "flexible", label: "Esnek", icon: "timer" }, { value: "none", label: "Çalışmıyorum", icon: "pause" }],
-      onChange: function () { paint(); if (onChange) onChange(); } });
-    var rw = h("div", { class: "wh-wrap" }, h("div", { class: "wh-in" }, range, msg));
-    var el = h("div", { class: "wh" }, mode, rw);
-    function paint() {
-      rw.classList.toggle("open", mode.get() === "fixed");
-      msg.textContent = mode.get() === "fixed" && st.value && en.value && st.value === en.value ? "Başlangıç ve bitiş saati aynı olamaz." : "";
-      msg.className = "ms-h" + (msg.textContent ? " bad" : "");
+  // Logolu açılır liste (tek seçim). Yerel <select> seçeneklerinde ikon gösterilemediği için erişilebilir bir liste kutusu:
+  // ok tuşları, Enter/Boşluk, Esc, Home/End; dışarı tıklayınca kapanır. items: [{ value, label, icon, level (0–1, isteğe bağlı) }]
+  var ddN = 0;
+  AVF.iconSelect = function (o) {
+    var h = AVF.h, id = "dd" + ++ddN, val = o.value || "", open = false, act = -1;
+    var items = [{ value: "", label: o.placeholder || "Seçiniz", icon: o.icon || "list", empty: true }].concat(o.items);
+    function lvl(it) { if (it.level === undefined) return null; var n = Math.round(it.level * 5) + 1; return h("span", { class: "dd-lvl", "aria-hidden": "true" }, [1, 2, 3, 4, 5, 6].map(function (i) { return h("i", { class: i <= n ? "on" : "" }); })); }
+    function face(it) { return [h("span", { class: "dd-ic" + (it.empty ? " empty" : "") }, AVF.icon(it.icon)), h("span", { class: "dd-t", text: it.label }), lvl(it)]; }
+    var btn = h("button", { class: "dd-btn inp", type: "button", "aria-haspopup": "listbox", "aria-expanded": "false", "aria-controls": id + "l", id: id, "aria-label": o.label });
+    var list = h("ul", { class: "dd-list", role: "listbox", id: id + "l", tabindex: "-1", "aria-label": o.label, hidden: "" });
+    var el = h("div", { class: "dd" }, btn, list);
+    function cur() { for (var i = 0; i < items.length; i++) if (items[i].value === val) return items[i]; return items[0]; }
+    function paintBtn() { var it = cur(); AVF.mount(btn, face(it), AVF.icon("chev", "dd-c")); btn.classList.toggle("empty", !val); }
+    function paintList() {
+      AVF.mount(list, items.map(function (it, i) {
+        var li = h("li", { role: "option", id: id + "o" + i, class: "dd-o" + (i === act ? " act" : "") + (it.empty ? " clear" : ""), "aria-selected": it.value === val ? "true" : "false" }, face(it), it.value === val && !it.empty ? AVF.icon("check", "dd-ok") : null);
+        li.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        li.addEventListener("click", function () { choose(i); });
+        return li;
+      }));
+      if (act >= 0) { list.setAttribute("aria-activedescendant", id + "o" + act); var a = list.children[act]; if (a && a.scrollIntoView) a.scrollIntoView({ block: "nearest" }); }
     }
-    [st, en].forEach(function (x) { x.addEventListener("change", function () { paint(); if (onChange) onChange(); }); });
+    function away(e) { if (!el.contains(e.target)) close(); }
+    function show() {
+      if (open) return; open = true; act = Math.max(0, items.indexOf(cur())); list.hidden = false; btn.setAttribute("aria-expanded", "true"); el.classList.add("open");
+      // aşağıda yer yoksa yukarı açılır
+      var r = btn.getBoundingClientRect(), vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+      el.classList.toggle("up", vh - r.bottom < 300 && r.top > vh - r.bottom);
+      paintList(); document.addEventListener("pointerdown", away, true);
+    }
+    function close() { if (!open) return; open = false; list.hidden = true; btn.setAttribute("aria-expanded", "false"); el.classList.remove("open"); document.removeEventListener("pointerdown", away, true); }
+    function choose(i) { var nv = items[i].value; var ch = nv !== val; val = nv; paintBtn(); close(); btn.focus(); if (ch && o.onChange) o.onChange(val); }
+    btn.addEventListener("click", function () { if (open) close(); else show(); });
+    btn.addEventListener("keydown", function (e) {
+      var k = e.key;
+      if (!open && (k === "ArrowDown" || k === "ArrowUp" || k === "Enter" || k === " ")) { e.preventDefault(); show(); return; }
+      if (!open) return;
+      if (k === "Escape") { e.preventDefault(); close(); }
+      else if (k === "ArrowDown") { e.preventDefault(); act = Math.min(items.length - 1, act + 1); paintList(); }
+      else if (k === "ArrowUp") { e.preventDefault(); act = Math.max(0, act - 1); paintList(); }
+      else if (k === "Home") { e.preventDefault(); act = 0; paintList(); }
+      else if (k === "End") { e.preventDefault(); act = items.length - 1; paintList(); }
+      else if (k === "Enter" || k === " ") { e.preventDefault(); choose(act); }
+      else if (k === "Tab") close();
+    });
+    el.get = function () { return val; };
+    el.set = function (v) { val = v || ""; if (!items.some(function (it) { return it.value === val; })) val = ""; paintBtn(); };
+    paintBtn(); return el;
+  };
+
+  // Çalışma saati: düzen (sabit / vardiyalı / esnek / çalışmıyorum).
+  //   • Sabit → başlangıç ve bitiş saati (30 dakikalık).
+  //   • Diğerleri → isteğe bağlı gün gün saat (Pazartesi–Pazar) ve kısa not.
+  var DAYS = [["mon", "Pazartesi"], ["tue", "Salı"], ["wed", "Çarşamba"], ["thu", "Perşembe"], ["fri", "Cuma"], ["sat", "Cumartesi"], ["sun", "Pazar"]];
+  AVF.WORK_DAYS = DAYS;
+  AVF.workHours = function (value, onChange, schedule, note) {
+    var h = AVF.h, times = []; for (var i = 0; i < 48; i++) times.push(String(Math.floor(i / 2)).padStart(2, "0") + ":" + (i % 2 ? "30" : "00"));
+    function sel(label) { var s = h("select", { class: "inp", "aria-label": label }, h("option", { value: "" }, "--:--")); times.forEach(function (t) { s.appendChild(h("option", { value: t }, t)); }); return s; }
+    function fire() { if (onChange) onChange(); }
+    var st = sel("Başlangıç"), en = sel("Bitiş"), msg = h("small", { class: "ms-h" });
+    var range = h("div", { class: "wh-range" },
+      h("label", { class: "wh-t" }, h("span", { class: "wh-l" }, AVF.icon("clock"), "Başlangıç"), st),
+      h("label", { class: "wh-t" }, h("span", { class: "wh-l" }, AVF.icon("clock"), "Bitiş"), en));
+    // gün gün
+    var rows = DAYS.map(function (d) {
+      var cb = h("input", { type: "checkbox", "aria-label": d[1] }), a = sel(d[1] + " başlangıç"), b = sel(d[1] + " bitiş");
+      var r = h("div", { class: "wd" }, h("label", { class: "wd-d" }, cb, h("span", { text: d[1] })), h("div", { class: "wd-t" }, a, h("span", { class: "wh-dash", text: "–" }), b));
+      function sync() { r.classList.toggle("on", cb.checked); a.disabled = b.disabled = !cb.checked; }
+      cb.addEventListener("change", function () { if (cb.checked && !a.value) { a.value = "09:00"; b.value = "17:00"; } sync(); paint(); fire(); });
+      [a, b].forEach(function (x) { x.addEventListener("change", function () { paint(); fire(); }); });
+      return { key: d[0], name: d[1], cb: cb, a: a, b: b, el: r, sync: sync };
+    });
+    var noteIn = h("textarea", { class: "inp", rows: "3", maxlength: "300", placeholder: "Örn. İki hafta gece, iki hafta gündüz vardiyası; hafta sonları değişken…" });
+    var noteCnt = h("span", { class: "cnt", text: "0/300" });
+    noteIn.addEventListener("input", function () { noteCnt.textContent = noteIn.value.length + "/300"; fire(); });
+    var days = h("div", { class: "wh-days" },
+      h("p", { class: "wh-sub" }, AVF.icon("calendar"), h("span", { text: "Gün gün saat belirtin (isteğe bağlı)" })),
+      h("div", { class: "wd-list" }, rows.map(function (r) { return r.el; })),
+      h("p", { class: "wh-sub" }, AVF.icon("notes"), h("span", { text: "Not (isteğe bağlı)" })), noteIn, noteCnt);
+    var mode = AVF.choice({ label: "Çalışma düzeni", cols: 4, clearable: true, items: [{ value: "fixed", label: "Sabit saatler", icon: "clock" }, { value: "shift", label: "Vardiyalı", icon: "refresh" }, { value: "flexible", label: "Esnek", icon: "timer" }, { value: "none", label: "Çalışmıyorum", icon: "pause" }],
+      onChange: function () { paint(); fire(); } });
+    var rw = h("div", { class: "wh-wrap" }, h("div", { class: "wh-in" }, range)), dw = h("div", { class: "wh-wrap" }, h("div", { class: "wh-in" }, days));
+    var el = h("div", { class: "wh" }, mode, rw, dw, msg);
+    function badDay() { for (var i = 0; i < rows.length; i++) { var r = rows[i]; if (r.cb.checked && (!r.a.value || !r.b.value || r.a.value === r.b.value)) return r.name; } return ""; }
+    function paint() {
+      var m = mode.get();
+      rw.classList.toggle("open", m === "fixed"); dw.classList.toggle("open", !!m && m !== "fixed");
+      var t = "";
+      if (m === "fixed" && st.value && en.value && st.value === en.value) t = "Başlangıç ve bitiş saati aynı olamaz.";
+      else if (m && m !== "fixed" && badDay()) t = badDay() + " için başlangıç ve bitiş saatini seçin (aynı olamaz).";
+      msg.textContent = t; msg.className = "ms-h" + (t ? " bad" : "");
+    }
     el.get = function () { var m = mode.get(); if (m !== "fixed") return m || ""; return st.value && en.value && st.value !== en.value ? st.value + "-" + en.value : ""; };
-    el.incomplete = function () { return mode.get() === "fixed" && !el.get(); };
-    el.set = function (v) {
+    el.schedule = function () {
+      var m = mode.get(); if (!m || m === "fixed") return null;
+      var o2 = {}, any = false; rows.forEach(function (r) { if (r.cb.checked && r.a.value && r.b.value && r.a.value !== r.b.value) { o2[r.key] = r.a.value + "-" + r.b.value; any = true; } });
+      return any ? o2 : null;
+    };
+    el.note = function () { var m = mode.get(); return m && m !== "fixed" ? noteIn.value.trim() : ""; };
+    el.incomplete = function () { var m = mode.get(); return (m === "fixed" && !el.get()) ? "Çalışma saatiniz için başlangıç ve bitiş saatini seçin." : (m && m !== "fixed" && badDay()) ? badDay() + " için başlangıç ve bitiş saatini seçin (aynı olamaz)." : ""; };
+    function setSchedule(sc) {
+      rows.forEach(function (r) { var v = sc && sc[r.key]; var q = /^(\d\d:\d\d)-(\d\d:\d\d)$/.exec(v || ""); r.cb.checked = !!q; r.a.value = q ? q[1] : ""; r.b.value = q ? q[2] : ""; r.sync(); });
+    }
+    el.set = function (v, sc, nt) {
       v = v || ""; var r = /^(\d\d:\d\d)-(\d\d:\d\d)$/.exec(v);
       if (r) { mode.set("fixed"); st.value = r[1]; en.value = r[2]; } else if (v.indexOf("fixed|") === 0) { var q = v.split("|"); mode.set("fixed"); st.value = q[1] || ""; en.value = q[2] || ""; } else { mode.set(v); st.value = ""; en.value = ""; }
+      setSchedule(sc || null); noteIn.value = nt || ""; noteCnt.textContent = noteIn.value.length + "/300";
       paint();
     };
-    el.raw = function () { return mode.get() === "fixed" ? "fixed|" + st.value + "|" + en.value : mode.get(); };
-    el.set(value); return el;
+    el.raw = function () {
+      var sc = {}; rows.forEach(function (r) { if (r.cb.checked) sc[r.key] = r.a.value + "-" + r.b.value; });
+      return { v: mode.get() === "fixed" ? "fixed|" + st.value + "|" + en.value : mode.get(), sc: sc, n: noteIn.value };
+    };
+    el.setRaw = function (o2) { if (!o2) return; if (typeof o2 === "string") return el.set(o2); el.set(o2.v || "", o2.sc, o2.n); };
+    [st, en].forEach(function (x) { x.addEventListener("change", function () { paint(); fire(); }); });
+    el.set(value, schedule, note); return el;
   };
-  AVF.workText = function (v) {
-    if (!v) return ""; if (v === "shift") return "Vardiyalı"; if (v === "flexible") return "Esnek"; if (v === "none") return "Çalışmıyor";
-    return v.replace("-", " – ");
+  AVF.workText = function (v, sc, nt) {
+    if (!v) return ""; var t = v === "shift" ? "Vardiyalı" : v === "flexible" ? "Esnek" : v === "none" ? "Çalışmıyor" : v.replace("-", " – ");
+    if (sc) { var parts = DAYS.filter(function (d) { return sc[d[0]]; }).map(function (d) { return d[1] + " " + sc[d[0]].replace("-", "–"); }); if (parts.length) t += " · " + parts.join(", "); }
+    if (nt) t += " · Not: " + nt;
+    return t;
   };
 
   // Dosya ekleri — kurallar sunucuyla aynı: PNG, JPG, JPEG, PDF, XLSX, DOCX; dosya başına 4 MB; en fazla 4 dosya.

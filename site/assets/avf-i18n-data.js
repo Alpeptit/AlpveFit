@@ -4,6 +4,25 @@
   var AVF = (window.AVF = window.AVF || {});
   AVF.DICT = AVF.DICT || {}; AVF.PATTERNS = AVF.PATTERNS || [];
   var D = {
+    "Panodan yapıştır": "Paste from clipboard",
+    "Kod yapıştırıldı.": "Code pasted.",
+    "Panoda 6 haneli bir kod bulunamadı.": "No 6-digit code found on the clipboard.",
+    "Tarayıcı panoya erişim izni vermedi; kodu alana uzun basıp yapıştırabilirsiniz.": "The browser did not allow clipboard access; long-press the field to paste the code.",
+    "Gün gün saat belirtin (isteğe bağlı)": "Set hours day by day (optional)",
+    "Not (isteğe bağlı)": "Note (optional)",
+    "Örn. İki hafta gece, iki hafta gündüz vardiyası; hafta sonları değişken…": "E.g. two weeks night shift, two weeks day shift; weekends vary…",
+    "Pazartesi": "Monday",
+    "Salı": "Tuesday",
+    "Çarşamba": "Wednesday",
+    "Perşembe": "Thursday",
+    "Cuma": "Friday",
+    "Cumartesi": "Saturday",
+    "Pazar": "Sunday",
+    "Kan grubunuzu seçin": "Select your blood type",
+    "Adım aralığınızı seçin": "Select your step range",
+    "Çalışma notu en fazla 300 karakter olabilir.": "The work note can be at most 300 characters.",
+    "Gün gün çalışma saati geçersiz.": "Invalid day-by-day working hours.",
+    "Gün gün çalışma saati geçersiz; her gün için başlangıç ve bitiş saatini seçin.": "Invalid day-by-day working hours; select a start and end time for each day.",
     "Kişisel Bilgiler": "Personal Info",
     "Güvenli Çıkış Yap": "Sign out securely",
     "Plan bölümlerini aç/kapat": "Expand/collapse plan sections",
@@ -1327,6 +1346,9 @@
 };
   for (var k in D) if (Object.prototype.hasOwnProperty.call(D, k)) AVF.DICT[k] = D[k];
   AVF.PATTERNS.push(
+    [/^(.+) için başlangıç ve bitiş saatini seçin \(aynı olamaz\)\.$/, function (m, d) { var M = { "Pazartesi": "Monday", "Salı": "Tuesday", "Çarşamba": "Wednesday", "Perşembe": "Thursday", "Cuma": "Friday", "Cumartesi": "Saturday", "Pazar": "Sunday" }; return "Select a start and end time for " + (M[d] || d) + " (they cannot be the same)."; }],
+    [/^(A|B|AB|0)([+-]) · Rh (pozitif|negatif)$/, function (m, a, b, c) { return a + b + " · Rh " + (c === "pozitif" ? "positive" : "negative"); }],
+    [/^([\d.]+ – [\d.]+|10\.000\+) adım$/, "$1 steps"],
     [/^(Boy|Kilo) (\d+)–(\d+) (cm|kg|inç|lbs) arasında olmalıdır\.$/, function (m, a, b, c, u) { return (a === "Boy" ? "Height" : "Weight") + " must be between " + b + " and " + c + " " + (u === "inç" ? "in" : u) + "."; }],
     [/^(\d+) (Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık) (\d{4}) · (\d+) yaş$/, function (m, d, mo, y, a) { var M = { "Ocak": "January", "Şubat": "February", "Mart": "March", "Nisan": "April", "Mayıs": "May", "Haziran": "June", "Temmuz": "July", "Ağustos": "August", "Eylül": "September", "Ekim": "October", "Kasım": "November", "Aralık": "December" }; return d + " " + M[mo] + " " + y + " · " + a + " years old"; }],
     [/^PNG, JPG, JPEG, PDF, XLSX, DOCX · en fazla 4 MB · en fazla (\d+) dosya$/, "PNG, JPG, JPEG, PDF, XLSX, DOCX · up to 4 MB · up to $1 files"],

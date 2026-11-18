@@ -201,11 +201,6 @@
   var STEPS = [["0-2000", "0 – 2.000"], ["2000-4000", "2.000 – 4.000"], ["4000-6000", "4.000 – 6.000"], ["6000-8000", "6.000 – 8.000"], ["8000-10000", "8.000 – 10.000"], ["10000+", "10.000+"]];
   var GOALS = [["Yağ Yakımı", "flame"], ["Kas Kazanımı", "muscle"], ["Güç Artışı", "bolt"]];
   function psec(icon, title, sub, kids) { return h("section", { class: "card psec" }, h("div", { class: "psh" }, h("span", { class: "tile" }, AVF.icon(icon)), h("span", { class: "t" }, h("b", { text: title }), sub ? h("small", { text: sub }) : null)), h("div", { class: "psb" }, kids)); }
-  function iconSelect(icon, label, opts, value) {
-    var s = h("select", { class: "inp", "aria-label": label }, h("option", { value: "" }, "Seçiniz"), opts.map(function (o) { return h("option", { value: o }, o); }));
-    s.value = value || "";
-    return { el: h("div", { class: "isel" }, AVF.icon(icon, "isel-i"), s, AVF.icon("chev", "isel-c")), sel: s };
-  }
   AVF.profileView = function (el) {
     AVF.mount(el, h("h2", { class: "ptitle", text: "Kişisel Bilgiler" }), AVF.skeleton(2));
     Promise.all([AVF.api("GET", "/profile"), AVF.api("GET", "/uploads/profile").then(null, function () { return []; })]).then(function (res) {
@@ -213,12 +208,12 @@
       function changed() { if (!restoring) D.set(snapshot()); }
       f.gender = AVF.choice({ label: "Cinsiyet", value: P.gender || "", clearable: true, onChange: changed, items: [{ value: "female", label: "Kadın", icon: "female" }, { value: "male", label: "Erkek", icon: "male" }] });
       f.birth = AVF.dateSelect(P.birth_date || "", 14, changed);
-      f.work = AVF.workHours(P.work_hours || "", changed);
+      f.work = AVF.workHours(P.work_hours || "", changed, P.work_schedule || null, P.work_note || "");
       f.height = AVF.measure("height", P.height_cm, changed);
       f.weight = AVF.measure("weight", P.weight_kg, changed);
-      var bs = iconSelect("drop", "Kan grubu", BLOOD, P.blood_type); f.blood = bs.sel; f.blood.addEventListener("change", changed);
+      f.blood = AVF.iconSelect({ label: "Kan grubu", icon: "drop", placeholder: "Kan grubunuzu seçin", value: P.blood_type || "", onChange: changed, items: BLOOD.map(function (x) { return { value: x, label: x + (x.slice(-1) === "+" ? " · Rh pozitif" : " · Rh negatif"), icon: "drop" }; }) });
       f.goal = AVF.choice({ label: "Hedefiniz", value: P.goal || "", clearable: true, onChange: changed, items: GOALS.map(function (g) { return { value: g[0], label: g[0], icon: g[1] }; }) });
-      f.steps = AVF.choice({ label: "Günlük ortalama adım sayısı", value: P.steps_range || "", clearable: true, cols: 3, onChange: changed, items: STEPS.map(function (x) { return { value: x[0], label: x[1], icon: "steps" }; }) });
+      f.steps = AVF.iconSelect({ label: "Günlük ortalama adım sayısı", icon: "steps", placeholder: "Adım aralığınızı seçin", value: P.steps_range || "", onChange: changed, items: STEPS.map(function (x, i) { return { value: x[0], label: x[1] + " adım", icon: "steps", level: i / (STEPS.length - 1) }; }) });
       f.occupation = AVF.input("text", { value: P.occupation || "", maxlength: "80", autocomplete: "organization-title", placeholder: "Mesleğiniz" });
       f.notes = h("textarea", { class: "inp", id: "pf-notes", maxlength: "1000", rows: "4", placeholder: "Kronik hastalık, yaralanma, kullandığınız ilaçlar gibi koçunuzun bilmesi gereken bilgiler" }, P.health_notes || "");
       var cnt = h("span", { class: "cnt", text: "0/1000" });
@@ -228,16 +223,16 @@
       f.files = AVF.fileBox({ scope: "profile", files: res[1] || [], locked: consented ? "" : "Dosya eklemek için önce açık rızanızı onaylayıp bilgilerinizi kaydedin." });
 
       function snapshot() {
-        return { gender: f.gender.get(), birth: f.birth.raw(), work: f.work.raw(), height: f.height.raw(), weight: f.weight.raw(), blood: f.blood.value, goal: f.goal.get(), steps: f.steps.get(), occupation: f.occupation.value, notes: f.notes.value, consent: consent.checked };
+        return { gender: f.gender.get(), birth: f.birth.raw(), work: f.work.raw(), height: f.height.raw(), weight: f.weight.raw(), blood: f.blood.get(), goal: f.goal.get(), steps: f.steps.get(), occupation: f.occupation.value, notes: f.notes.value, consent: consent.checked };
       }
       function apply(d) {
         restoring = true;
-        f.gender.set(d.gender || ""); f.birth.set(d.birth || ""); f.work.set(d.work || ""); f.height.setRaw(d.height); f.weight.setRaw(d.weight);
-        f.blood.value = d.blood || ""; f.goal.set(d.goal || ""); f.steps.set(d.steps || ""); f.occupation.value = d.occupation || ""; f.notes.value = d.notes || ""; consent.checked = !!d.consent; count();
+        f.gender.set(d.gender || ""); f.birth.set(d.birth || ""); f.work.setRaw(d.work || ""); f.height.setRaw(d.height); f.weight.setRaw(d.weight);
+        f.blood.set(d.blood || ""); f.goal.set(d.goal || ""); f.steps.set(d.steps || ""); f.occupation.value = d.occupation || ""; f.notes.value = d.notes || ""; consent.checked = !!d.consent; count();
         restoring = false;
       }
       function payload() {
-        return { heightCm: f.height.getMetric(), weightKg: f.weight.getMetric(), birthDate: f.birth.get(), gender: f.gender.get(), stepsRange: f.steps.get(), workHours: f.work.get(), bloodType: f.blood.value,
+        return { heightCm: f.height.getMetric(), weightKg: f.weight.getMetric(), birthDate: f.birth.get(), gender: f.gender.get(), stepsRange: f.steps.get(), workHours: f.work.get(), workSchedule: f.work.schedule(), workNote: f.work.note(), bloodType: f.blood.get(),
           occupation: f.occupation.value.trim(), goal: f.goal.get(), healthNotes: f.notes.value.trim() };
       }
       var consent = h("input", { type: "checkbox", id: "pf-consent" }); consent.addEventListener("change", changed);
@@ -256,7 +251,7 @@
           h("div", { class: "fgrid" },
             h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("ruler")), "Boy"), f.height),
             h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("weight")), "Kilo"), f.weight)),
-          h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("drop")), "Kan grubu"), bs.el)]),
+          h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("drop")), "Kan grubu"), f.blood)]),
         psec("target", "Hedefiniz", "Şu an için öncelikli hedefiniz", [f.goal]),
         psec("steps", "Günlük Ortalama Adım", "Bir günde yaklaşık kaç adım attığınız", [f.steps]),
         psec("alert", "Sağlık ve Sakatlık Durumu", "Koçunuzun bilmesi gereken sağlık bilgileri ve görselleri", [f.notes, h("div", { class: "row between", style: "margin-top:6px" }, cnt), f.files]),
@@ -276,7 +271,7 @@
         msg.style.display = "none";
         if (f.birth.partial()) return fail("Doğum tarihini gün, ay ve yıl olarak tamamlayın.");
         var me = f.height.error() || f.weight.error(); if (me) return fail(me);
-        if (f.work.incomplete()) return fail("Çalışma saatiniz için başlangıç ve bitiş saatini seçin.");
+        var wi = f.work.incomplete(); if (wi) return fail(wi);
         if (f.files.busy()) return fail("Dosyalar yükleniyor; lütfen yükleme bitince kaydedin.");
         var body = payload();
         var any = Object.keys(body).some(function (k) { return body[k] !== "" && body[k] !== null; });

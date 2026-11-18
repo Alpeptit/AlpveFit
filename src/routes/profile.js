@@ -6,11 +6,24 @@ import { logAudit } from "../utils/auditLog.js";
 
 export const profileRouter = withAsyncErrors(express.Router());
 const BLOOD = ["A+", "A-", "B+", "B-", "AB+", "AB-", "0+", "0-"];
-export const PROFILE_COLS = `height_cm, weight_kg, birth_year, to_char(birth_date, 'YYYY-MM-DD') AS birth_date, gender, steps_range, work_hours, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, updated_at`;
+export const PROFILE_COLS = `height_cm, weight_kg, birth_year, to_char(birth_date, 'YYYY-MM-DD') AS birth_date, gender, steps_range, work_hours, work_schedule, work_note, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, updated_at`;
 const GENDERS = ["female", "male"];
 const STEPS = ["0-2000", "2000-4000", "4000-6000", "6000-8000", "8000-10000", "10000+"];
 const GOALS = ["Yağ Yakımı", "Kas Kazanımı", "Güç Artışı"];
 const WORK_MODES = ["shift", "flexible", "none"];
+const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const RANGE_RE = /^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/;
+/** Gün gün çalışma saati: { mon: "09:00-17:00", … } — yalnız bilinen gün anahtarları ve geçerli aralıklar; boşsa null. */
+function scheduleIn(v) {
+  if (v === null || v === undefined || v === "") return { v: null };
+  if (typeof v !== "object" || Array.isArray(v)) return { err: "Gün gün çalışma saati geçersiz." };
+  const out = {};
+  for (const [k, r] of Object.entries(v)) {
+    if (!DAY_KEYS.includes(k) || typeof r !== "string" || !RANGE_RE.test(r) || r.slice(0, 5) === r.slice(6)) return { err: "Gün gün çalışma saati geçersiz; her gün için başlangıç ve bitiş saatini seçin." };
+    out[k] = r;
+  }
+  return { v: Object.keys(out).length ? out : null };
+}
 const WORK_RE = /^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/;
 /** Çalışma saati: "HH:MM-HH:MM" (başlangıç ≠ bitiş) veya "shift" / "flexible" / "none". */
 function workIn(v) {
@@ -54,7 +67,12 @@ profileRouter.put("/profile", requireAuth, async (req, res) => {
   const b = req.body || {};
   const h = intIn(b.heightCm, 100, 250, "Boy"), bd = dateIn(b.birthDate), td = intIn(b.trainingDays, 0, 7, "Haftalık antrenman günü");
   const wh = workIn(b.workHours);
-  for (const x of [h, bd, td, wh]) if (x.err) return res.status(400).json({ error: x.err });
+  // Gün gün saat ve not yalnız vardiyalı / esnek / çalışmıyorum düzeninde saklanır.
+  const flexMode = WORK_MODES.includes(wh.v);
+  const ws = flexMode ? scheduleIn(b.workSchedule) : { v: null };
+  let workNote = null;
+  if (flexMode && b.workNote) { workNote = clean(b.workNote, 300); if (workNote === null) return res.status(400).json({ error: "Çalışma notu en fazla 300 karakter olabilir." }); }
+  for (const x of [h, bd, td, wh, ws]) if (x.err) return res.status(400).json({ error: x.err });
   const by = { v: bd.v ? bd.year : null };
   const gender = b.gender === "" || b.gender == null ? null : String(b.gender);
   if (gender !== null && !GENDERS.includes(gender)) return res.status(400).json({ error: "Geçersiz cinsiyet seçimi." });
@@ -82,12 +100,12 @@ profileRouter.put("/profile", requireAuth, async (req, res) => {
   const consentAt = prior.rows[0]?.health_consent_at || null;
   if (hasAny && !consentAt && b.healthConsent !== true) return res.status(400).json({ error: "Bu bilgileri kaydedebilmemiz için açık rızanızı onaylamanız gerekir.", code: "consent_required" });
   const { rows } = await pool.query(
-    `INSERT INTO member_profiles (user_id, height_cm, weight_kg, birth_year, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, birth_date, gender, steps_range, work_hours, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $11 THEN now() END, $12, $13, $14, $15, now())
+    `INSERT INTO member_profiles (user_id, height_cm, weight_kg, birth_year, occupation, daily_steps, blood_type, training_days, goal, health_notes, health_consent_at, birth_date, gender, steps_range, work_hours, work_schedule, work_note, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $11 THEN now() END, $12, $13, $14, $15, $16, $17, now())
      ON CONFLICT (user_id) DO UPDATE SET height_cm=$2, weight_kg=$3, birth_year=$4, occupation=$5, daily_steps=$6, blood_type=$7, training_days=$8, goal=$9, health_notes=$10,
-       health_consent_at = COALESCE(member_profiles.health_consent_at, CASE WHEN $11 THEN now() END), birth_date=$12, gender=$13, steps_range=$14, work_hours=$15, updated_at = now()
+       health_consent_at = COALESCE(member_profiles.health_consent_at, CASE WHEN $11 THEN now() END), birth_date=$12, gender=$13, steps_range=$14, work_hours=$15, work_schedule=$16, work_note=$17, updated_at = now()
      RETURNING ${PROFILE_COLS}`,
-    [req.user.sub, h.v, w, by.v, occupation || null, st.v, blood, td.v, goal || null, notes || null, hasAny && b.healthConsent === true, bd.v, gender, stepsRange, wh.v]);
+    [req.user.sub, h.v, w, by.v, occupation || null, st.v, blood, td.v, goal || null, notes || null, hasAny && b.healthConsent === true, bd.v, gender, stepsRange, wh.v, ws.v ? JSON.stringify(ws.v) : null, workNote]);
   await logAudit(req.user.sub, "profile_update", "user", req.user.sub, {}, req.ip || null);
   res.json(rows[0]);
 });
