@@ -49,7 +49,7 @@
           function (e2) { AVF.busy(btn, false); err.textContent = AVF.errText(e2); });
       } }, h("div", { class: "field" }, h("label", { for: title.id }, h("span", { class: "tile" }, AVF.icon("file")), "Başlık", h("span", { class: "req", text: "Zorunlu" })), title, h("div", { class: "row between" }, h("span"), tcnt)),
         subjBox,
-        h("div", { class: "field" }, h("label", { for: "tmsg" }, h("span", { class: "tile" }, AVF.icon("chat")), "Mesajınız", h("span", { class: "req", text: "Zorunlu" })), msg, h("div", { class: "row between" }, h("span"), mcnt)),
+        h("div", { class: "field" }, h("label", { for: "tmsg" }, h("span", { class: "tile" }, AVF.icon("chat")), "Mesajınız", h("span", { class: "req", text: "Zorunlu" })), msg, h("div", { class: "row between" }, AVF.emojiPicker(msg), mcnt)),
         files, err, btn));
     AVF.api("GET", "/tickets/subjects").then(function (list) {
       subj = AVF.choice({ label: "Konu", cols: 3, value: d.subject && list.indexOf(d.subject) >= 0 ? d.subject : "", onChange: save, items: list.map(function (x) { return { value: x, label: x, icon: SUBJ_ICON[x] || "help" }; }) });
@@ -59,7 +59,7 @@
   function attList(list) {
     if (!list || !list.length) return null;
     return h("div", { class: "batt" }, list.map(function (a) {
-      var img = a.mime === "image/png" || a.mime === "image/jpeg";
+      var img = a.mime === "image/png" || a.mime === "image/jpeg" || a.mime === "image/gif";
       return h("a", { class: "batt-i" + (img ? " img" : ""), href: "/api/attachments/" + a.id, target: "_blank", rel: "noopener", title: a.filename },
         img ? h("img", { src: "/api/attachments/" + a.id, alt: "", loading: "lazy" }) : [AVF.icon("file"), h("span", { "data-notr": "", text: a.filename })]);
     }));
@@ -86,7 +86,7 @@
           if (rfiles.busy()) { err.textContent = "Dosyalar yükleniyor; lütfen yükleme bitince gönderin."; return; }
           AVF.busy(sb, true);
           AVF.api("POST", "/tickets/" + t.id + "/messages", { message: ta.value.trim(), attachments: rfiles.ids() }).then(function () { RD.clear(); ticketDetail(el, id); }, function (e2) { AVF.busy(sb, false); err.textContent = AVF.errText(e2); });
-        } }, ta, rfiles, err, h("div", { class: "row", style: "margin-top:10px" }, sb, rb));
+        } }, ta, h("div", { class: "row between", style: "margin:6px 0" }, AVF.emojiPicker(ta), h("span")), rfiles, err, h("div", { class: "row", style: "margin-top:10px" }, sb, rb));
       }
       AVF.mount(el, h("div", { class: "row between", style: "margin-bottom:14px;gap:10px;flex-wrap:wrap" }, h("h2", { class: "ptitle", style: "margin:0", "data-notr": "", text: t.title }), tchip(t.status)),
         h("p", { class: "muted", style: "margin:0 0 16px" }, t.ticket_number + " · " + t.subject + " · " + AVF.fmtDateTime(t.created_at)),

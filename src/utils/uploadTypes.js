@@ -17,8 +17,11 @@ export const UPLOAD_KINDS = [
   { ext: "pdf", label: "PDF", mime: "application/pdf", sniff: "pdf" },
   { ext: "xlsx", label: "XLSX", mime: OOXML_SHEET, sniff: "xlsx" },
   { ext: "docx", label: "DOCX", mime: OOXML_DOC, sniff: "docx" },
+  // GIF yalnız destek talebi mesajlarında (her iki taraf) kabul edilir; kişisel bilgi / vücut formu eklerinde kabul edilmez.
+  { ext: "gif", label: "GIF", mime: "image/gif", sniff: "gif", ticketOnly: true },
 ];
-export const TYPES_TEXT = [...new Set(UPLOAD_KINDS.map((k) => k.label))].join(", ");
+export const TYPES_TEXT = [...new Set(UPLOAD_KINDS.filter((k) => !k.ticketOnly).map((k) => k.label))].join(", ");
+export const TICKET_TYPES_TEXT = [...new Set(UPLOAD_KINDS.map((k) => k.label))].join(", ");
 export const TYPE_ERROR = `Bu dosya türü desteklenmiyor. Yalnızca ${TYPES_TEXT} dosyaları eklenebilir.`;
 export const SIZE_ERROR = `Dosya en fazla ${UPLOAD_MAX_TEXT} olabilir.`;
 export const CONTENT_ERROR = `Dosyanın içeriği uzantısıyla uyuşmuyor. Yalnızca ${TYPES_TEXT} dosyaları eklenebilir.`;
@@ -42,6 +45,7 @@ export function sniff(buf) {
   if (!Buffer.isBuffer(buf) || buf.length < 8) return null;
   if (buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
   if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "jpeg";
+  const g6 = buf.subarray(0, 6).toString("latin1"); if (g6 === "GIF87a" || g6 === "GIF89a") return "gif";
   if (buf.subarray(0, 5).toString("latin1") === "%PDF-") return "pdf";
   if (buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04) {
     // OOXML belgesi bir ZIP'tir; yerel dosya başlıklarındaki adlar sıkıştırılmadan yazılır.

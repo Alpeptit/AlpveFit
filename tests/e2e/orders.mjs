@@ -109,17 +109,7 @@ chk("kategoriler: beslenme 6, antrenman 6, farmakoloji 4", ["beslenme", "antrenm
 r = await new Client().call("GET", "/blog/protein-ve-vucut-gelistirme"); chk("başlangıç yazısı kaynaklarıyla okunur (PMID)", r.status === 200 && /## Kaynaklar/.test(r.body.body) && /PMID: 28698222/.test(r.body.body) && r.body.published_at === undefined, r.status);
 r = await M2.c.call("POST", "/admin/blog", { title: "Deneme", slug: "deneme", body: "x" }); chk("üye blog yazısı oluşturamaz (admin API gizli 404)", r.status === 404, r);
 r = await C1.c.call("POST", "/admin/blog", { title: "Deneme", slug: "deneme", body: "x" }); chk("uzman blog yazısı oluşturamaz", r.status === 403 || r.status === 404, r);
-r = await A.c.call("POST", "/admin/blog", { title: "Su içmek", slug: "Gecersiz Adres", body: "x" }); chk("geçersiz slug reddedilir", r.status === 400, r);
-r = await A.c.call("POST", "/admin/blog", { title: "Kategori testi", slug: "kategori-testi", body: "x", category: "siyaset" }); chk("geçersiz kategori reddedilir", r.status === 400, r);
-r = await A.c.call("POST", "/admin/blog", { title: "Kapak testi", slug: "kapak-testi", body: "x", cover: "../x" }); chk("geçersiz kapak anahtarı reddedilir", r.status === 400, r);
-r = await A.c.call("POST", "/admin/blog", { title: "Su içmek önemli", slug: "su-icmek-onemli", excerpt: "Kısa özet", body: "İlk paragraf.\n\n## Alt başlık\n\nİkinci paragraf <b>düz metin</b>.", status: "draft" });
-const bp = r.body.id; chk("yönetici taslak yazı oluşturur", r.status === 201 && !!bp, r);
-r = await new Client().call("GET", "/blog/su-icmek-onemli"); chk("taslak herkese açık okunamaz (404)", r.status === 404, r);
-r = await A.c.call("PUT", `/admin/blog/${bp}`, { status: "published" }); chk("yönetici yazıyı yayınlar", r.status === 200, r);
-r = await new Client().call("GET", "/blog"); chk("yayınlanan yazı listede (en üstte) görünür", r.body.length === BLOG0 + 1 && r.body[0].slug === "su-icmek-onemli" && r.body[0].body === undefined, r.body.length);
-r = await new Client().call("GET", "/blog/su-icmek-onemli"); chk("yazı içeriği düz metin olarak okunur", r.status === 200 && r.body.body.includes("<b>düz metin</b>") && r.body.author_name === undefined, r.body);
-r = await A.c.call("POST", "/admin/blog", { title: "Aynı adres", slug: "su-icmek-onemli", body: "x" }); chk("yinelenen slug reddedilir", r.status === 400, r);
-r = await A.c.call("DELETE", `/admin/blog/${bp}`); chk("yönetici yazıyı siler", r.status === 200 && (await new Client().call("GET", "/blog")).body.length === BLOG0, r);
+r = await A.c.call("POST", "/admin/blog", { title: "Deneme", slug: "deneme", body: "x" }); chk("blog yönetimi panelden kaldırıldı (yönetici için de 404)", r.status === 404, r);
 
 // üye hesabı silinince ödenmiş sipariş mali kayıt olarak kalır, kişisel veriler gider
 let q = await M1.c.call("POST", "/me/request-delete", { password: "Kirmizi.Elma7" }); const code = (await (await fetch(`${BASE}/__mails?to=${encodeURIComponent(M1.email)}`)).json()).text.match(/\b\d{6}\b/)[0];

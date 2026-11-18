@@ -33,7 +33,7 @@
     drop: "M12 3C9 8 6 11 6 15a6 6 0 0012 0c0-4-3-7-6-12z", briefcase: "M3 8h18v12H3zM9 8V5h6v3M3 13h18", calendar: "M4 6h16v15H4zM4 10h16M8 3v4M16 3v4",
     ruler: "M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2", weight: "M6 8h12l2 12H4zM9 8a3 3 0 016 0M10 14h4", flame: "M12 21a6 6 0 006-6c0-3-2-5-3-8-1.5 1.5-2 2.5-3 2.5C11 7 10 5 9 3 8 8 6 10 6 15a6 6 0 006 6z",
     bolt: "M13 2L4 14h7l-1 8 9-12h-7z", steps: "M3 16l6-9h3l1 4 7 2v4H3zM3 20h18", image: "M3 5h18v14H3zM8 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM21 16l-5-5-8 8",
-    notes: "M5 3h14v18H5zM9 8h6M9 12h6M9 16h3", syringe: "M18 2l4 4M17 7l3-3M19 9L9 19l-4 1 1-4L16 6zM14 8l2 2M11 11l2 2M8 14l2 2M3 21l3-3", device: "M3 5h18v11H3zM8 20h8M12 16v4", clip: "M20 12l-8 8a5 5 0 01-7-7l9-9a3.5 3.5 0 015 5l-9 9a2 2 0 01-3-3l8-8",
+    notes: "M5 3h14v18H5zM9 8h6M9 12h6M9 16h3", like: "M7 10v11H3V10zM7 10l4-8a3 3 0 013 3v4h5a2 2 0 012 2.3l-1.4 8A2 2 0 0117.6 21H7", dislike: "M17 14V3h4v11zM17 14l-4 8a3 3 0 01-3-3v-4H5a2 2 0 01-2-2.3l1.4-8A2 2 0 016.4 3H17", flag: "M5 21V4h12l-2 4 2 4H5", syringe: "M18 2l4 4M17 7l3-3M19 9L9 19l-4 1 1-4L16 6zM14 8l2 2M11 11l2 2M8 14l2 2M3 21l3-3", device: "M3 5h18v11H3zM8 20h8M12 16v4", clip: "M20 12l-8 8a5 5 0 01-7-7l9-9a3.5 3.5 0 015 5l-9 9a2 2 0 01-3-3l8-8",
     key: "M14 10a4 4 0 11-3.9 5H7l-2 2H3v-2l6.3-6.3A4 4 0 0114 10zM15.5 9.5h.01", muscle: "M4 15c0-3 2-4 4-4l2-3c1-2 4-2 5 0l1 3c2 0 4 1 4 4s-2 4-5 4H9c-3 0-5-1-5-4z",
     ext: "M14 4h6v6M20 4l-9 9M18 14v6H4V6h6", reply: "M5 4v7a4 4 0 004 4h10M15 11l4 4-4 4", info: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 11v5M12 8h.01",
     youtube: "M3 8.5a3 3 0 013-3h12a3 3 0 013 3v7a3 3 0 01-3 3H6a3 3 0 01-3-3zM10 9.5v5l4.5-2.5z",
@@ -632,6 +632,7 @@
   // Dosya ekleri — kurallar sunucuyla aynı: PNG, JPG, JPEG, PDF, XLSX, DOCX; dosya başına 4 MB; en fazla 4 dosya.
   AVF.UPLOAD = { exts: ["png", "jpg", "jpeg", "pdf", "xlsx", "docx"], max: 4, bytes: 4 * 1024 * 1024,
     mime: { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", pdf: "application/pdf", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" } };
+  AVF.UPLOAD.mime.gif = "image/gif";
   AVF.UPLOAD.accept = AVF.UPLOAD.exts.map(function (e) { return "." + e; }).join(",") + ",image/png,image/jpeg,application/pdf," + AVF.UPLOAD.mime.xlsx + "," + AVF.UPLOAD.mime.docx;
   AVF.fileSize = function (n) { return n >= 1048576 ? (Math.round(n / 104857.6) / 10) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; };
   AVF.uploadFile = function (scope, file) {
@@ -644,14 +645,15 @@
   // o: { scope, files: [mevcut], max, base ("/api/attachments/" | "/api/admin/attachments/"), readOnly, locked (metin), onChange }
   AVF.fileBox = function (o) {
     var h = AVF.h, U = AVF.UPLOAD, max = o.max || U.max, files = (o.files || []).slice(), base = o.base || "/api/attachments/";
+    var gif = o.scope === "ticket", exts = gif ? U.exts.concat(["gif"]) : U.exts, typesText = gif ? "PNG, JPG, JPEG, GIF, PDF, XLSX, DOCX" : "PNG, JPG, JPEG, PDF, XLSX, DOCX";
     var list = h("ul", { class: "fb-list" }), msg = h("div", { class: "fb-msg", role: "alert" });
-    var pick = h("input", { type: "file", accept: U.accept, multiple: "", hidden: "", tabindex: "-1" });
+    var pick = h("input", { type: "file", accept: U.accept + (gif ? ",.gif,image/gif" : ""), multiple: "", hidden: "", tabindex: "-1" });
     var count = h("span", { class: "fb-n" });
     var addBtn = h("button", { class: "fb-add", type: "button" }, h("span", { class: "tile" }, AVF.icon("image")),
-      h("span", { class: "t" }, h("b", { text: "Görsel / dosya ekle" }), h("small", { text: "PNG, JPG, JPEG, PDF, XLSX, DOCX · en fazla 4 MB · en fazla " + max + " dosya" })), count);
+      h("span", { class: "t" }, h("b", { text: "Görsel / dosya ekle" }), h("small", { text: typesText + " · en fazla 4 MB · en fazla " + max + " dosya" })), count);
     var el = h("div", { class: "fbox" + (o.locked ? " off" : "") }, o.readOnly ? null : addBtn, o.readOnly ? null : pick, msg, list);
     if (o.locked) addBtn.setAttribute("aria-disabled", "true");
-    function isImg(f) { return f.mime === "image/png" || f.mime === "image/jpeg"; }
+    function isImg(f) { return f.mime === "image/png" || f.mime === "image/jpeg" || f.mime === "image/gif"; }
     function err(t) { msg.textContent = t || ""; msg.style.display = t ? "" : "none"; }
     function paint() {
       count.textContent = files.length + "/" + max;
@@ -674,7 +676,7 @@
       if (files.length + arr.length > max) { err("En fazla " + max + " dosya eklenebilir."); arr = arr.slice(0, Math.max(0, max - files.length)); }
       arr.forEach(function (file) {
         var ext = (/\.([a-z0-9]+)$/i.exec(file.name) || [])[1]; ext = ext ? ext.toLowerCase() : "";
-        if (U.exts.indexOf(ext) < 0) return err("Bu dosya türü desteklenmiyor. Yalnızca PNG, JPG, JPEG, PDF, XLSX, DOCX dosyaları eklenebilir.");
+        if (exts.indexOf(ext) < 0) return err("Bu dosya türü desteklenmiyor. Yalnızca " + typesText + " dosyaları eklenebilir.");
         if (file.size > U.bytes) return err("Dosya en fazla 4 MB olabilir.");
         var tmp = { pending: true, filename: file.name }; files.push(tmp); paint();
         AVF.uploadFile(o.scope, file).then(function (r) { files[files.indexOf(tmp)] = r; paint(); }, function (e) { files = files.filter(function (x) { return x !== tmp; }); paint(); err(AVF.errText(e)); });
@@ -729,5 +731,26 @@
       }));
     }
     err(""); paint(); return el;
+  };
+  // Emoji seçici: metin alanının imleç konumuna emoji ekler. Liste sabittir (dış kaynak yok).
+  var EMOJI = ["😀", "😃", "😄", "😁", "😊", "🙂", "😉", "😍", "🤩", "😎", "🤔", "😅", "😂", "🙏", "👍", "👎", "👏", "🙌", "💪", "🔥", "✅", "❌", "⚠️", "❗",
+    "❓", "💯", "🎉", "🏆", "⭐", "❤️", "💙", "💚", "🖤", "🤍", "😢", "😞", "😡", "😴", "🤒", "🤕", "🥗", "🍗", "🥚", "🍌", "🍎", "🥑", "💧", "🏋️", "🏃", "🚴", "🧘", "⏰", "📅", "📈", "📉", "📸", "📝", "💬"];
+  AVF.emojiPicker = function (ta) {
+    var h = AVF.h, wrap = h("div", { class: "emo" }), pop = h("div", { class: "emo-pop", role: "dialog", "aria-label": "Emoji seç", hidden: "" });
+    var btn = h("button", { class: "emo-btn", type: "button", "aria-label": "Emoji ekle", "aria-expanded": "false", title: "Emoji ekle" }, h("span", { "aria-hidden": "true", text: "😊" }));
+    EMOJI.forEach(function (e) {
+      pop.appendChild(h("button", { type: "button", class: "emo-i", "data-notr": "", text: e, "aria-label": e, onclick: function () {
+        var st = ta.selectionStart == null ? ta.value.length : ta.selectionStart, en = ta.selectionEnd == null ? st : ta.selectionEnd;
+        var max = Number(ta.getAttribute("maxlength")) || 1e9; if (ta.value.length - (en - st) + e.length > max) return;
+        ta.value = ta.value.slice(0, st) + e + ta.value.slice(en); var c = st + e.length;
+        ta.focus(); try { ta.setSelectionRange(c, c); } catch (x) { /* yok */ }
+        ta.dispatchEvent(new Event("input", { bubbles: true }));
+      } }));
+    });
+    function close() { pop.hidden = true; btn.setAttribute("aria-expanded", "false"); document.removeEventListener("pointerdown", away, true); }
+    function away(e) { if (!wrap.contains(e.target)) close(); }
+    btn.addEventListener("click", function () { if (!pop.hidden) return close(); pop.hidden = false; btn.setAttribute("aria-expanded", "true"); document.addEventListener("pointerdown", away, true); });
+    pop.addEventListener("keydown", function (e) { if (e.key === "Escape") { close(); btn.focus(); } });
+    wrap.appendChild(btn); wrap.appendChild(pop); return wrap;
   };
 })();

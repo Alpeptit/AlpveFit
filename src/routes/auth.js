@@ -63,6 +63,9 @@ authRouter.post("/register", async (req, res) => {
   //  • Kullanıcı adı, 24 saatten eski DOĞRULANMAMIŞ bir kayıtta kalmışsa serbest bırakılır.
   //  Not: kalıcı silinen hesap satırı tamamen silindiği için e-postası zaten serbesttir.
   const em = email.trim().toLowerCase(), un = username.trim().toLowerCase();
+  // Kalıcı yasaklanan (yönetici tarafından silinen) hesabın e-postası yeniden kayıt olamaz (yalnız özeti saklanır).
+  const banned = await pool.query(`SELECT 1 FROM banned_emails WHERE email_hash = encode(digest($1, 'sha256'), 'hex')`, [em]);
+  if (banned.rows.length) return res.status(403).json({ error: "Bu e-posta adresiyle kayıt olunamaz. Bir yanlışlık olduğunu düşünüyorsanız destek@alpvefit.com adresine yazın.", code: "banned" });
   const existing = await pool.query(
     `SELECT id, email, username, email_verified_at, created_at < now() - interval '24 hours' AS stale,
             created_at < now() - interval '30 minutes' AS pending_old FROM users WHERE email = $1 OR username = $2`,
@@ -443,10 +446,11 @@ authRouter.post("/reset-password", async (req, res) => {
   const tk = await findTicket(ticket);
   if (!tk) return res.status(400).json(RESET_EXPIRED);
 
-  const { rows } = await pool.query(`SELECT full_name, username, email, password_hash, locked_at, locked_until FROM users WHERE id = $1`, [tk.userId]);
+  const { rows } = await pool.query(`SELECT full_name, username, email, password_hash, locked_at, locked_until, locked_reason FROM users WHERE id = $1`, [tk.userId]);
   const user = rows[0];
   if (!user) return res.status(400).json(RESET_EXPIRED);
   if (user.locked_at && !user.locked_until) return sendLocked(res, user);   // eski kalıcı kilit: yalnız yönetici açar
+  if (isLockActive(user) && String(user.locked_reason || '').startsWith('admin_')) return sendLocked(res, user);   // yönetici yasağı sıfırlamayla açılmaz
 
   if (hasWhitespace(newPassword)) return res.status(400).json({ error: PASSWORD_SPACE_ERROR });
   const passwordError = validatePassword(newPassword, user.full_name, user.username);

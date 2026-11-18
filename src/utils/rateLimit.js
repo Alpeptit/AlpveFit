@@ -112,7 +112,8 @@ export async function expireLock(userId) {
 
 /** v57: kullanıcının kendi kurtarması (şifre sıfırlama tamamlandı) — GEÇİCİ kilit ve doğrulama sayacı sıfırlanır. */
 export async function clearTemporaryLock(userId) {
-  await pool.query(`UPDATE users SET locked_at = NULL, locked_until = NULL, locked_reason = NULL WHERE id = $1 AND locked_until IS NOT NULL`, [userId]);
+  // Yönetici engeli / süreli yasağı (locked_reason 'admin_…') şifre sıfırlamayla KALKMAZ; yalnız yönetici kaldırır veya süresi dolar.
+  await pool.query(`UPDATE users SET locked_at = NULL, locked_until = NULL, locked_reason = NULL WHERE id = $1 AND locked_until IS NOT NULL AND coalesce(locked_reason, '') NOT LIKE 'admin\\_%'`, [userId]);
   await pool.query(`DELETE FROM rate_limit_state WHERE identifier = $1 AND action = $2`, [`verify:${userId}`, VERIFY_ACTION]);
 }
 

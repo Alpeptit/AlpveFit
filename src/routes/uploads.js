@@ -10,7 +10,7 @@ import { withAsyncErrors } from "../utils/asyncRoutes.js";
 import { pool } from "../db/pool.js";
 import { requireAuth } from "../middleware/auth.js";
 import { checkHourlyActionLimit } from "../utils/rateLimit.js";
-import { UPLOAD_MAX_BYTES, ATTACH_MAX, COUNT_ERROR, SIZE_ERROR, declaredTypeError, contentTypeError, cleanFilename, kindOf } from "../utils/uploadTypes.js";
+import { UPLOAD_MAX_BYTES, ATTACH_MAX, COUNT_ERROR, SIZE_ERROR, TYPE_ERROR, TYPES_TEXT, TICKET_TYPES_TEXT, declaredTypeError, contentTypeError, cleanFilename, kindOf } from "../utils/uploadTypes.js";
 
 export const uploadsRouter = withAsyncErrors(express.Router());
 export const UPLOADS_PER_HOUR = 30;
@@ -49,7 +49,8 @@ uploadsRouter.post("/uploads/:scope", requireAuth, async (req, res, next) => {
   let name = ""; try { name = decodeURIComponent(String(req.headers["x-file-name"] || "")); } catch { name = ""; }
   const filename = cleanFilename(name);
   const te = declaredTypeError(String(req.headers["x-file-type"] || ""), filename);
-  if (te) return res.status(400).json({ error: te });
+  if (te) return res.status(400).json({ error: scope === "ticket" ? te.replace(TYPES_TEXT, TICKET_TYPES_TEXT) : te });
+  if (kindOf(filename).ticketOnly && scope !== "ticket") return res.status(400).json({ error: TYPE_ERROR });
   const buf = req.body;
   if (!Buffer.isBuffer(buf) || !buf.length) return res.status(400).json({ error: "Dosya bulunamadı." });
   if (buf.length > UPLOAD_MAX_BYTES) return res.status(400).json({ error: SIZE_ERROR });
@@ -89,7 +90,7 @@ uploadsRouter.get("/uploads/:scope", requireAuth, async (req, res) => {
 export function sendAttachment(res, a) {
   // pg, bytea'yı Buffer olarak döndürür; başka bir sürücü onaltılık metin ("\\x…") döndürürse çevrilir.
   const data = Buffer.isBuffer(a.data) ? a.data : Buffer.from(String(a.data || "").replace(/^\\x/, ""), "hex");
-  const image = a.mime === "image/png" || a.mime === "image/jpeg";
+  const image = a.mime === "image/png" || a.mime === "image/jpeg" || a.mime === "image/gif";
   res.setHeader("Content-Type", a.mime);
   res.setHeader("Content-Length", String(data.length));
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -102,7 +103,10 @@ export function sendAttachment(res, a) {
 
 uploadsRouter.get("/attachments/:id", requireAuth, async (req, res) => {
   if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: "Dosya bulunamadı." });
-  const { rows } = await pool.query(`SELECT filename, mime, data FROM attachments WHERE id = $1 AND user_id = $2`, [req.params.id, req.user.sub]);
+  // Sahibi görür; ayrıca üye, KENDİ destek talebindeki mesajlara (ör. destek ekibinin yanıtına) eklenmiş dosyaları görür.
+  const { rows } = await pool.query(
+    `SELECT a.filename, a.mime, a.data FROM attachments a
+      WHERE a.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM ticket_messages m JOIN tickets t ON t.id = m.ticket_id WHERE m.id = a.message_id AND t.user_id = $2))`, [req.params.id, req.user.sub]);
   if (!rows[0]) return res.status(404).json({ error: "Dosya bulunamadı." });
   sendAttachment(res, rows[0]);
 });
