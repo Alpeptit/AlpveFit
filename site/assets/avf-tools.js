@@ -20,8 +20,8 @@
   var ACT = [["1.2", "Hareketsiz", "Masa başı, egzersiz yok"], ["1.375", "Hafif aktif", "Haftada 1–3 gün antrenman"], ["1.55", "Orta aktif", "Haftada 3–5 gün antrenman"],
     ["1.725", "Çok aktif", "Haftada 6–7 gün antrenman"], ["1.9", "Ekstra aktif", "Günde 2 antrenman veya fiziksel iş"]];
   function bmr(v) { return 10 * v.w + 6.25 * v.h - 5 * v.a + (v.s === "m" ? 5 : -161); }
-  var GROUPS = [["all", "Tümü", "layers"], ["nut", "Beslenme", "utensils"], ["body", "Vücut Analizi", "body"], ["train", "Antrenman", "dumb"]];
-  var GNAME = { nut: "Beslenme", body: "Vücut Analizi", train: "Antrenman" };
+  var GROUPS = [["all", "Tümü", "layers"], ["nut", "Beslenme", "utensils"], ["body", "Vücut Analizi", "body"], ["train", "Antrenman", "dumb"], ["dose", "Dozaj", "syringe"]];
+  var GNAME = { nut: "Beslenme", body: "Vücut Analizi", train: "Antrenman", dose: "Dozaj" };
 
   // ---- sonuç bileşenleri (koyu sonuç kartı) ----
   // Birim sistemi: "met" (cm · kg) veya "imp" (inç · lb). Hesaplar her zaman metrik yapılır; giriş ve sonuç gösterimi çevrilir.
@@ -166,6 +166,7 @@
         return [stat("Bel / kalça oranı", r, 2, "", true), textStat("Risk düzeyi", c, r < lo ? "good" : "warn"),
           gauge(.6, 1.2, r, [[lo, Z.green, "Düşük"], [hi, Z.amber, "Orta"], [1.2, Z.red, "Yüksek"]])];
       }, note: "Eşikler Dünya Sağlık Örgütü önerilerine dayanır." },
+    { key: "dozaj-hesaplayici", grp: "dose", icon: "syringe", title: "Dozaj Hesaplayıcı", desc: "Şişedeki madde miktarı, eklenen BAC ve çekilecek hacme göre konsantrasyonu ve şırıngadaki miktarı hesaplayın.", custom: "dose", wide: true },
     { key: "vucut-tipi", grp: "body", icon: "users", title: "Vücut Tipi Belirleme", desc: "Beş kısa soruyla baskın vücut tipinizi (ektomorf, mezomorf, endomorf) öğrenin.", custom: "body" },
   ];
 
@@ -379,7 +380,8 @@
       link("/araclar", [AVF.icon("back"), h("span", { text: "Tüm araçlar" })], { class: "tcrumb" }),
       h("div", { class: "thead" }, h("span", { class: "tc-ic lg" }, AVF.icon(t.icon)),
         h("div", {}, h("span", { class: "tc-grp" }, h("i"), h("span", { text: GNAME[t.grp] })), h("h1", { text: t.title }), h("p", { text: t.desc }))),
-      h("div", { class: "tlayout" }, form, h("div", { class: "tpanel tres-p" }, out)))));
+      t.wide ? form : h("div", { class: "tlayout" }, form, h("div", { class: "tpanel tres-p" }, out)))));
+    if (t.custom === "dose") { form.className = "tdose"; AVF.DoseCalc.mount(form, { lang: AVF.lang }); return; }
     emptyState(out, t);
     if (t.custom === "rest") restTool(form, out, t);
     else if (t.custom === "body") bodyTool(form, out);
