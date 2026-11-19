@@ -4,6 +4,11 @@
   var AVF = (window.AVF = window.AVF || {});
   AVF.DICT = AVF.DICT || {}; AVF.PATTERNS = AVF.PATTERNS || [];
   var D = {
+"Uygulamayı yükle": "Install the app",
+"AlpveFit'i ana ekrana ekleyin": "Add AlpveFit to your Home Screen",
+"Safari'de alttaki Paylaş düğmesine dokunun, ardından “Ana Ekrana Ekle”yi seçin. AlpveFit, simgesiyle bir uygulama gibi tam ekran açılır.": "In Safari, tap the Share button at the bottom, then choose “Add to Home Screen”. AlpveFit then opens full screen from its icon, like an app.",
+"AlpveFit uygulaması yüklendi.": "The AlpveFit app is installed.",
+"Anladım": "Got it",
 "şişe": "vial",
 "Karışım": "Blend",
 "PDF indir / Yazdır": "Download PDF / Print",

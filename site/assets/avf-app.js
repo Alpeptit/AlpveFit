@@ -39,6 +39,7 @@
     setTimeout(function () { document.body.classList.remove("lang-in"); }, 600);
   });
   var footEl;
+  if (AVF.pwa) AVF.pwa.onChange(function () { if (footEl) renderFooter(); });
   function buildShell() {
     var root = document.getElementById("app");
     nav = h("nav", { class: "nav", "aria-label": "Ana menü" });
@@ -87,7 +88,8 @@
         col("compass", "Keşfet", [fl("/paketler", "tag", "Paketler"), fl("/blog", "book", "Blog"), fl("/forum", "msg", "Forum"), fl("/araclar", "wrench", "Araçlar")]),
         col("scale", "Yasal", AVF.LEGAL_LINKS.map(function (l) { return fl("/yasal/" + l[0], LEGAL_ICONS[l[0]] || "file", l[1]); })),
         col("headset", "İletişim", [h("a", { href: "mailto:destek@alpvefit.com" }, AVF.icon("mail"), h("span", { text: "destek@alpvefit.com" })),
-          h("a", { href: "/panel/destek/yeni", onclick: function (e) { e.preventDefault(); AVF.openTicket(); } }, AVF.icon("ticket"), h("span", { text: "Ticket gönder" }))])),
+          h("a", { href: "/panel/destek/yeni", onclick: function (e) { e.preventDefault(); AVF.openTicket(); } }, AVF.icon("ticket"), h("span", { text: "Ticket gönder" })),
+          AVF.pwa && AVF.pwa.available() ? h("a", { href: "#", class: "f-app", onclick: function (e) { e.preventDefault(); AVF.pwa.install(); } }, AVF.icon("phone"), h("span", { text: "Uygulamayı yükle" })) : null].filter(Boolean))),
       h("div", { class: "fbottom" }, h("span", { "data-notr": "" }, "© " + new Date().getFullYear() + " AlpveFit"), h("span", { text: "Uzaktan eğitim ve koçluk platformu" }))));
   }
   function renderChrome() {
@@ -183,6 +185,7 @@
         it("/panel/hesap", "cog", "Hesap Ayarları"),
         h("div", { class: "um-sep" }),
         AVF.themeRow ? AVF.themeRow() : null,
+        AVF.pwa && AVF.pwa.available() ? h("button", { class: "um-i", type: "button", role: "menuitem", onclick: function () { close(); AVF.pwa.install(); } }, AVF.icon("phone"), h("span", { text: "Uygulamayı yükle" })) : null,
         h("button", { class: "um-i out", type: "button", role: "menuitem", onclick: function () { close(); logout(); } }, AVF.icon("out"), h("span", { text: "Güvenli Çıkış Yap" })));
       var first = pop.querySelector(".um-i"); if (first) first.focus({ preventScroll: true });
     });

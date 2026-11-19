@@ -42,3 +42,14 @@ test("plan PDF / yazdır: yalnız plan basılır, aydınlık renk, ek istek yok;
   assert.match(read("site/assets/avf-app.js"), /AVF\.printPlan\(\{ kind: kind, plan: p, ctx: ctx \}\)/);
   assert.match(read("site-uzman/assets/uzman.js"), /AVF\.printPlan\(\{ kind: p\.kind, plan: p, member: m\.full_name \}\)/);
 });
+
+test("uygulama (PWA): bildirim dosyası, çevrimdışı sayfa ve hizmet çalışanı kişisel veri saklamaz", () => {
+  const sw = read("site/sw.js"), man = JSON.parse(read("site/manifest.webmanifest")), idx = read("site/index.html"), site = read("src/site.js");
+  assert.equal(man.display, "standalone"); assert.ok(man.icons.some((i) => i.purpose === "maskable"));
+  assert.match(sw, /var SKIP = \/\^\\\/\(api\|uzman\|admin\)/);
+  assert.match(sw, /indexOf\("no-store"\) < 0 && cc\.indexOf\("private"\) < 0/);
+  assert.match(sw, /req\.mode === "navigate"[\s\S]{0,120}fetch\(req\)\.catch/);   // sayfalar her zaman ağdan
+  assert.match(idx, /<link rel="manifest" href="\/manifest\.webmanifest">/);
+  assert.match(site, /app\.get\("\/sw\.js"[\s\S]{0,120}no-cache/);
+  assert.equal(/<script>/.test(read("site/offline.html")), false);   // satır içi betik yok (CSP)
+});

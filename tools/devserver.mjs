@@ -47,7 +47,7 @@ function findRoute(method, full) {
   }
   return null;
 }
-const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webp": "image/webp", ".jpg": "image/jpeg" };
+const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webp": "image/webp", ".jpg": "image/jpeg", ".png": "image/png", ".webmanifest": "application/manifest+json" };
 function sendFile(res, file, status = 200) { res.writeHead(status, { "content-type": MIME[extname(file)] || "application/octet-stream", "cache-control": "no-store" }); res.end(readFileSync(file)); }
 const rawBody = (req) => new Promise((ok) => { const c = []; let n = 0; req.on("data", (d) => { n += d.length; if (n <= 4 * 1024 * 1024 + 1) c.push(d); }); req.on("end", () => ok(Buffer.concat(c))); });
 const body = (req) => new Promise((ok) => { const c = []; req.on("data", (d) => c.push(d)); req.on("end", () => { try { ok(JSON.parse(Buffer.concat(c).toString() || "{}")); } catch { ok({}); } }); });
@@ -84,6 +84,7 @@ http.createServer(async (rq, rs) => {
     if (path === "/admin" || path === "/admin/") { const u = await panelUser({ headers: rq.headers }); if (!u) return (await sessionUser({ headers: rq.headers })) ? sendFile(rs, join(root, "site/404.html"), 404) : sendFile(rs, join(root, "site/index.html")); rs.writeHead(302, { location: "/uzman", "cache-control": "private, no-store" }); return rs.end(); }
     if (path === "/uzman" || path.startsWith("/uzman/")) { const u = await panelUser({ headers: rq.headers }); if (!u) return sendFile(rs, join(root, "site/404.html"), 404); return sendFile(rs, join(root, "site-uzman/index.html")); }
     if (path.startsWith("/assets/uzman/")) { const u = await panelUser({ headers: rq.headers }); const f = join(root, "site-uzman/assets", path.slice(14)); if (!u || !existsSync(f)) { rs.writeHead(404); return rs.end("Not found"); } return sendFile(rs, f); }
+    if (["/sw.js", "/manifest.webmanifest", "/offline.html"].includes(path)) return sendFile(rs, join(root, "site", path.slice(1)));
     if (path.startsWith("/assets/")) { const f = join(root, "site", path); if (!f.startsWith(join(root, "site/assets")) || !existsSync(f) || !statSync(f).isFile()) { rs.writeHead(404); return rs.end("Not found"); } return sendFile(rs, f); }
     if (["/", "/giris", "/kayit", "/sifremi-unuttum", "/panel", "/paketler", "/sss", "/hakkimizda", "/blog", "/araclar", "/forum"].includes(path) || path.startsWith("/blog/") || path.startsWith("/araclar/") || path.startsWith("/panel/") || path.startsWith("/yasal/")) return sendFile(rs, join(root, "site/index.html"));
     return sendFile(rs, join(root, "site/404.html"), 404);

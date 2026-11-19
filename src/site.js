@@ -86,6 +86,16 @@ export function mountSite(app) {
     res.redirect(302, "/uzman");
   });
 
+  // Uygulama (PWA): hizmet çalışanı her açılışta tazelenir (no-cache) — yeni sürüm gecikmeden devreye girer.
+  app.get("/sw.js", (req, res) => {
+    res.setHeader("Cache-Control", "no-cache"); res.setHeader("X-Content-Type-Options", "nosniff");
+    res.type("text/javascript").sendFile(join(SITE_DIR, "sw.js"));
+  });
+  app.get("/manifest.webmanifest", (req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=3600"); res.setHeader("X-Content-Type-Options", "nosniff");
+    res.type("application/manifest+json").sendFile(join(SITE_DIR, "manifest.webmanifest"));
+  });
+
   // Tek sayfa uygulama: /panel, /panel/*, /giris vb. istemci tarafı yönlendirilir.
   const SPA = ["/", "/giris", "/kayit", "/sifremi-unuttum", "/paketler", "/sss", "/hakkimizda", "/blog", "/blog/*", "/araclar", "/araclar/*", "/forum", "/yasal/*", "/panel", "/panel/*"];
   app.get(SPA, (req, res) => { htmlHeaders(res); res.sendFile(indexFile); });

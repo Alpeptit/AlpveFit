@@ -1,0 +1,25 @@
+{
+  "name": "AlpveFit — Uzaktan Eğitim ve Koçluk",
+  "short_name": "AlpveFit",
+  "description": "Size özel beslenme, antrenman ve takviye programlarınız, koçunuz ve topluluk tek uygulamada.",
+  "id": "/",
+  "start_url": "/panel",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "tr",
+  "dir": "ltr",
+  "background_color": "#F7F7F5",
+  "theme_color": "#111113",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    { "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Planlarım", "short_name": "Planlar", "url": "/panel", "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Arkadaşlar ve Mesajlar", "short_name": "Mesajlar", "url": "/panel/arkadaslar", "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Araçlar", "short_name": "Araçlar", "url": "/araclar", "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
