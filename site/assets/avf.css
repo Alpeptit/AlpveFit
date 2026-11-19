@@ -2282,3 +2282,49 @@ html.lang-locked .lang,html.lang-locked .dlang{display:none!important}
 .fr-m.fail{opacity:1;outline:1.5px solid var(--red)}.fr-m.fail small{color:var(--red)}
 .fr-retry{border:0;background:none;color:inherit;font:700 12px "Inter",sans-serif;text-decoration:underline;cursor:pointer;padding:0 2px}
 .fr-m .rd .ico{width:14px;height:14px}
+/* uygulama indirme: menüde öne çıkan satır + tarayıcıya özel küçük rehber */
+.drawer nav a.d-app{margin-top:8px;padding:12px;border:1px solid var(--line);background:linear-gradient(135deg,var(--paper),var(--card));gap:12px}
+.d-app-i{width:38px;height:38px;border-radius:12px;background:var(--ink);color:var(--on-ink);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.d-app-t{display:flex;flex-direction:column;min-width:0;flex:1}.d-app-t b{font-size:14.5px}.d-app-t small{color:var(--muted);font-weight:500;font-size:12px}
+.pw-sheet{position:fixed;left:0;right:0;bottom:0;z-index:300;display:flex;flex-direction:column;align-items:center;padding:0 12px calc(12px + env(safe-area-inset-bottom));pointer-events:none;animation:pwIn .32s cubic-bezier(.2,.85,.25,1) both}
+.pw-sheet.out{animation:pwOut .2s ease both}
+.pw-sheet.desktop{align-items:flex-end;padding:0 20px 20px}
+.pw-card{pointer-events:auto;position:relative;width:min(420px,100%);background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:22px;box-shadow:0 24px 60px -12px rgba(0,0,0,.35);padding:18px 18px 16px}
+.pw-x{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:10px;border:0;background:var(--paper);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.pw-x .ico{width:16px;height:16px}
+.pw-head{display:flex;align-items:center;gap:12px;margin:0 36px 12px 0}
+.pw-app{width:44px;height:44px;border-radius:12px;box-shadow:0 6px 16px -6px rgba(0,0,0,.4)}
+.pw-head b{font-size:16px;display:block}.pw-head small{color:var(--muted);font-size:12.5px}
+.pw-br{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--pri-soft);color:var(--ink);font-weight:700}
+.pw-steps{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:8px}
+.pw-steps li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--paper);border:1px solid var(--line);font-size:14px;line-height:1.4;animation:pwStep .35s ease both}
+.pw-n{width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--on-ink);font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.pw-i{width:30px;height:30px;border-radius:9px;border:1px solid var(--line2);background:var(--card);display:inline-flex;align-items:center;justify-content:center;flex:none;color:#0A84FF}
+.pw-i .ico{width:17px;height:17px;stroke-width:2}
+.pw-share{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:2px solid currentColor;border-top:0;border-radius:0 0 4px 4px;margin-top:5px;position:relative}
+.pw-share .ico{position:absolute;top:-9px;width:14px;height:14px;stroke-width:2.4}
+.pw-tx b{font-weight:800;color:var(--ink)}
+.pw-why{display:flex;align-items:flex-start;gap:7px;margin:0 0 12px;color:var(--muted);font-size:12.5px}.pw-why .ico{width:15px;height:15px;flex:none;margin-top:1px;color:#F59E0B}
+.pw-arrow{pointer-events:none;margin-top:6px;width:38px;height:38px;border-radius:50%;background:var(--ink);color:var(--on-ink);display:inline-flex;align-items:center;justify-content:center;animation:pwBob 1.2s ease-in-out infinite;box-shadow:0 8px 20px -6px rgba(0,0,0,.4)}
+.pw-arrow .ico{width:20px;height:20px}
+.pw-sheet.d-up{bottom:auto;top:0;flex-direction:column-reverse;padding:calc(10px + env(safe-area-inset-top)) 12px 0}
+.pw-sheet.d-up .pw-arrow{margin:0 0 6px;align-self:flex-end;margin-right:14px}
+.pw-sheet.d-up.desktop{padding:20px}
+@keyframes pwIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes pwOut{to{opacity:0;transform:translateY(16px)}}
+@keyframes pwStep{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+@keyframes pwBob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+.pw-sheet.d-up .pw-arrow{animation-name:pwBobUp}@keyframes pwBobUp{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.pw-sheet,.pw-steps li,.pw-arrow{animation:none}}
+/* ===== güvenli alan (ana ekrandan açılan uygulama): üst çubuk durum çubuğunun / çentiğin altında kalmaz ===== */
+.top{padding-top:env(safe-area-inset-top)}
+.top .wrap{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+.drawer nav{padding-top:calc(18px + env(safe-area-inset-top));padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+.toasts{bottom:calc(24px + env(safe-area-inset-bottom))}
+.totop{bottom:calc(24px + env(safe-area-inset-bottom))}
+.ck{bottom:calc(16px + env(safe-area-inset-bottom))}
+footer.foot{padding-bottom:env(safe-area-inset-bottom)}
+@media (max-width:520px){.bell-pop{top:calc(64px + env(safe-area-inset-top))}}
+@media (max-width:760px){.totop{bottom:calc(16px + env(safe-area-inset-bottom))}.ck{bottom:calc(8px + env(safe-area-inset-bottom))}}
+/* uygulama olarak açıkken: tarayıcı çubuğu yok; üst çubuk sabit kalır ve ekran kenarına yapışık görünür */
+@media (display-mode:standalone){.top{position:sticky;top:0}body{overscroll-behavior-y:none}}

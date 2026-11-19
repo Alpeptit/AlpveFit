@@ -89,7 +89,7 @@
     var u = AVF.session && AVF.session.user;
     if (!u) {
       page(view, "Forum", "Forum", "",
-        AVF.state("lock", "Forum yalnızca üyelere açıktır", "Foruma erişmek için hesabınıza giriş yapın. Hesabınız yoksa birkaç adımda üye olabilirsiniz.",
+        AVF.state("lock", "Forum yalnızca üyelere açık", "Aramıza katılmak için giriş yap; hesabın yoksa birkaç adımda üye olabilirsin. Seni bekliyoruz! 💪",
           h("div", { class: "row", style: "justify-content:center;margin-top:8px" },
             h("button", { class: "btn", type: "button", onclick: function () { AVF.auth.open("login"); } }, "Giriş yap"),
             h("button", { class: "btn ghost", type: "button", onclick: function () { AVF.auth.open("register"); } }, "Kayıt ol"))));
@@ -98,7 +98,7 @@
     }
     if (!forumOk()) {
       page(view, "Forum", "Forum", "",
-        AVF.state("shield", "18 yaş uyarısı", "Forum, yetişkinlere yönelik sağlık, antrenman ve farmakoloji tartışmaları içerebilir. Devam etmek için 18 yaşını doldurduğunuzu onaylamanız gerekir.",
+        AVF.state("shield", "Önce küçük bir kontrol", "Forumda yetişkinlere yönelik sağlık, antrenman ve farmakoloji sohbetleri var. Devam etmek için 18 yaşını doldurduğunu onayla.",
           h("div", { class: "row", style: "justify-content:center;margin-top:8px" },
             h("button", { class: "btn", type: "button", onclick: function () { try { sessionStorage.setItem(FKEY, "1"); } catch (e) { /* depolama yok */ } AVF.pages.forum(view, sub); } }, "18 yaşından büyüğüm, devam et"),
             link("/", "Ana sayfaya dön", { class: "btn ghost" }))));

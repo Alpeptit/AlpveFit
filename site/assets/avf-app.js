@@ -105,7 +105,7 @@
         col("scale", "Yasal", AVF.LEGAL_LINKS.map(function (l) { return fl("/yasal/" + l[0], LEGAL_ICONS[l[0]] || "file", l[1]); })),
         col("headset", "İletişim", [h("a", { href: "mailto:destek@alpvefit.com" }, AVF.icon("mail"), h("span", { text: "destek@alpvefit.com" })),
           h("a", { href: "/panel/destek/yeni", onclick: function (e) { e.preventDefault(); AVF.openTicket(); } }, AVF.icon("ticket"), h("span", { text: "Ticket gönder" })),
-          AVF.pwa && AVF.pwa.available() ? h("a", { href: "#", class: "f-app", onclick: function (e) { e.preventDefault(); AVF.pwa.install(); } }, AVF.icon("phone"), h("span", { text: "Uygulamayı yükle" })) : null].filter(Boolean))),
+          AVF.pwa && AVF.pwa.available() ? h("a", { href: "#", class: "f-app", onclick: function (e) { e.preventDefault(); AVF.pwa.install(); } }, AVF.icon("phone"), h("span", { text: "Uygulamayı indir" })) : null].filter(Boolean))),
       h("div", { class: "fbottom" }, h("span", { "data-notr": "" }, "© " + new Date().getFullYear() + " AlpveFit"), h("span", { text: "Uzaktan eğitim ve koçluk platformu" }))));
   }
   function renderChrome() {
@@ -124,6 +124,8 @@
       h("div", { class: "dsep" }),
       link("/blog", [AVF.icon("book"), h("span", { text: "Blog" })]),
       item(NAV.filter(function (i) { return i[0] === "/forum"; })[0]),
+      AVF.pwa && AVF.pwa.available() ? h("a", { href: "#", class: "d-app", onclick: function (e) { e.preventDefault(); drawer.classList.remove("open"); AVF.pwa.install(); } },
+        h("span", { class: "d-app-i" }, AVF.icon("phone")), h("span", { class: "d-app-t" }, h("b", { text: "Uygulamayı indir" }), h("small", { text: "Ana ekrana ekle, tam ekran ve hızlı aç" })), AVF.icon("arrow")) : null,
       u ? h("a", { href: "#", onclick: function (e) { e.preventDefault(); logout(); } }, AVF.icon("out"), h("span", { text: "Güvenli Çıkış Yap" })) : null,
       h("div", { class: "dlang" }, langSwitch())));
     // Sade üst çubuk: dil seçimi, (mobilde) forum, (üyeyse) bildirimler ve tek bir şeffaf hesap ikonu.
@@ -223,7 +225,7 @@
         it("/panel/hesap", "cog", "Hesap Ayarları"),
         h("div", { class: "um-sep" }),
         AVF.themeRow ? AVF.themeRow() : null,
-        AVF.pwa && AVF.pwa.available() ? h("button", { class: "um-i", type: "button", role: "menuitem", onclick: function () { close(); AVF.pwa.install(); } }, AVF.icon("phone"), h("span", { text: "Uygulamayı yükle" })) : null,
+        AVF.pwa && AVF.pwa.available() ? h("button", { class: "um-i", type: "button", role: "menuitem", onclick: function () { close(); AVF.pwa.install(); } }, AVF.icon("phone"), h("span", { text: "Uygulamayı indir" })) : null,
         h("button", { class: "um-i out", type: "button", role: "menuitem", onclick: function () { close(); logout(); } }, AVF.icon("out"), h("span", { text: "Güvenli Çıkış Yap" })));
       var first = pop.querySelector(".um-i"); if (first) first.focus({ preventScroll: true });
     });
@@ -278,14 +280,14 @@
     });
   }
   function sessionGone(why, data) {
-    liveStop(); AVF.session.user = null; kinds = null; unread = 0; if (why !== "expired" && AVF.clearDrafts) AVF.clearDrafts(); renderChrome();
+    liveStop(); hint(false); AVF.session.user = null; kinds = null; unread = 0; if (why !== "expired" && AVF.clearDrafts) AVF.clearDrafts(); renderChrome();
     if (why === "locked") { go("/"); AVF.auth.locked(data); return; }
     if (why === "expired") AVF.toast("Oturumunuz sona erdi. Lütfen yeniden giriş yapın.", "err");
     if (location.pathname.indexOf("/panel") === 0) go("/"); else route();
   }
   AVF.onSessionEnd = sessionGone;
   AVF.onLogin = function () {
-    kinds = null; renderChrome(); refreshUnread(); liveStart();
+    kinds = null; hint(true); renderChrome(); refreshUnread(); liveStart();
     var next = AVF.afterLogin; AVF.afterLogin = null;
     if (next && next.path === "/admin") { location.replace("/admin"); return; }   // yönetim alanı sunucuda ayrıca doğrulanır
     if (next && Date.now() - next.at < 10 * 60000) return go(next.path, true);
@@ -458,7 +460,7 @@
     }
     if (kinds) return draw();
     paintMenu(); AVF.mount(content, AVF.skeleton(3));
-    AVF.api("GET", "/plans/overview").then(function (o) { kinds = o.kinds; AVF.overview = o; draw(); }, function (e) {
+    AVF.take("/plans/overview").then(function (o) { kinds = o.kinds; AVF.overview = o; draw(); }, function (e) {
       AVF.mount(content, AVF.state("alert", "Planlar yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: function () { panelPage(sub); } }, "Tekrar dene")));
     });
   }
@@ -614,10 +616,24 @@
   }
 
   // ---------- açılış ----------
+  // Hız: oturum ipucu (yalnız "1", kişisel veri yok). Misafir genel sayfaları oturum yanıtını beklemeden hemen görür;
+  // oturumu olan üyenin panel/forum verisi, oturum sorgusuyla AYNI ANDA istenir (bir gidiş-dönüş tasarrufu).
+  function hint(v) { try { if (v === undefined) return localStorage.getItem("avf_s") === "1"; if (v) localStorage.setItem("avf_s", "1"); else localStorage.removeItem("avf_s"); } catch (e) { return false; } }
+  AVF._pre = {};
+  AVF.take = function (path) { var p = AVF._pre[path]; delete AVF._pre[path]; return p || AVF.api("GET", path); };
   function boot() {
     buildShell();
-    AVF.api("GET", "/auth/me").then(function (u) { AVF.session.user = u; }, function () { AVF.session.user = null; }).then(function () {
-      route(); refreshUnread(); liveStart(); AVF.auth.checkResetLink();
+    var p0 = location.pathname, priv = /^\/(panel|forum|giris|kayit|sifremi-unuttum|admin)(\/|$)/.test(p0), had = hint(), early = !priv && !had;
+    if (early) route();   // misafir: sayfa anında
+    else if (had) {
+      if (/^\/panel(\/|$)/.test(p0)) AVF._pre["/plans/overview"] = AVF.api("GET", "/plans/overview");
+      if (/^\/forum(\/|$)/.test(p0)) AVF._pre["/board/home"] = AVF.api("GET", "/board/home");
+      Object.keys(AVF._pre).forEach(function (k) { AVF._pre[k].catch(function () { /* asıl istek yeniden dener */ }); });
+      AVF.mount(view, h("div", { class: "wrap section" }, AVF.skeleton(3)));
+    }
+    AVF.api("GET", "/auth/me").then(function (u) { AVF.session.user = u; hint(true); }, function () { AVF.session.user = null; hint(false); AVF._pre = {}; }).then(function () {
+      if (!early || AVF.session.user) route(); else renderChrome();
+      refreshUnread(); liveStart(); AVF.auth.checkResetLink();
       // Bildirim ve mesaj sayacı: sekme görünürken 60 sn'de bir, sekmeye dönünce hemen tazelenir.
       setInterval(function () { if (!document.hidden && AVF.session.user && !live.ok) refreshUnread(); }, 60000);   // anlık bağlantı varken yoklama gereksiz
       document.addEventListener("visibilitychange", function () { if (!document.hidden && AVF.session.user) refreshUnread(); }); if (AVF.auth.restore) AVF.auth.restore(); cookieBanner();

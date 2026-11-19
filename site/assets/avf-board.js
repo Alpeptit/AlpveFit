@@ -252,7 +252,7 @@
     var KEY = o.draftKey ? "avf_fd_" + (AVF.session.user ? AVF.session.user.id : "x") + "_" + o.draftKey : null;
     var saved = null; try { saved = KEY ? JSON.parse(localStorage.getItem(KEY) || "null") : null; } catch (e) { saved = null; }
     if (saved && Date.now() - saved.t > 7 * 864e5) saved = null;
-    var ta = h("textarea", { class: "inp fo-ta", rows: o.compact ? "4" : "8", maxlength: "10000", placeholder: o.placeholder || "Mesajınızı yazın…", "aria-label": "Mesaj", spellcheck: "true" });
+    var ta = h("textarea", { class: "inp fo-ta", rows: o.compact ? "4" : "8", maxlength: "10000", placeholder: o.placeholder || "Mesajını yaz…", "aria-label": "Mesaj", spellcheck: "true" });
     ta.value = o.value || (saved && saved.v) || "";
     var images = (o.images || []).slice(), imgBox = h("div", { class: "fo-imgs" }), cnt = h("small", { class: "fo-cnt" }), msg = h("div", { class: "fo-cmsg", role: "alert" });
     var prev = h("div", { class: "fo-prev", hidden: "" }), tabW = h("button", { type: "button", role: "tab", class: "on", "aria-selected": "true" }, "Yaz"), tabP = h("button", { type: "button", role: "tab", "aria-selected": "false" }, "Önizleme");
@@ -390,7 +390,7 @@
     paintImages(); paintCount();
     var el = h("div", { class: "fo-comp" + (o.compact ? " compact" : "") }, tools, h("div", { class: "fo-taw" }, ta, sugg), prev, imgBox, gifBox, pick,
       o.extra || null,
-      saved && !o.value ? h("small", { class: "fo-draft" }, AVF.icon("save"), h("span", { text: "Kaydedilmemiş taslağınız geri yüklendi." })) : null,
+      saved && !o.value ? h("small", { class: "fo-draft" }, AVF.icon("save"), h("span", { text: "Yarım kalan taslağın geri geldi, kaldığın yerden devam." })) : null,
       msg, h("div", { class: "fo-cfoot" }, h("small", { class: "fo-help", text: "**kalın**  *italik*  ==vurgu==  ## başlık  > alıntı  - liste  @kullanıcıadı  ·  Ctrl+Enter ile gönder" }), cnt, h("span", { class: "fo-cbtn" }, cancel, send)));
     el.textarea = ta;
     el.insert = function (t) { var s = ta.value; ta.value = (s && !/\n$/.test(s) ? s + "\n" : s) + t; ta.focus(); try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (x) { /* yok */ } ta.dispatchEvent(new Event("input", { bubbles: true })); };
@@ -640,7 +640,7 @@
           return h("label", { class: "fo-po" }, inp, h("span", { "data-notr": "", text: o }));
         }));
         var vb = h("button", { class: "btn sm", type: "button" }, AVF.icon("check", "bico"), "Oy ver"), m = h("small", { class: "fo-cmsg" });
-        vb.onclick = function () { if (!picks.length) { m.textContent = "Bir seçenek işaretleyin."; return; } AVF.busy(vb, true); api("POST", "/t/" + t.id + "/vote", { choices: picks }).then(function (x) { paint(x); }, function (e) { AVF.busy(vb, false); m.textContent = AVF.errText(e); }); };
+        vb.onclick = function () { if (!picks.length) { m.textContent = "Bir seçenek işaretle."; return; } AVF.busy(vb, true); api("POST", "/t/" + t.id + "/vote", { choices: picks }).then(function (x) { paint(x); }, function (e) { AVF.busy(vb, false); m.textContent = AVF.errText(e); }); };
         AVF.mount(box, head, form, h("div", { class: "row" }, vb, m), foot);
       }
     }
@@ -674,8 +674,8 @@
     var acts = h("div", { class: "fo-acts" });
     function paintActs() {
       if (p.hidden && !r.me.mod) return AVF.mount(acts, null);
-      var like = h("button", { type: "button", class: "fo-ab rx" + (p.myReaction === 1 ? " on" : ""), "aria-pressed": String(p.myReaction === 1), title: p.own ? "Kendi mesajınız" : "Beğen", disabled: p.own || p.hidden ? "" : null }, AVF.icon("like"), h("b", { text: num(p.likes) }));
-      var dis = h("button", { type: "button", class: "fo-ab rx neg" + (p.myReaction === -1 ? " on" : ""), "aria-pressed": String(p.myReaction === -1), title: p.own ? "Kendi mesajınız" : "Beğenme", disabled: p.own || p.hidden ? "" : null }, AVF.icon("dislike"), h("b", { text: num(p.dislikes) }));
+      var like = h("button", { type: "button", class: "fo-ab rx" + (p.myReaction === 1 ? " on" : ""), "aria-pressed": String(p.myReaction === 1), title: p.own ? "Kendi mesajın" : "Beğen", disabled: p.own || p.hidden ? "" : null }, AVF.icon("like"), h("b", { text: num(p.likes) }));
+      var dis = h("button", { type: "button", class: "fo-ab rx neg" + (p.myReaction === -1 ? " on" : ""), "aria-pressed": String(p.myReaction === -1), title: p.own ? "Kendi mesajın" : "Beğenme", disabled: p.own || p.hidden ? "" : null }, AVF.icon("dislike"), h("b", { text: num(p.dislikes) }));
       function react(v) { var nv = p.myReaction === v ? 0 : v; api("POST", "/posts/" + p.id + "/react", { value: nv }).then(function (x) { p.likes = x.likes; p.dislikes = x.dislikes; p.myReaction = x.myReaction; paintActs(); }, function (e) { AVF.toast(AVF.errText(e), "err"); }); }
       like.onclick = function () { react(1); }; dis.onclick = function () { react(-1); };
       var quote = r.canReply && !p.hidden ? h("button", { type: "button", class: "fo-ab", onclick: function () {
@@ -720,7 +720,7 @@
       p.canEdit ? ["pen", "Düzenle", function () { editPost(p, ctx); }] : null,
       (p.own || me.mod) && p.editedAt ? ["clock", "Düzenleme geçmişi", function () { history_(p); }] : null,
       p.own && !p.hidden ? ["trash", p.first ? "Konuyu sil" : "Mesajı sil", function () {
-        AVF.confirmDialog({ icon: "trash", danger: true, title: p.first ? "Konu silinsin mi?" : "Mesaj silinsin mi?", text: p.first ? "Konunuz forumdan kaldırılır. Bu işlem geri alınamaz." : "Mesajınız kaldırılır; yerinde “silindi” yazar.", confirm: "Evet, sil", cancel: "Vazgeç" }).then(function (y) {
+        AVF.confirmDialog({ icon: "trash", danger: true, title: p.first ? "Konu silinsin mi?" : "Mesaj silinsin mi?", text: p.first ? "Konun forumdan kaldırılır. Bu işlem geri alınamaz." : "Mesajın kaldırılır; yerinde “silindi” yazar.", confirm: "Evet, sil", cancel: "Vazgeç" }).then(function (y) {
           if (!y) return; api("DELETE", "/posts/" + p.id).then(function (x) { AVF.toast("Silindi."); if (x.topicDeleted) go("/forum/k/" + r.category.slug); else ctx.reload(); }, function (e) { AVF.toast(AVF.errText(e), "err"); });
         });
       }, "danger"] : null,
@@ -750,8 +750,8 @@
   function report(p) {
     var sel = h("div", { class: "fo-rr" }, (S.reasons || []).map(function (x, i) { return h("label", { class: "fo-po" }, h("input", { type: "radio", name: "rr", value: x[0], checked: i === 0 ? "" : null }), h("span", { text: x[1] })); }));
     var nt = h("textarea", { class: "inp", rows: "2", maxlength: "300", placeholder: "Ek açıklama (isteğe bağlı)", "aria-label": "Açıklama" });
-    dialog({ icon: "flag", title: "Mesajı şikâyet et", text: "Şikâyetiniz moderatörlere iletilir; kim olduğunuz mesajın yazarına gösterilmez.", body: h("div", { class: "fo-dfrm" }, sel, nt), confirm: "Şikâyet et",
-      onConfirm: function () { var v = sel.querySelector("input:checked"); return api("POST", "/posts/" + p.id + "/report", { reason: v ? v.value : "", note: nt.value }).then(function (x) { AVF.toast(x.already ? "Bu mesajı zaten şikâyet ettiniz." : "Şikâyetiniz alındı. Teşekkür ederiz."); }); } });
+    dialog({ icon: "flag", title: "Mesajı şikâyet et", text: "Şikâyetin moderatörlere iletilir; kim olduğun mesajın yazarına gösterilmez.", body: h("div", { class: "fo-dfrm" }, sel, nt), confirm: "Şikâyet et",
+      onConfirm: function () { var v = sel.querySelector("input:checked"); return api("POST", "/posts/" + p.id + "/report", { reason: v ? v.value : "", note: nt.value }).then(function (x) { AVF.toast(x.already ? "Bu mesajı zaten şikâyet ettiniz." : "Şikâyetin alındı, teşekkürler! Ekibimiz bakacak."); }); } });
   }
   function modPost(p, action, ctx) {
     if (action === "restore") return api("POST", "/posts/" + p.id + "/mod", { action: "restore" }).then(function () { AVF.toast("Mesaj geri getirildi."); ctx.reload(); }, function (e) { AVF.toast(AVF.errText(e), "err"); });
@@ -1017,7 +1017,7 @@
     })));
   }
 
-  function notFound() { shell({ h1: "Bulunamadı", crumbs: [] }, AVF.state("msg", "Sayfa bulunamadı", "Aradığınız forum sayfası yok.", lk("/forum", "Foruma dön", { class: "btn" }))); }
+  function notFound() { shell({ h1: "Bulunamadı", crumbs: [] }, AVF.state("msg", "Sayfa bulunamadı", "Aradığın forum sayfası burada değil. Belki taşındı, belki hiç yoktu. 🤷", lk("/forum", "Foruma dön", { class: "btn" }))); }
 
   // ------------------------------------------------------------------ giriş kapısı ve yönlendirme
   function gateRules(view, rules, again) {
@@ -1032,7 +1032,7 @@
       })()));
   }
   function boot(view, sub, done) {
-    api("GET", "/home").then(function (r) {
+    (AVF.take ? AVF.take("/board/home") : api("GET", "/home")).then(function (r) {
       S.me = r.me; S.cats = r.categories; S.stats = r.stats;
       S.tags = r.tags || [];
       if (!S.rules) api("GET", "/rules").then(function (x) { S.rules = x.rules; S.ruleIcons = x.icons || []; S.reasons = x.reasons; var rl = VIEW && VIEW.querySelector(".fo-rul ul"); if (rl) rl.replaceWith(ruleList(S.rules.slice(1, 5), S.ruleIcons.slice(1, 5), "mini")); }, function () {});
