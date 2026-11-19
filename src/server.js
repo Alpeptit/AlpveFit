@@ -94,10 +94,22 @@ app.use(clientIpMiddleware);
 
 app.use(
   helmet({
+    // API yanıtları için en dar politika. Helmet'in varsayılan listesi KULLANILMAZ (orada style-src / font-src "https:" joker
+    // kaynağı vardı — ZAP taraması "CSP: Wildcard Directive"). Satır içi stil yalnız sunucunun ürettiği küçük onay sayfaları
+    // (ör. bülten onayı) içindir; betik hiçbir API yanıtında çalışamaz. Site sayfalarının politikası src/site.js'tedir.
     contentSecurityPolicy: {
+      useDefaults: false,
       directives: {
         defaultSrc: ["'none'"], // bu bir API sunucusu — hiçbir içerik render etmez
         frameAncestors: ["'none'"],
+        baseUri: ["'none'"],
+        formAction: ["'self'"],
+        objectSrc: ["'none'"],
+        scriptSrc: ["'none'"],
+        scriptSrcAttr: ["'none'"],
+        styleSrc: ["'unsafe-inline'"],
+        imgSrc: ["'self'", "data:"],
+        upgradeInsecureRequests: [],
       },
     },
     // Tarayıcıya "bu siteye bir daha ASLA http:// ile bağlanma" der —
@@ -106,6 +118,8 @@ app.use(
     hsts: { maxAge: 63072000, includeSubDomains: true, preload: true },
   })
 );
+// Tarayıcı özellik izinleri TÜM yanıtlarda kapalı (API ve statik dosyalar dahil; sayfalarda src/site.js aynı başlığı yazar)
+app.use((req, res, next) => { res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()"); next(); });
 // M-17 (v4): FRONTEND_URL origin olarak normalize edilir ("https://x.app/" → "https://x.app");
 // aksi halde sonda "/" olan bir değer tüm tarayıcı isteklerini CORS'ta reddettirirdi.
 app.use(cors({ origin: normalizeOrigin(process.env.FRONTEND_URL) || process.env.FRONTEND_URL, credentials: true }));
