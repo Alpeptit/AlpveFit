@@ -99,7 +99,7 @@
       if (i[0] === "/panel" && !u) {
         return h("a", { href: "/giris", onclick: function (e) { e.preventDefault(); drawer.classList.remove("open"); AVF.auth.open("login"); } }, AVF.icon(i[1]), h("span", { text: i[2] }));
       }
-      var a = link(i[0], [AVF.icon(i[1]), h("span", { text: i[2] }), i[0] === "/forum" ? h("em", { class: "soon", text: "Yakında" }) : null]);
+      var a = link(i[0], [AVF.icon(i[1]), h("span", { text: i[2] })]);
       if (active(i[0])) a.setAttribute("aria-current", "page"); return a;
     }
     AVF.mount(nav, NAV.map(item));
@@ -123,7 +123,8 @@
     var d = n.data || {};
     if (n.type === "plan_published" && d.kind && AVF.KIND[d.kind]) return "/panel/" + AVF.KIND[d.kind].slug;
     if (n.type === "plan_updated") return d.kinds && d.kinds.length === 1 && AVF.KIND[d.kinds[0]] ? "/panel/" + AVF.KIND[d.kinds[0]].slug : "/panel";
-    if (n.type === "level_up" || n.type === "forum") return "/panel/forum-ayarlari/seviye";
+    if (n.type === "forum" && d.topicId) return "/forum/konu/" + d.topicId + (d.postId ? "?m=" + d.postId : "");
+    if (n.type === "level_up" || n.type === "forum") return n.type === "forum" && d.kind === "moderation" && !d.topicId ? "/forum" : "/panel/forum-ayarlari/seviye";
     if (n.type === "friend") return "/panel/arkadaslar";
     if (n.type === "ticket" && d.ticketId) return "/panel/destek/" + d.ticketId;
     if ((n.type === "order_paid" || n.type === "order_payment") && n.order_id) return "/panel/siparis/" + n.order_id;
@@ -236,7 +237,7 @@
     if (p === "/paketler") return AVF.packagesPage(view);
     if (p === "/sss") return AVF.pages.faq(view);
     if (p === "/hakkimizda") return AVF.pages.about(view);
-    if (p === "/forum") return AVF.pages.forum(view);
+    if (p === "/forum" || p.indexOf("/forum/") === 0) return AVF.pages.forum(view, p.slice(7));
     if (p === "/blog") return AVF.pages.blog(view);
     if (p.indexOf("/blog/") === 0) return AVF.pages.post(view, p.slice(6));
     if (p === "/araclar") return AVF.pages.tools(view);
@@ -464,6 +465,8 @@
     if (n.type === "plan_updated") return h("div", {}, h("span", { text: "Planlarınız güncellendi" }), d.kinds && d.kinds.length ? h("small", { class: "nk", text: d.kinds.filter(function (k) { return AVF.KIND[k]; }).map(function (k) { return AVF.t(AVF.KIND[k].label); }).join(" · ") }) : null);
     if (n.type === "level_up" && d.name) return h("div", {}, h("span", { text: "Tebrikler! Forum seviyeniz yükseldi: " }), h("b", { text: d.name }));
     if (n.type === "friend") return h("div", { text: n.text });
+    // forum bildirimi: konu başlığı kullanıcı içeriğidir (çevrilmez); moderasyon gerekçesi ve toplu sayı ayrıca gösterilir
+    if (n.type === "forum") return h("div", { "data-notr": "" }, h("span", { text: n.text }), d.count > 1 ? h("small", { class: "nk", text: d.count + " yeni" }) : null, d.reason ? h("small", { class: "nk", text: "Gerekçe: " + d.reason }) : null);
     return h("div", { text: n.text });
   }
   /** Tüm bildirimleri temizle — onay sorulur (okundu işaretlemede sorulmaz). */

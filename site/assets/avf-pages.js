@@ -1,4 +1,4 @@
-/* AlpveFit — bilgi sayfaları: SSS, Hakkımızda, Blog, Araçlar (hesaplayıcılar), Forum (yapım aşamasında).
+/* AlpveFit — bilgi sayfaları: SSS, Hakkımızda, Blog, Araçlar (hesaplayıcılar), Forum (giriş kapısı; forumun kendisi avf-board.js).
    Hesaplayıcılar tamamen tarayıcıda çalışır: girilen değerler sunucuya GÖNDERİLMEZ ve saklanmaz. */
 (function () {
   "use strict";
@@ -80,12 +80,12 @@
             h("div", { class: "row" }, h("a", { class: "btn", href: "mailto:destek@alpvefit.com" }, AVF.icon("mail", "bico"), "E-posta gönder"), link("/sss", "Sık sorulan sorular", { class: "btn ghost" }))))), "users");
   };
 
-  // ---------- Forum (yapım aşamasında) ----------
+  // ---------- Forum: üyelik + 18 yaş kapısı ----------
   // Forum: yalnız oturum açmış üyeler girer; her oturumda 18 yaş onayı istenir. Aynı kapı adres çubuğundan da geçilemez
   // (yönlendirici tek noktadır). Forum içeriği/API'si eklendiğinde sunucu tarafında da üyelik ve onay şartı aranmalıdır.
   var FKEY = "avf_forum_18";
   function forumOk() { try { return sessionStorage.getItem(FKEY) === "1"; } catch (e) { return false; } }
-  AVF.pages.forum = function (view) {
+  AVF.pages.forum = function (view, sub) {
     var u = AVF.session && AVF.session.user;
     if (!u) {
       page(view, "Forum", "Forum", "",
@@ -93,20 +93,20 @@
           h("div", { class: "row", style: "justify-content:center;margin-top:8px" },
             h("button", { class: "btn", type: "button", onclick: function () { AVF.auth.open("login"); } }, "Giriş yap"),
             h("button", { class: "btn ghost", type: "button", onclick: function () { AVF.auth.open("register"); } }, "Kayıt ol"))));
-      AVF.afterLogin = { path: "/forum", at: Date.now() };
+      AVF.afterLogin = { path: location.pathname + location.search, at: Date.now() };
       return AVF.auth.open("login");
     }
     if (!forumOk()) {
       page(view, "Forum", "Forum", "",
         AVF.state("shield", "18 yaş uyarısı", "Forum, yetişkinlere yönelik sağlık, antrenman ve farmakoloji tartışmaları içerebilir. Devam etmek için 18 yaşını doldurduğunuzu onaylamanız gerekir.",
           h("div", { class: "row", style: "justify-content:center;margin-top:8px" },
-            h("button", { class: "btn", type: "button", onclick: function () { try { sessionStorage.setItem(FKEY, "1"); } catch (e) { /* depolama yok */ } AVF.pages.forum(view); } }, "18 yaşından büyüğüm, devam et"),
+            h("button", { class: "btn", type: "button", onclick: function () { try { sessionStorage.setItem(FKEY, "1"); } catch (e) { /* depolama yok */ } AVF.pages.forum(view, sub); } }, "18 yaşından büyüğüm, devam et"),
             link("/", "Ana sayfaya dön", { class: "btn ghost" }))));
       return;
     }
-    page(view, "Forum", "Forum", "",
-      AVF.state("msg", "Forum yapım aşamasında", "Üyelerimizin soru sorabileceği ve deneyim paylaşabileceği forum alanı üzerinde çalışıyoruz. Çok yakında burada olacak.",
-        h("div", { class: "row", style: "justify-content:center;margin-top:8px" }, link("/blog", "Blog'u incele", { class: "btn" }), link("/araclar", "Araçlara git", { class: "btn ghost" }))));
+    // Forum: avf-board.js (sunucu ayrıca kuralların ve 18 yaş beyanının onaylandığını denetler)
+    document.title = "Forum — AlpveFit";
+    AVF.forumBoard(view, sub || "");
   };
 
   // Blog: avf-blog.js (AVF.pages.blog / AVF.pages.post orada tanımlanır).

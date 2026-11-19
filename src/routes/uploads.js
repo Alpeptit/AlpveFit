@@ -94,7 +94,7 @@ uploadsRouter.get("/uploads/:scope", requireAuth, async (req, res) => {
 });
 
 /** Dosyayı güvenli başlıklarla gönderir (sahiplik/yetki çağıran tarafından doğrulanmış olmalı). */
-export function sendAttachment(res, a) {
+export function sendAttachment(res, a, cache) {
   // pg, bytea'yı Buffer olarak döndürür; başka bir sürücü onaltılık metin ("\\x…") döndürürse çevrilir.
   const data = Buffer.isBuffer(a.data) ? a.data : Buffer.from(String(a.data || "").replace(/^\\x/, ""), "hex");
   const image = a.mime === "image/png" || a.mime === "image/jpeg" || a.mime === "image/gif";
@@ -103,7 +103,8 @@ export function sendAttachment(res, a) {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
   res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
-  res.setHeader("Cache-Control", "private, no-store");
+  // değişmeyen görseller (her yeni yükleme yeni kimlik alır): tarayıcı bir hafta saklar, ara katman (CDN) saklamaz
+  res.setHeader("Cache-Control", cache === "immutable" ? "private, max-age=604800, immutable" : "private, no-store");
   res.setHeader("Content-Disposition", `${image ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(a.filename)}`);
   res.end(data);
 }

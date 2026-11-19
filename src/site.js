@@ -97,7 +97,7 @@ export function mountSite(app) {
   });
 
   // Tek sayfa uygulama: /panel, /panel/*, /giris vb. istemci tarafı yönlendirilir.
-  const SPA = ["/", "/giris", "/kayit", "/sifremi-unuttum", "/paketler", "/sss", "/hakkimizda", "/blog", "/blog/*", "/araclar", "/araclar/*", "/forum", "/yasal/*", "/panel", "/panel/*"];
+  const SPA = ["/", "/giris", "/kayit", "/sifremi-unuttum", "/paketler", "/sss", "/hakkimizda", "/blog", "/blog/*", "/araclar", "/araclar/*", "/forum", "/forum/*", "/yasal/*", "/panel", "/panel/*"];
   app.get(SPA, (req, res) => { htmlHeaders(res); res.sendFile(indexFile); });
 
   app.use(express.static(SITE_DIR, {

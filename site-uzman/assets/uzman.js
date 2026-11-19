@@ -492,12 +492,23 @@
     load();
   }
 
-  // ---------- yönetici: FORUM (forum açıldığında moderasyon araçları burada olacak) ----------
+  // ---------- yönetici: FORUM — özet ve moderasyon ekranlarına geçiş (moderasyonun kendisi forumun içinde: /forum/moderasyon) ----------
   function forumView(c) {
     AVF.mount(c, h("h2", { class: "ptitle" }, AVF.icon("msg"), " Forum"), AVF.skeleton(1));
-    api("GET", "/forum/levels").then(function (L) {
+    Promise.all([api("GET", "/forum/levels"), AVF.api("GET", "/board/home").catch(function (e) { return { err: e }; })]).then(function (x) {
+      var L = x[0], H = x[1], st = H && H.stats, me = H && H.me;
+      var open = function (path) { location.href = path; };
+      var tile = function (icon, label, val) { return h("div", { class: "card", style: "padding:14px;display:flex;gap:12px;align-items:center" }, h("span", { class: "tile" }, AVF.icon(icon)), h("div", null, h("small", { style: "color:var(--muted)", text: label }), h("b", { style: "display:block;font-size:20px", text: String(val) }))); };
       AVF.mount(c, h("h2", { class: "ptitle" }, AVF.icon("msg"), " Forum"),
-        h("div", { class: "note" }, "Forum yönetimi (genel konular, kilitleme, şikâyetler, içerik düzenleme, kullanıcı engelleme) forum aşamasında bu sekmeye eklenecek. Üyelerin forum seviyesi ve moderatör ataması şimdiden Üyeler › Yönet bölümünden yapılabilir."),
+        H && H.err ? h("div", { class: "note warn" }, AVF.icon("alert", "bico"), h("span", { text: "Moderasyon araçlarını kullanmak için forumu bir kez açıp forum kurallarını onaylayın." }), " ", h("a", { href: "/forum", text: "Foruma git" })) : null,
+        st ? h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:14px" },
+          tile("flag", "Açık şikâyet", me.openReports), tile("file", "Konu", st.topics), tile("chat", "Mesaj", st.posts), tile("users", "Forum üyesi", st.members), tile("pulse", "Şu an çevrimiçi", st.online)) : null,
+        h("div", { class: "row", style: "flex-wrap:wrap;gap:8px" },
+          h("button", { class: "btn", type: "button", onclick: function () { open("/forum/moderasyon"); } }, AVF.icon("shield", "bico"), "Şikâyet kuyruğu"),
+          h("button", { class: "btn ghost", type: "button", onclick: function () { open("/forum/moderasyon?t=bans"); } }, AVF.icon("lock", "bico"), "Forum yasakları"),
+          h("button", { class: "btn ghost", type: "button", onclick: function () { open("/forum/moderasyon?t=cats"); } }, AVF.icon("cog", "bico"), "Kategoriler"),
+          h("button", { class: "btn ghost", type: "button", onclick: function () { open("/forum"); } }, AVF.icon("msg", "bico"), "Foruma git")),
+        h("p", { class: "hint", text: "Konu sabitleme, kilitleme, taşıma, içerik kaldırma ve forumdan uzaklaştırma işlemleri forumun içinde, her konu ve mesajın moderasyon menüsünden yapılır. Üyelerin seviyesi ve moderatör ataması Üyeler › Yönet bölümündedir. Tüm işlemler denetim kaydına yazılır." }),
         h("div", { class: "card", style: "padding:18px;margin-top:14px" }, h("h3", { style: "margin-bottom:6px" }, "Seviye kuralları"),
           h("p", { class: "hint", text: "Kullanıcılar arası mesajlaşma Pump Avcısı seviyesinde açılır. Moderatör ve Admin yalnız atamayla verilir." }),
           h("ol", { class: "lvl-list" }, L.map(function (l) { return h("li", null, h("span", { class: "tile" }, AVF.icon("award")), h("b", { text: l.name }), h("small", { text: l.min + "+ puan" })); }),
@@ -510,6 +521,10 @@
   var ACTION_TR = { member_block: "Üye engellendi", member_ban: "Süreli yasak", member_unblock: "Engel kaldırıldı", member_perma_ban: "Kalıcı yasak (üye silindi)", member_forum_set: "Forum seviyesi / rolü",
     user_role_set: "Yetki değişikliği", member_access_set: "Plan bölümü erişimi", assignment_set: "Uzman ataması", assignment_remove: "Uzman ataması kaldırıldı", order_delivery_set: "Teslim durumu",
     ticket_reply: "Destek yanıtı", ticket_close: "Destek talebi çözüldü", profile_update: "Kişisel bilgi güncellendi", profile_delete: "Kişisel bilgi silindi", password_reset: "Şifre sıfırlandı", account_locked: "Hesap kilitlendi",
+    forum_topic_create: "Forum: konu açıldı", forum_post_edit_mod: "Forum: mesaj düzenlendi (moderatör)", forum_post_hide: "Forum: mesaj kaldırıldı", forum_post_restore: "Forum: mesaj geri getirildi",
+    forum_topic_pin: "Forum: konu sabitlendi", forum_topic_unpin: "Forum: sabitleme kaldırıldı", forum_topic_lock: "Forum: konu kilitlendi", forum_topic_unlock: "Forum: kilit açıldı", forum_topic_move: "Forum: konu taşındı",
+    forum_topic_kind: "Forum: konu türü değişti", forum_topic_hide: "Forum: konu kaldırıldı", forum_topic_restore: "Forum: konu geri getirildi", forum_report_uphold: "Forum: şikâyet haklı bulundu", forum_report_dismiss: "Forum: şikâyet reddedildi",
+    forum_ban: "Forum: üye uzaklaştırıldı", forum_unban: "Forum: uzaklaştırma kaldırıldı", forum_category_update: "Forum: kategori güncellendi",
     plan_create: "Plan oluşturuldu", plan_update: "Plan güncellendi", plan_publish: "Plan yayınlandı", plan_unpublish: "Plan yayından kaldırıldı", plan_archive: "Plan arşivlendi", plan_delete: "Plan silindi", order_paid: "Sipariş ödendi" };
   function auditView(c) {
     var list = h("div"), more = h("div", { style: "margin-top:12px" }), last = null, acts = [["", "Tümü"]];

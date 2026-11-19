@@ -43,7 +43,7 @@
     more: "M12 6h.01M12 12h.01M12 18h.01", checks: "M2 13l4 4L16 7M10 15l2 2L22 7",
     unlock: "M6 11h12v10H6zM8 11V7a4 4 0 017.7-1.5", sun: "M12 16a4 4 0 100-8 4 4 0 000 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4", moon: "M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z",
     chart: "M4 20V10M10 20V4M16 20v-7M22 20H2", trash2: "M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3",
-    atsign: "M16 12a4 4 0 10-1.2 2.8M16 8v5a2.5 2.5 0 005 0v-1a9 9 0 10-3.5 7.1", pen: "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4", phone: "M7 2h10a1 1 0 011 1v18a1 1 0 01-1 1H7a1 1 0 01-1-1V3a1 1 0 011-1zM11 18h2", printer: "M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7zM17 12.5h.01",
+    atsign: "M16 12a4 4 0 10-1.2 2.8M16 8v5a2.5 2.5 0 005 0v-1a9 9 0 10-3.5 7.1", pen: "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4", phone: "M7 2h10a1 1 0 011 1v18a1 1 0 01-1 1H7a1 1 0 01-1-1V3a1 1 0 011-1zM11 18h2", search: "M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3", bookmark: "M6 3h12v18l-6-4-6 4z", quote: "M5 8h5v5c0 3-1.6 4.8-4.5 5.5M14 8h5v5c0 3-1.6 4.8-4.5 5.5", pushpin: "M9 3h6l-1 6 4 4H6l4-4zM12 13v8", link: "M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1", printer: "M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7zM17 12.5h.01",
   };
   AVF.icon = function (n, cls) {
     var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");

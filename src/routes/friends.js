@@ -15,7 +15,7 @@ export const friendsRouter = withAsyncErrors(express.Router());
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const pair = (a, b) => (a < b ? [a, b] : [b, a]);
 const clean = (v, max) => String(v ?? "").replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F​-‏‪-‮⁦-⁩]/g, "").trim().slice(0, max);
-export const DM_MAX = 2000, DM_IMAGE_MAX = 5 * 1024 * 1024;
+export const DM_MAX = 2000, DM_IMAGE_MAX = 4 * 1024 * 1024;
 const REPORT_REASONS = ["spam", "abuse", "obscene", "political", "scam", "other"];
 // Engellenmiş / yasaklı (yönetici) hesaplar listelerde ve aramada görünmez.
 const ACTIVE = `NOT (u.locked_at IS NOT NULL AND u.locked_reason LIKE 'admin\\_%' AND (u.locked_until IS NULL OR u.locked_until > now()))`;
@@ -167,14 +167,14 @@ friendsRouter.post("/messages/:id", requireAuth, async (req, res) => {
   const { rows } = await pool.query(`INSERT INTO dm_messages (sender_id, recipient_id, body) VALUES ($1, $2, $3) RETURNING id, created_at`, [req.user.sub, req.params.id, body]);
   res.status(201).json({ id: rows[0].id, at: rows[0].created_at });
 });
-// Görsel mesaj: PNG / JPG / GIF, en fazla 5 MB ve 4096 piksel; tür dosya içeriğinden okunur.
+// Görsel mesaj: PNG / JPG / GIF, en fazla 4 MB ve 4096 piksel; tür dosya içeriğinden okunur.
 friendsRouter.post("/messages/:id/image", requireAuth, async (req, res, next) => {
-  if (Number(req.headers["content-length"] || 0) > DM_IMAGE_MAX) return res.status(400).json({ error: "Görsel en fazla 5 MB olabilir." });
+  if (Number(req.headers["content-length"] || 0) > DM_IMAGE_MAX) return res.status(400).json({ error: "Görsel en fazla 4 MB olabilir." });
   next();
 }, raw, async (req, res) => {
   const buf = req.body, info = Buffer.isBuffer(buf) ? imageInfo(buf) : null;
   if (!info || !["image/png", "image/jpeg", "image/gif"].includes(info.mime)) return res.status(400).json({ error: "Yalnız PNG, JPG veya GIF gönderilebilir." });
-  if (buf.length > DM_IMAGE_MAX) return res.status(400).json({ error: "Görsel en fazla 5 MB olabilir." });
+  if (buf.length > DM_IMAGE_MAX) return res.status(400).json({ error: "Görsel en fazla 4 MB olabilir." });
   if (info.w > 4096 || info.h > 4096) return res.status(400).json({ error: "Görsel en fazla 4096×4096 piksel olabilir." });
   const g = await sendGuard(req, res); if (!g) return;
   const ext = info.mime === "image/png" ? "png" : info.mime === "image/gif" ? "gif" : "jpg";

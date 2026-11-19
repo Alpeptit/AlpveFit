@@ -36,7 +36,7 @@ async function load(file, prefix) {
   prefixes.push([routes, prefix]);
 }
 await load("auth.js", "/api/auth"); await load("twoFactor.js", "/api"); await load("account.js", "/api"); await load("notifications.js", "/api");
-await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("uploads.js", "/api"); await load("support.js", "/api"); await load("forum.js", "/api"); await load("progress.js", "/api"); await load("friends.js", "/api"); await load("admin.js", "/api/admin");
+await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("uploads.js", "/api"); await load("support.js", "/api"); await load("forum.js", "/api"); await load("board.js", "/api"); await load("progress.js", "/api"); await load("friends.js", "/api"); await load("admin.js", "/api/admin");
 const { hideAdminApi, panelUser, sessionUser } = await import(join(root, "src/utils/panelSession.js"));
 
 function findRoute(method, full) {
@@ -86,7 +86,7 @@ http.createServer(async (rq, rs) => {
     if (path.startsWith("/assets/uzman/")) { const u = await panelUser({ headers: rq.headers }); const f = join(root, "site-uzman/assets", path.slice(14)); if (!u || !existsSync(f)) { rs.writeHead(404); return rs.end("Not found"); } return sendFile(rs, f); }
     if (["/sw.js", "/manifest.webmanifest", "/offline.html"].includes(path)) return sendFile(rs, join(root, "site", path.slice(1)));
     if (path.startsWith("/assets/")) { const f = join(root, "site", path); if (!f.startsWith(join(root, "site/assets")) || !existsSync(f) || !statSync(f).isFile()) { rs.writeHead(404); return rs.end("Not found"); } return sendFile(rs, f); }
-    if (["/", "/giris", "/kayit", "/sifremi-unuttum", "/panel", "/paketler", "/sss", "/hakkimizda", "/blog", "/araclar", "/forum"].includes(path) || path.startsWith("/blog/") || path.startsWith("/araclar/") || path.startsWith("/panel/") || path.startsWith("/yasal/")) return sendFile(rs, join(root, "site/index.html"));
+    if (["/", "/giris", "/kayit", "/sifremi-unuttum", "/panel", "/paketler", "/sss", "/hakkimizda", "/blog", "/araclar", "/forum"].includes(path) || path.startsWith("/blog/") || path.startsWith("/araclar/") || path.startsWith("/panel/") || path.startsWith("/yasal/") || path.startsWith("/forum/")) return sendFile(rs, join(root, "site/index.html"));
     return sendFile(rs, join(root, "site/404.html"), 404);
   } catch (e) { console.error("[sunucu]", e); rs.writeHead(500); rs.end("hata"); }
 }).listen(PORT, "127.0.0.1", () => origLog("devserver http://127.0.0.1:" + PORT));

@@ -108,7 +108,7 @@
         pick.addEventListener("change", function () {
           var f = pick.files && pick.files[0]; pick.value = ""; if (!f) return;
           if (["image/png", "image/jpeg", "image/gif"].indexOf(f.type) < 0) return AVF.toast(AVF.t("Yalnız PNG, JPG veya GIF gönderilebilir."));
-          if (f.size > 5 * 1024 * 1024) return AVF.toast(AVF.t("Görsel en fazla 5 MB olabilir."));
+          if (f.size > 4 * 1024 * 1024) return AVF.toast(AVF.t("Görsel en fazla 4 MB olabilir."));
           var hd = { "Content-Type": "application/octet-stream", Accept: "application/json", "x-avf-lang": AVF.lang || "tr" }, c = AVF.cookie("avf_csrf"); if (c) hd["x-csrf-token"] = c;
           AVF.busy(send, true, "");
           fetch("/api/messages/" + id + "/image", { method: "POST", credentials: "same-origin", headers: hd, body: f }).then(function (rs) { return rs.json().then(function (d) { if (!rs.ok) throw { status: rs.status, data: d }; return d; }); })

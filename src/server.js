@@ -24,6 +24,7 @@ import { blogRouter } from "./routes/blog.js";
 import { supportRouter } from "./routes/support.js";
 import { uploadsRouter } from "./routes/uploads.js";
 import { forumRouter } from "./routes/forum.js";
+import { boardRouter } from "./routes/board.js";
 import { startPlanMailJob } from "./utils/planNotify.js";
 import { startDataRetentionJob } from "./services/dataRetention.js";
 import { normalizeOrigin } from "./utils/originCheck.js";
@@ -241,6 +242,7 @@ app.use("/api", supportRouter);       // /api/tickets/* — destek talepleri
 app.use("/api", blogRouter);          // /api/blog — herkese açık blog (yazma: /api/admin/blog)
 app.use("/api", profileRouter);       // /api/profile — üyenin koçluk bilgileri
 app.use("/api", forumRouter);         // /api/forum/me* — forum ayarları (kullanıcı adı, avatar, imza, bağlantılar, bildirimler)
+app.use("/api", boardRouter);         // /api/board/* — forum: konular, mesajlar, moderasyon (yalnız kuralları onaylamış üyeler)
 
 app.get("/api/health", (req, res) => res.json({ ok: true, ...(dbMigrations.state === "ok" ? {} : { db: dbMigrations.state }) }));
 

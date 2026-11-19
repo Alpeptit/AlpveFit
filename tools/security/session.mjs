@@ -25,6 +25,8 @@ if (cols.has("email_verified")) tries.push(`email_verified = true`);
 if (cols.has("email_verified_at")) tries.push(`email_verified_at = now()`);
 if (role === "admin" && cols.has("totp_enabled")) tries.push(`totp_enabled = true`);
 for (const t of tries) { try { await pool.query(`UPDATE users SET ${t} WHERE id = $1`, [u.id]); } catch { /* bu projede geçerli değil */ } }
+// forumu olan projede tarama hesabı forum kurallarını onaylamış sayılır (forum uçları da taransın)
+try { await pool.query(`INSERT INTO forum_profiles (user_id, rules_accepted_at) VALUES ($1, now()) ON CONFLICT (user_id) DO UPDATE SET rules_accepted_at = now()`, [u.id]); } catch { /* forum yok */ }
 const token = jwt.sign({ sub: u.id, role: u.role, tv: u.token_version }, process.env.JWT_SECRET, { expiresIn: "6h", algorithm: "HS256" });
 const csrf = crypto.randomBytes(32).toString("hex");
 process.stdout.write(JSON.stringify({ id: u.id, cookie: `${AUTH_COOKIE_NAME}=${token}; ${CSRF_COOKIE_NAME}=${csrf}`, csrf }));

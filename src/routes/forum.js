@@ -158,5 +158,5 @@ forumRouter.get("/forum/media/:id", async (req, res) => {
   if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: "Bulunamadı." });
   const { rows } = await pool.query(`SELECT filename, mime, data FROM attachments WHERE id = $1 AND scope IN ('avatar', 'sig')`, [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: "Bulunamadı." });
-  sendAttachment(res, rows[0]);
+  sendAttachment(res, rows[0], "immutable");
 });
