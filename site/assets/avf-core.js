@@ -193,10 +193,13 @@
   AVF.DELIVERY = { online: "Uzaktan (online)", in_person: "Yüz yüze", hybrid: "Uzaktan + yüz yüze" };
 
   // ---------- bildirim (toast) ----------
-  AVF.toast = function (msg, kind) {
+  AVF.toast = function (msg, kind, o) {
     var box = document.getElementById("toasts");
     if (!box) { box = AVF.h("div", { id: "toasts", class: "toasts", role: "status", "aria-live": "polite" }); document.body.appendChild(box); }
-    var t = AVF.h("div", { class: "toast" + (kind === "err" ? " err" : "") }, msg); box.appendChild(t);
+    // o.href: dokununca ilgili sayfaya götüren bildirim (ör. yeni mesaj)
+    var t = o && o.href ? AVF.h("a", { class: "toast link", href: o.href, onclick: function (e) { e.preventDefault(); if (t.parentNode) t.parentNode.removeChild(t); AVF.go(o.href); } }, AVF.icon("chat", "bico"), AVF.h("span", { text: msg }), AVF.icon("arrow", "bico"))
+      : AVF.h("div", { class: "toast" + (kind === "err" ? " err" : "") }, msg);
+    box.appendChild(t);
     setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 4200);
   };
 

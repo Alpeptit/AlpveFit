@@ -51,15 +51,16 @@
     var price = h("div", { class: "price" }), listP = h("div", { class: "listp" }), buy = h("button", { class: "btn block", type: "button" }, "Satın al");
     var opts = h("div", { class: "seg dur n" + p.options.length, role: "radiogroup", "aria-label": "Süre seçin" });
     function paint() {
-      AVF.mount(price, h("b", {}, moneyC(sel.price, cat && cat.currency)));
-      AVF.mount(listP, weeksText(sel.weeks) + " · tek ödeme");
+      // liste fiyatı sabit; indirimli tutar öne çıkar, liste fiyatı üstü çizili gösterilir
+      AVF.mount(price, sel.listPrice && sel.listPrice > sel.price ? h("s", { class: "was", text: moneyC(sel.listPrice, cat && cat.currency) }) : null, h("b", {}, moneyC(sel.price, cat && cat.currency)));
+      AVF.mount(listP, weeksText(sel.weeks) + " · tek ödeme", sel.listPrice > sel.price ? h("span", { class: "save", text: moneyC(sel.listPrice - sel.price, cat && cat.currency) + " kazancın var" }) : null);
       Array.prototype.forEach.call(opts.children, function (b, i) { b.setAttribute("aria-checked", p.options[i] === sel ? "true" : "false"); });
     }
     p.options.forEach(function (o) { opts.appendChild(h("button", { type: "button", role: "radio", onclick: function () { sel = o; paint(); } }, weeksText(o.weeks))); });
     buy.addEventListener("click", function () { AVF.checkout(p, sel, c); });
     paint();
     return h("article", { class: "card pkg fx" },
-      h("div", { class: "pkg-head" }, h("span", { class: "tile" }, AVF.icon(copy.icon)), h("span", { class: "chip" }, copy.level)),
+      h("div", { class: "pkg-head" }, h("span", { class: "tile" }, AVF.icon(copy.icon)), p.discountPct ? h("span", { class: "chip disc" }, AVF.icon("tag"), h("span", { "data-notr": "", text: "%" + p.discountPct + " indirim" })) : null, h("span", { class: "chip" }, copy.level)),
       h("h3", { text: p.label }), h("p", { class: "tagline" }, copy.tag),
       h("div", { class: "pkg-price" }, price, listP), opts,
       h("div", { class: "pkg-cats" }, PKG_CATS.map(function (cg) {
@@ -84,6 +85,8 @@
       h("button", { class: "x", type: "button", "aria-label": "Kapat", onclick: close }, AVF.icon("x")),
       h("h2", { id: "co-t" }, "Siparişi onayla"), h("p", { class: "sub" }, p.label + " · " + weeksText(opt.weeks)),
       h("div", { class: "sum" },
+        opt.listPrice > opt.price ? h("div", { class: "line" }, h("span", {}, "Liste fiyatı"), h("s", {}, moneyC(opt.listPrice, cat && cat.currency))) : null,
+        opt.listPrice > opt.price ? h("div", { class: "line ok" }, h("span", {}, "Kampanya indirimi (%" + p.discountPct + ")"), h("b", {}, "−" + moneyC(opt.listPrice - opt.price, cat && cat.currency))) : null,
         h("div", { class: "tot" }, h("span", {}, "Ödenecek tutar"), h("b", {}, moneyC(opt.price, cat && cat.currency)))),
       h("div", { class: "pm" },
         payOn ? h("button", { type: "button", class: "on", "aria-pressed": "true" }, AVF.icon("card"), h("span", {}, h("b", {}, "Kredi / banka kartı"), h("small", {}, "Sanal POS ile güvenli ödeme")), AVF.icon("check"))
@@ -128,6 +131,8 @@
       var head = h("div", { class: "row between", style: "margin-bottom:14px;gap:10px;flex-wrap:wrap" }, h("h2", { class: "ptitle", style: "margin:0", text: o.order_number }), statusChip(o.status));
       var summary = h("div", { class: "card", style: "padding:18px;margin-bottom:14px" }, h("div", { class: "kv" },
         h("div", {}, h("span", {}, "Paket"), h("b", { text: pk.label })), h("div", {}, h("span", {}, "Süre"), h("b", { text: weeksText(o.weeks) })),
+        Number(o.list_price) > Number(o.subtotal) ? h("div", {}, h("span", {}, "Liste fiyatı"), h("s", { text: moneyC(o.list_price, o.currency) })) : null,
+        Number(o.list_price) > Number(o.subtotal) ? h("div", {}, h("span", {}, "İndirim"), h("b", { class: "okc", text: "−" + moneyC(Number(o.list_price) - Number(o.subtotal), o.currency) })) : null,
         h("div", {}, h("span", {}, "Tutar"), h("b", { text: moneyC(o.subtotal, o.currency) })),
         h("div", {}, h("span", {}, "Ödeme"), h("b", { text: "Kredi / banka kartı" }))));
       var body = [];

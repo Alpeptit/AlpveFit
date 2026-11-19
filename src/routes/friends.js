@@ -10,6 +10,7 @@ import { checkHourlyActionLimit } from "../utils/rateLimit.js";
 import { forumLevel, publicLevel, MESSAGING_LEVEL, LEVELS } from "../utils/forumLevels.js";
 import { imageInfo } from "../utils/forumRules.js";
 import { raw, sendAttachment } from "./uploads.js";
+import { openStream, emit } from "../utils/live.js";
 
 export const friendsRouter = withAsyncErrors(express.Router());
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -34,7 +35,10 @@ async function relation(me, other) {
   const { rows } = await pool.query(`SELECT * FROM friendships WHERE user_a = $1 AND user_b = $2`, [a, b]);
   return rows[0] || null;
 }
-async function notify(userId, text, data) { await pool.query(`INSERT INTO notifications (user_id, type, text, data) VALUES ($1, 'friend', $2, $3)`, [userId, text, JSON.stringify(data || {})]).catch(() => {}); }
+async function notify(userId, text, data) { await pool.query(`INSERT INTO notifications (user_id, type, text, data) VALUES ($1, 'friend', $2, $3)`, [userId, text, JSON.stringify(data || {})]).catch(() => {}); emit(userId, "notif", { kind: "friend" }); }
+
+// Anlık olay akışı (yeni mesaj, okundu, yazıyor, bildirim). Yalnız oturumdaki üyenin kendi olayları.
+friendsRouter.get("/live", requireAuth, (req, res) => { openStream(req, res, String(req.user.sub)); });
 
 friendsRouter.get("/friends/summary", requireAuth, async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -149,7 +153,8 @@ friendsRouter.get("/messages/:id", requireAuth, async (req, res) => {
     `SELECT ${MSG_COLS} FROM dm_messages m
       WHERE ((m.sender_id = $1 AND m.recipient_id = $2 AND NOT m.hidden_for_sender) OR (m.sender_id = $2 AND m.recipient_id = $1 AND NOT m.hidden_for_recipient))
         AND ($3::timestamptz IS NULL OR m.created_at < $3) ORDER BY m.created_at DESC LIMIT 50`, [me, other, before]);
-  await pool.query(`UPDATE dm_messages SET read_at = now() WHERE sender_id = $1 AND recipient_id = $2 AND read_at IS NULL RETURNING id`, [other, me]);
+  const rd = await pool.query(`UPDATE dm_messages SET read_at = now() WHERE sender_id = $1 AND recipient_id = $2 AND read_at IS NULL RETURNING id`, [other, me]);
+  if (rd.rows.length) emit(other, "read", { by: me });   // gönderene "okundu" anında
   res.json({ peer: { ...pub(g.theirs), canMessage: canMessage(g.theirs) }, canMessage: canMessage(g.mine) && canMessage(g.theirs), meCanMessage: canMessage(g.mine),
     messagingLevel: LEVELS[MESSAGING_LEVEL - 1].name,
     messages: rows.reverse().map((m) => ({ id: m.id, mine: m.sender_id === me, body: m.removed_by_mod ? "" : m.body, removed: m.removed_by_mod, imageId: m.removed_by_mod ? null : m.attachment_id, at: m.created_at, read: !!m.read_at })) });
@@ -167,7 +172,20 @@ friendsRouter.post("/messages/:id", requireAuth, async (req, res) => {
   if (body.length > DM_MAX) return res.status(400).json({ error: `Mesaj en fazla ${DM_MAX} karakter olabilir.` });
   const g = await sendGuard(req, res); if (!g) return;
   const { rows } = await pool.query(`INSERT INTO dm_messages (sender_id, recipient_id, body) VALUES ($1, $2, $3) RETURNING id, created_at`, [req.user.sub, req.params.id, body]);
+  emit(req.params.id, "dm", { from: req.user.sub, id: rows[0].id, at: rows[0].created_at });
+  emit(req.user.sub, "dm", { to: req.params.id, id: rows[0].id, at: rows[0].created_at, mine: true });   // gönderenin diğer sekmeleri
   res.status(201).json({ id: rows[0].id, at: rows[0].created_at });
+});
+// "Yazıyor…" işareti: yalnız mesajlaşabilen arkadaşa, kişi başına 2 saniyede bir (veri saklanmaz)
+const typingAt = new Map();
+friendsRouter.post("/messages/:id/typing", requireAuth, async (req, res) => {
+  const k = req.user.sub + ":" + req.params.id, now = Date.now();
+  if (now - (typingAt.get(k) || 0) < 2000) return res.json({ ok: true });
+  const g = await chatGuard(req, res); if (!g) return;
+  if (!canMessage(g.mine) || !canMessage(g.theirs)) return res.json({ ok: true });
+  typingAt.set(k, now); if (typingAt.size > 5000) typingAt.clear();
+  emit(req.params.id, "typing", { from: req.user.sub });
+  res.json({ ok: true });
 });
 // Görsel mesaj: PNG / JPG / GIF, en fazla 4 MB ve 4096 piksel; tür dosya içeriğinden okunur.
 friendsRouter.post("/messages/:id/image", requireAuth, async (req, res, next) => {
@@ -182,6 +200,8 @@ friendsRouter.post("/messages/:id/image", requireAuth, async (req, res, next) =>
   const ext = info.mime === "image/png" ? "png" : info.mime === "image/gif" ? "gif" : "jpg";
   const a = await pool.query(`INSERT INTO attachments (user_id, scope, filename, mime, size_bytes, data) VALUES ($1, 'dm', $2, $3, $4, $5) RETURNING id`, [req.user.sub, `gorsel.${ext}`, info.mime, buf.length, buf]);
   const { rows } = await pool.query(`INSERT INTO dm_messages (sender_id, recipient_id, body, attachment_id) VALUES ($1, $2, '', $3) RETURNING id, created_at`, [req.user.sub, req.params.id, a.rows[0].id]);
+  emit(req.params.id, "dm", { from: req.user.sub, id: rows[0].id, at: rows[0].created_at });
+  emit(req.user.sub, "dm", { to: req.params.id, id: rows[0].id, at: rows[0].created_at, mine: true });
   res.status(201).json({ id: rows[0].id, at: rows[0].created_at, imageId: a.rows[0].id });
 });
 // Mesaj görseli: yalnız gönderen ve alıcı (moderatörce kaldırılmadıysa); yönetici şikâyet incelemesinde ayrı yoldan görür.

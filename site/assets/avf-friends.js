@@ -9,10 +9,13 @@
   function go(p) { if (AVF.go) AVF.go(p); else location.href = p; }
   function hm(t) { var d = new Date(t); return d.toLocaleTimeString(AVF.lang === "en" ? "en-GB" : "tr-TR", { hour: "2-digit", minute: "2-digit" }); }
   function dayKey(t) { var d = new Date(t); return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); }
-  var pollT = null;
+  var pollT = null, offs = [];
+  function unsub() { offs.forEach(function (f) { f(); }); offs = []; }
 
   AVF.friendsView = function (el, peerId) {
-    clearTimeout(pollT);
+    clearTimeout(pollT); unsub();
+    // liste: arkadaşlık olayı ya da yeni mesaj gelince sayaçlar anında tazelenir
+    if (AVF.live) { offs.push(AVF.live.on("notif", function (d) { if (d.kind === "friend" && listCol.isConnected) loadList(); })); offs.push(AVF.live.on("dm", function () { if (listCol.isConnected) loadList(); })); }
     var listCol = h("div", { class: "fr-list" }), chatCol = h("div", { class: "fr-chat" });
     var wrap = h("div", { class: "fr" + (peerId ? " has-chat" : "") }, listCol, chatCol);
     AVF.mount(el, h("h2", { class: "ptitle", text: "Arkadaşlar ve Mesajlar" }), wrap);
@@ -74,7 +77,16 @@
 
     function chat(id) {
       var log = h("div", { class: "fr-log", role: "log", "aria-live": "polite" }), comp = h("div"), head = h("div", { class: "fr-ch" }), oldest = null, lastIds = "";
-      AVF.mount(chatCol, head, log, comp);
+      var typing = h("div", { class: "fr-typing", hidden: "", "aria-live": "polite" }, h("span", { class: "fr-dots", "aria-hidden": "true" }, h("i"), h("i"), h("i")), h("span", { text: AVF.t("yazıyor…") })), typT = null;
+      var pending = [];   // gönderilmekte olan / gönderilemeyen mesajlar (iyimser gösterim)
+      AVF.mount(chatCol, head, log, typing, comp);
+      // anlık: bu sohbetteki yeni mesaj, okundu ve yazıyor bilgisi
+      if (AVF.live) {
+        offs.push(AVF.live.on("dm", function (d) { if (chatCol.isConnected && (d.from === id || d.to === id)) { if (d.from === id) showTyping(false); load(true); } }));
+        offs.push(AVF.live.on("read", function (d) { if (chatCol.isConnected && d.by === id) load(true); }));
+        offs.push(AVF.live.on("typing", function (d) { if (chatCol.isConnected && d.from === id) showTyping(true); }));
+      }
+      function showTyping(on) { clearTimeout(typT); typing.hidden = !on; if (on) { var nb = log.scrollHeight - log.scrollTop - log.clientHeight < 80; if (nb) log.scrollTop = log.scrollHeight; typT = setTimeout(function () { typing.hidden = true; }, 4500); } }
       AVF.mount(log, AVF.skeleton(2));
       function paint(r, keepScroll) {
         AVF.mount(head, h("a", { class: "ibtn fr-back", href: "/panel/arkadaslar", "aria-label": AVF.t("Listeye dön"), onclick: function (e) { e.preventDefault(); go("/panel/arkadaslar"); } }, AVF.icon("back")),
@@ -93,9 +105,24 @@
               !m.mine && !m.removed ? h("button", { type: "button", title: AVF.t("Şikâyet et"), "aria-label": AVF.t("Şikâyet et"), onclick: function () { report(m); } }, AVF.icon("flag")) : null,
               h("button", { type: "button", title: AVF.t("Benden sil"), "aria-label": AVF.t("Benden sil"), onclick: function () { AVF.api("DELETE", "/messages/m/" + m.id, {}).then(function () { load(true); }); } }, AVF.icon("trash"))));
           return [sep, bubble];
-        }) : h("div", { class: "fr-empty sm" }, h("span", { class: "fr-eic" }, AVF.icon("chat")), h("small", { text: "Henüz mesaj yok. İlk mesajı siz gönderin." })));
+        }) : (pending.length ? null : h("div", { class: "fr-empty sm" }, h("span", { class: "fr-eic" }, AVF.icon("chat")), h("small", { text: "Henüz mesaj yok. İlk mesajı sen gönder. 👋" }))));
+        pending.forEach(function (pm) { log.appendChild(pendingBubble(pm)); });
         if (keepScroll) log.scrollTop = log.scrollHeight - sc; else log.scrollTop = log.scrollHeight;
         if (!comp.firstChild) composer(r);
+      }
+      function pendingBubble(pm) {
+        return h("div", { class: "fr-m me pend" + (pm.failed ? " fail" : "") }, h("p", { "data-notr": "", text: pm.body }),
+          h("small", null, pm.failed ? [AVF.icon("alert"), h("span", { text: AVF.t("Gönderilemedi") }), h("button", { type: "button", class: "fr-retry", onclick: function () { pm.failed = false; sendText(pm); } }, AVF.t("Tekrar dene")),
+            h("button", { type: "button", class: "fr-retry", onclick: function () { pending = pending.filter(function (x) { return x !== pm; }); repaintPending(); } }, AVF.t("Sil"))]
+            : [h("span", { text: AVF.t("Gönderiliyor") }), h("span", { class: "rd", "aria-label": AVF.t("Gönderiliyor") }, AVF.icon("clock"))]));
+      }
+      function repaintPending() { Array.prototype.forEach.call(log.querySelectorAll(".fr-m.pend"), function (n) { n.remove(); }); pending.forEach(function (pm) { log.appendChild(pendingBubble(pm)); }); log.scrollTop = log.scrollHeight; }
+      // iyimser gönderim: mesaj anında baloncuk olarak görünür; sunucu onaylayınca gerçek mesajla değişir, hata olursa "Tekrar dene"
+      function sendText(pm) {
+        if (pending.indexOf(pm) < 0) pending.push(pm);
+        repaintPending();
+        AVF.api("POST", "/messages/" + id, { body: pm.body }).then(function () { pending = pending.filter(function (x) { return x !== pm; }); load(); },
+          function (er) { pm.failed = true; repaintPending(); AVF.toast(AVF.errText(er)); });
       }
       function composer(r) {
         if (!r.canMessage) return AVF.mount(comp, h("p", { class: "note fr-lock" }, AVF.icon("lock", "bico"), h("span", { text: r.meCanMessage ? AVF.t("Bu kullanıcı henüz mesaj alabilecek seviyede değil.") : AVF.t("Özel mesajlaşma " + r.messagingLevel + " seviyesinde açılır.") })));
@@ -103,7 +130,12 @@
         var pick = h("input", { type: "file", accept: ".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif", hidden: "", tabindex: "-1" });
         var send = h("button", { class: "btn fr-send", type: "submit", "aria-label": AVF.t("Gönder") }, AVF.icon("send"));
         function grow() { ta.style.height = "auto"; ta.style.height = Math.min(140, ta.scrollHeight) + "px"; }
-        ta.addEventListener("input", grow);
+        var lastTyping = 0;
+        ta.addEventListener("input", function () {
+          grow();
+          // "yazıyor…" işareti: en çok 2,5 sn'de bir
+          if (ta.value.trim() && Date.now() - lastTyping > 2500) { lastTyping = Date.now(); AVF.api("POST", "/messages/" + id + "/typing", {}).then(null, function () {}); }
+        });
         ta.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event("submit", { cancelable: true })); } });
         pick.addEventListener("change", function () {
           var f = pick.files && pick.files[0]; pick.value = ""; if (!f) return;
@@ -116,8 +148,9 @@
         });
         var form = h("form", { class: "fr-comp", novalidate: true, onsubmit: function (e) {
           e.preventDefault(); var v = ta.value.trim(); if (!v) return;
-          AVF.busy(send, true, ""); ta.disabled = true;
-          AVF.api("POST", "/messages/" + id, { body: v }).then(function () { ta.value = ""; grow(); AVF.busy(send, false); ta.disabled = false; ta.focus(); load(); }, function (er) { AVF.busy(send, false); ta.disabled = false; AVF.toast(AVF.errText(er)); });
+          if (v.length > 2000) return AVF.toast(AVF.t("Mesaj en fazla 2000 karakter olabilir."));
+          ta.value = ""; grow(); ta.focus(); lastTyping = 0;
+          sendText({ body: v });
         } }, h("button", { class: "ibtn", type: "button", "aria-label": AVF.t("Görsel gönder"), title: AVF.t("Görsel gönder"), onclick: function () { pick.click(); } }, AVF.icon("image")), AVF.emojiPicker ? AVF.emojiPicker(ta) : null, ta, pick, send);
         AVF.mount(comp, form);
       }
@@ -141,7 +174,9 @@
           var ids = r.messages.map(function (m) { return m.id + (m.read ? "r" : ""); }).join(",");
           if (ids !== lastIds || !head.firstChild) { var atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 60; paint(r, keep || !atBottom && lastIds); lastIds = ids; }
           if (AVF.refreshUnread) AVF.refreshUnread();
-          pollT = setTimeout(function poll() { if (!chatCol.isConnected) return; if (!document.hidden) load(true); else pollT = setTimeout(poll, 8000); }, 8000);   // açık sohbet 8 sn'de bir tazelenir
+          // yedek yoklama: anlık bağlantı varken 30 sn, yokken 8 sn
+          var every = AVF.live && AVF.live.connected() ? 30000 : 8000;
+          pollT = setTimeout(function poll() { if (!chatCol.isConnected) return; if (!document.hidden) load(true); else pollT = setTimeout(poll, every); }, every);
         }, function (e) {
           AVF.mount(head, h("a", { class: "ibtn fr-back", href: "/panel/arkadaslar", onclick: function (ev) { ev.preventDefault(); go("/panel/arkadaslar"); } }, AVF.icon("back")));
           AVF.mount(log, AVF.state("lock", "Sohbet açılamadı", AVF.errText(e)));

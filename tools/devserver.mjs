@@ -73,7 +73,10 @@ http.createServer(async (rq, rs) => {
         append(k, v) { if (k.toLowerCase() === "set-cookie") setCookies.push(...[].concat(v)); },
         getHeader() { return undefined; }, set() { return this; },
         json(o) { if (sent.done) return this; sent.done = true; const h = { "content-type": "application/json", "cache-control": "no-store" }; if (setCookies.length) h["set-cookie"] = setCookies; rs.writeHead(this.statusCode, h); rs.end(JSON.stringify(o)); return this; },
-        end(d) { if (!sent.done) { sent.done = true; rs.writeHead(this.statusCode, this.hdr); rs.end(d); } }, send(b) { return this.json(b); } };
+        end(d) { if (!sent.done) { sent.done = true; rs.writeHead(this.statusCode, this.hdr); rs.end(d); } else if (!rs.writableEnded) rs.end(d); }, send(b) { return this.json(b); },
+        // akış (SSE) desteği
+        flushHeaders() { if (!sent.done) { sent.done = true; rs.writeHead(this.statusCode, this.hdr); } }, write(d) { if (!sent.done) this.flushHeaders(); return rs.write(d); }, on(ev, fn) { rs.on(ev, fn); return this; } };
+      req.on = (ev, fn) => { rq.on(ev, fn); return req; };
       const chain = path.startsWith("/api/admin") ? [hideAdminApi, ...r.handlers] : r.handlers;
       let i = 0; const next = async (err) => {
         if (err) { console.error("[hata]", err.message); return res.status(500).json({ error: "Sunucu tarafında bir hata oluştu." }); }

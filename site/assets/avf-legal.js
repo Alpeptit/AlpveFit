@@ -20,7 +20,7 @@
           "Üye, **18 yaşını doldurduğunu** ve doğru, güncel bilgi verdiğini beyan eder. Hesap bilgilerinin ve iki aşamalı doğrulama kodlarının gizliliğinden Üye sorumludur; hesabın devredilmesi veya paylaşılması yasaktır.",
           "AlpveFit, hesabın kötüye kullanıldığına dair makul şüphe hâlinde hesabı geçici olarak kısıtlayabilir veya askıya alabilir."]],
         ["Fiyat ve ödeme", [
-          "Fiyatlar **Türk lirası (TRY)** cinsinden liste fiyatıdır. Ödeme, **kredi / banka kartı** ile sanal POS (ödeme kuruluşu) üzerinden alınır. Kart bilgileri AlpveFit sunucularına iletilmez ve **AlpveFit tarafından saklanmaz**.",
+          "Fiyatlar **Türk lirası (TRY)** cinsinden liste fiyatıdır; kampanya dönemlerinde sipariş ekranında gösterilen **indirimli tutar** ödenir. Ödeme, **kredi / banka kartı** ile sanal POS (ödeme kuruluşu) üzerinden alınır. Kart bilgileri AlpveFit sunucularına iletilmez ve **AlpveFit tarafından saklanmaz**.",
           "!lock|Ödeme sayfası ve site trafiği **256-bit SSL sertifikası** ile şifrelenir.",
           "Siparişiniz oluşturulduğunda size bir **sipariş numarası** verilir; tüm işlemleriniz panelinizdeki **Siparişlerim** bölümünden izlenebilir. Ödeme penceresi, sipariş oluşturulduktan sonra **2 saattir**; süre dolduğunda sipariş geçersiz olur.",
           "Kartın banka tarafından reddedilmesi veya 3D Secure doğrulamasının tamamlanmaması gibi nedenlerle ödeme alınamazsa sipariş ödenmemiş sayılır ve plan hazırlama süreci başlamaz."]],
@@ -59,7 +59,7 @@
           "The Member declares to be **at least 18 years old** and to provide accurate, up-to-date information. The Member is responsible for keeping credentials and two-step verification codes confidential; transferring or sharing an account is prohibited.",
           "AlpveFit may temporarily restrict or suspend an account where there is reasonable suspicion of misuse."]],
         ["Price and payment", [
-          "Prices are list prices in **Turkish lira (TRY)**. Payment is taken by **credit / debit card** through a virtual POS (payment institution). Card details are not transmitted to AlpveFit servers and are **not stored by AlpveFit**.",
+          "Prices are list prices in **Turkish lira (TRY)**; during campaigns the **discounted amount** shown at checkout is charged. Payment is taken by **credit / debit card** through a virtual POS (payment institution). Card details are not transmitted to AlpveFit servers and are **not stored by AlpveFit**.",
           "!lock|The payment page and all site traffic are encrypted with a **256-bit SSL certificate**.",
           "When your order is created you receive an **order number**; you can track everything under **My Orders** in your panel. The payment window is **2 hours** after the order is created; once it expires the order becomes void.",
           "If the payment cannot be taken — for example because the bank declines the card or 3D Secure is not completed — the order is deemed unpaid and plan preparation does not start."]],

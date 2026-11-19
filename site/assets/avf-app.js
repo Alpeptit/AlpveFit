@@ -241,6 +241,36 @@
   }
   AVF.renderChrome = function () { renderChrome(); };
   AVF.refreshUnread = function () { refreshUnread(); };
+
+  // ---------- anlık olaylar (SSE): yeni mesaj, okundu, yazıyor, bildirim ----------
+  // Oturum açıkken tek bağlantı; sekme arka plandayken de açık kalır (tarayıcı kendiliğinden yeniden bağlanır).
+  var live = { es: null, fns: {}, ok: false };
+  AVF.live = {
+    on: function (ev, fn) { (live.fns[ev] = live.fns[ev] || []).push(fn); return function () { live.fns[ev] = (live.fns[ev] || []).filter(function (f) { return f !== fn; }); }; },
+    connected: function () { return live.ok; },
+  };
+  function liveFire(ev, d) { (live.fns[ev] || []).slice().forEach(function (f) { try { f(d); } catch (e) { /* yok say */ } }); }
+  var refreshT = null;
+  function refreshSoon() { clearTimeout(refreshT); refreshT = setTimeout(refreshUnread, 250); }
+  function liveStart() {
+    if (live.es || !AVF.session.user || !window.EventSource) return;
+    var es = live.es = new EventSource("/api/live");
+    es.addEventListener("hello", function () { live.ok = true; });
+    es.addEventListener("notif", function (e) { refreshSoon(); liveFire("notif", JSON.parse(e.data || "{}")); });
+    es.addEventListener("dm", function (e) {
+      var d = JSON.parse(e.data || "{}"); liveFire("dm", d);
+      if (!d.mine) {
+        refreshSoon();
+        // açık sohbet bu kişiyle değilse kısa bir uyarı
+        if (location.pathname !== "/panel/arkadaslar/" + d.from) AVF.toast(AVF.t("Yeni bir mesajın var."), null, { href: "/panel/arkadaslar/" + d.from });
+      }
+    });
+    es.addEventListener("read", function (e) { liveFire("read", JSON.parse(e.data || "{}")); });
+    es.addEventListener("typing", function (e) { liveFire("typing", JSON.parse(e.data || "{}")); });
+    es.onerror = function () { live.ok = false; if (!AVF.session.user) liveStop(); };
+  }
+  function liveStop() { if (live.es) { try { live.es.close(); } catch (e) { /* yok say */ } } live.es = null; live.ok = false; }
+  AVF.liveStart = liveStart; AVF.liveStop = liveStop;
   function logout() {
     AVF.confirmDialog({ icon: "out", title: "Çıkış yapmak istediğinize emin misiniz?", text: "Güvenli çıkış yaptığınızda oturumunuz bu cihazda kapatılır.", confirm: "Evet, çıkış yap", cancel: "Vazgeç" }).then(function (ok) {
       if (!ok) return;
@@ -248,14 +278,14 @@
     });
   }
   function sessionGone(why, data) {
-    AVF.session.user = null; kinds = null; unread = 0; if (why !== "expired" && AVF.clearDrafts) AVF.clearDrafts(); renderChrome();
+    liveStop(); AVF.session.user = null; kinds = null; unread = 0; if (why !== "expired" && AVF.clearDrafts) AVF.clearDrafts(); renderChrome();
     if (why === "locked") { go("/"); AVF.auth.locked(data); return; }
     if (why === "expired") AVF.toast("Oturumunuz sona erdi. Lütfen yeniden giriş yapın.", "err");
     if (location.pathname.indexOf("/panel") === 0) go("/"); else route();
   }
   AVF.onSessionEnd = sessionGone;
   AVF.onLogin = function () {
-    kinds = null; renderChrome(); refreshUnread();
+    kinds = null; renderChrome(); refreshUnread(); liveStart();
     var next = AVF.afterLogin; AVF.afterLogin = null;
     if (next && next.path === "/admin") { location.replace("/admin"); return; }   // yönetim alanı sunucuda ayrıca doğrulanır
     if (next && Date.now() - next.at < 10 * 60000) return go(next.path, true);
@@ -587,9 +617,9 @@
   function boot() {
     buildShell();
     AVF.api("GET", "/auth/me").then(function (u) { AVF.session.user = u; }, function () { AVF.session.user = null; }).then(function () {
-      route(); refreshUnread(); AVF.auth.checkResetLink();
+      route(); refreshUnread(); liveStart(); AVF.auth.checkResetLink();
       // Bildirim ve mesaj sayacı: sekme görünürken 60 sn'de bir, sekmeye dönünce hemen tazelenir.
-      setInterval(function () { if (!document.hidden && AVF.session.user) refreshUnread(); }, 60000);
+      setInterval(function () { if (!document.hidden && AVF.session.user && !live.ok) refreshUnread(); }, 60000);   // anlık bağlantı varken yoklama gereksiz
       document.addEventListener("visibilitychange", function () { if (!document.hidden && AVF.session.user) refreshUnread(); }); if (AVF.auth.restore) AVF.auth.restore(); cookieBanner();
     });
   }

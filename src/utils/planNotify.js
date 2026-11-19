@@ -5,6 +5,7 @@ import { pool } from "../db/pool.js";
 import { sendMail } from "./mailer.js";
 import { planUpdatedMail } from "./emailTemplates.js";
 import { KIND_LABELS } from "./permissions.js";
+import { emit } from "./live.js";
 
 const DELAY_MIN = Math.max(1, Number(process.env.PLAN_MAIL_DELAY_MIN || 15));
 
@@ -16,6 +17,7 @@ export async function notePlanChange(memberId, kind) {
             text = 'Planlarınız güncellendi.'
       WHERE id = (SELECT id FROM notifications WHERE user_id = $1 AND type = 'plan_updated' AND read_at IS NULL ORDER BY created_at DESC LIMIT 1)
       RETURNING id`, [memberId, kind]);
+  emit(memberId, "notif", { kind: "plan" });
   if (!upd.rows.length) await pool.query(`INSERT INTO notifications (user_id, type, text, data) VALUES ($1, 'plan_updated', 'Planlarınız güncellendi.', $2)`, [memberId, JSON.stringify({ kinds: [kind] })]);
   await pool.query(
     `UPDATE users SET plan_mail_due_at = now() + make_interval(mins => $2::int),

@@ -4,6 +4,7 @@ import { pool } from "../db/pool.js";
 import { forumLevel } from "./forumLevels.js";
 import { sendMail } from "./mailer.js";
 import { levelUpMail } from "./emailTemplates.js";
+import { emit } from "./live.js";
 
 export async function syncLevel(userId) {
   await pool.query(`INSERT INTO forum_profiles (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [userId]);
@@ -18,6 +19,7 @@ export async function syncLevel(userId) {
   if (!upd.rows.length || lv.n < prev || r.role === "admin") return lv;   // yönetici hesabına kutlama gönderilmez
   await pool.query(`INSERT INTO notifications (user_id, type, text, data) VALUES ($1, 'level_up', $2, $3)`,
     [userId, `Tebrikler! Forum seviyeniz yükseldi: ${lv.name}`, JSON.stringify({ n: lv.n, name: lv.name, popup: true })]);
+  emit(userId, "notif", { kind: "level" });
   if (r.email) sendMail(r.email, levelUpMail(r.preferred_lang, { name: lv.name })).catch(() => {});
   return lv;
 }

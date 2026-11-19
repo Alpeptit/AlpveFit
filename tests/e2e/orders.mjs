@@ -16,14 +16,14 @@ chk("paketler herkese açık; kart (sahte POS) etkin ve TEST olarak işaretli; k
 const adv = r.body.packages.find((p) => p.key === "advanced"), st = r.body.packages.find((p) => p.key === "starter"), cp = r.body.packages.find((p) => p.key === "competitor");
 chk("paket süreleri: Başlangıç 12/24, İleri 16/24, Yarışmacı 12; farmakoloji yalnız ileri ve yarışmacıda",
   st.options.map((o) => o.weeks).join() === "12,24" && adv.options.map((o) => o.weeks).join() === "16,24" && cp.options.map((o) => o.weeks).join() === "12" && !st.pharmacology && adv.pharmacology && cp.pharmacology, r.body);
-chk("indirim yok: fiyatlar liste fiyatı", st.options[0].price === 4990 && st.options[0].cryptoPrice === undefined, st.options[0]);
+chk("kampanya: liste fiyatı sabit, %15 indirimli tutar", st.options[0].listPrice === 4990 && st.options[0].price === 4242 && st.discountPct === 15 && cp.discountPct === 20 && cp.options[0].price === 11192 && st.options[0].cryptoPrice === undefined, st.options[0]);
 r = await new Client().call("POST", "/orders", { packageKey: "starter", weeks: 12, consent: true }); chk("misafir sipariş veremez", r.status === 401, r);
 r = await M1.c.call("POST", "/orders", { packageKey: "starter", weeks: 12 }); chk("sözleşme onayı olmadan sipariş olmaz", r.status === 400 && r.body.code === "consent_required", r);
 r = await M1.c.call("POST", "/orders", { packageKey: "starter", weeks: 16, consent: true }); chk("pakette olmayan süre reddedilir", r.status === 400, r);
 r = await M1.c.call("POST", "/orders", { packageKey: "hack", weeks: 12, consent: true }); chk("geçersiz paket reddedilir", r.status === 400, r);
 r = await M1.c.call("POST", "/orders", { packageKey: "starter", weeks: 12, consent: true, price: 1, subtotal: 1, method: "crypto" });
 const o1 = r.body.order;
-chk("sipariş: tutar SUNUCU kataloğundan (istemci fiyatı yok sayılır), ödeme sağlayıcısı mock", r.status === 201 && Number(o1.subtotal) === 4990 && Number(o1.list_price) === 4990 && o1.currency === "TRY" && o1.payment_provider === "mock" && o1.status === "pending" && /^AVF-\d{6}$/.test(o1.order_number), r.body);
+chk("sipariş: tutar SUNUCU kataloğundan (istemci fiyatı yok sayılır), ödeme sağlayıcısı mock", r.status === 201 && Number(o1.subtotal) === 4242 && Number(o1.list_price) === 4990 && o1.currency === "TRY" && o1.payment_provider === "mock" && o1.status === "pending" && /^AVF-\d{6}$/.test(o1.order_number), r.body);
 r = await M1.c.call("GET", "/orders/" + o1.id); chk("sipariş detayı: ödeme sağlayıcısı TEST; cüzdan/kripto alanı yok", r.body.payment && r.body.payment.test === true && r.body.paymentInstructions === undefined, r.body);
 r = await M2.c.call("GET", "/orders/" + o1.id); chk("başka üye siparişi göremez (404)", r.status === 404, r);
 r = await M2.c.call("POST", `/orders/${o1.id}/cancel`, {}); chk("başka üye siparişi iptal edemez", r.status === 404, r);
@@ -38,7 +38,7 @@ r = await M1.c.call("POST", `/orders/${o1b.id}/cancel`, {}); chk("ödenmemiş si
 // ---- sahte sanal POS ----
 r = await M1.c.call("POST", `/orders/${o1.id}/pay/mock`, { outcome: "bogus" }); chk("geçersiz test sonucu reddedilir", r.status === 400, r);
 r = await M1.c.call("POST", `/orders/${o1.id}/pay/mock`, { outcome: "decline" }); chk("reddedilen test kartı: 402, sipariş ÖDENMEZ, erişim açılmaz", r.status === 402 && r.body.code === "card_declined" && sql(`SELECT status FROM orders WHERE id='${o1.id}'`) === "pending" && sql(`SELECT count(*) FROM member_access WHERE member_id='${M1.id}'`) === "0" && sql(`SELECT payment_attempts FROM orders WHERE id='${o1.id}'`) === "1", r);
-r = await M1.c.call("POST", `/orders/${o1.id}/pay/mock`, { outcome: "success", amount: 0.01, status: "paid" }); chk("başarılı test ödemesi: sipariş 'paid' (istemcinin tutar/durum alanları yok sayılır)", r.status === 200 && sql(`SELECT status FROM orders WHERE id='${o1.id}'`) === "paid" && Number(sql(`SELECT subtotal FROM orders WHERE id='${o1.id}'`)) === 4990, r);
+r = await M1.c.call("POST", `/orders/${o1.id}/pay/mock`, { outcome: "success", amount: 0.01, status: "paid" }); chk("başarılı test ödemesi: sipariş 'paid' (istemcinin tutar/durum alanları yok sayılır)", r.status === 200 && sql(`SELECT status FROM orders WHERE id='${o1.id}'`) === "paid" && Number(sql(`SELECT subtotal FROM orders WHERE id='${o1.id}'`)) === 4242, r);
 chk("ödeme: plans_due_at = ödeme + 24 saat; payment_ref MOCK-…", sql(`SELECT (plans_due_at - paid_at) = interval '24 hours' FROM orders WHERE id='${o1.id}'`) === "t" && /^MOCK-/.test(sql(`SELECT payment_ref FROM orders WHERE id='${o1.id}'`)), null);
 chk("Başlangıç paketi: beslenme+antrenman+takviye açılır, FARMAKOLOJİ AÇILMAZ", sql(`SELECT string_agg(kind, ',' ORDER BY kind) FROM member_access WHERE member_id='${M1.id}'`) === "notes,nutrition,supplement,training", sql(`SELECT string_agg(kind, ',' ORDER BY kind) FROM member_access WHERE member_id='${M1.id}'`));
 r = await M1.c.call("GET", "/notifications"); chk("ödeme bildirimi 'order_paid'; bekleme bildirimi kalktı", r.body.some((n) => n.type === "order_paid") && !r.body.some((n) => n.type === "order_payment" && n.order_id === o1.id), r.body);
@@ -47,7 +47,7 @@ r = await M1.c.call("POST", `/orders/${o1.id}/pay/mock`, { outcome: "success" })
 r = await M1.c.call("POST", `/orders/${o1.id}/cancel`, {}); chk("ödenmiş sipariş iptal edilemez", r.status === 409, r);
 r = await M1.c.call("GET", "/plans/overview"); chk("üye paneli: erişim açılan 4 tür görünür", r.body.kinds.map((k) => k.kind).join() === "nutrition,training,supplement,notes", r.body);
 r = await M2.c.call("POST", "/orders", { packageKey: "advanced", weeks: 16, consent: true }); const o2 = r.body.order;
-chk("ileri seviye 16 hafta: 7490, farmakolojili", Number(o2.subtotal) === 7490 && o2.pharmacology === true, o2);
+chk("ileri seviye 16 hafta: 7490 yerine 6367 (%15), farmakolojili", Number(o2.subtotal) === 6367 && Number(o2.list_price) === 7490 && o2.pharmacology === true, o2);
 for (let i = 0; i < 10; i++) await M2.c.call("POST", `/orders/${o2.id}/pay/mock`, { outcome: "decline" });
 r = await M2.c.call("POST", `/orders/${o2.id}/pay/mock`, { outcome: "success" }); chk("çok sayıda deneme sonrası ödeme engellenir (429)", r.status === 429 && r.body.code === "too_many_attempts" && sql(`SELECT status FROM orders WHERE id='${o2.id}'`) === "pending", r);
 r = await M2.c.call("POST", `/admin/orders/${o2.id}/approve`, { reason: "deneme gerekçesi uzun" }); chk("üye elle onay veremez (admin API gizli 404)", r.status === 404, r);
@@ -63,7 +63,7 @@ r = await A.c.call("GET", "/admin/unmatched"); chk("eşleşmeyen işlem uç nokt
 
 // süre dolumu
 r = await M3.c.call("POST", "/orders", { packageKey: "competitor", weeks: 12, consent: true }); const o3 = r.body.order;
-chk("yarışmacı 12 hafta: 13990", Number(o3.subtotal) === 13990, o3);
+chk("yarışmacı 12 hafta: 13990 yerine 11192 (%20)", Number(o3.subtotal) === 11192 && Number(o3.list_price) === 13990, o3);
 sql(`UPDATE orders SET payment_expires_at = now() - interval '1 minute' WHERE id='${o3.id}'`);
 r = await M3.c.call("GET", "/orders/" + o3.id); chk("süresi dolan sipariş 'expired' olur ve ödeme kapanır", r.body.order.status === "expired" && r.body.payment === null, r.body);
 r = await M3.c.call("POST", `/orders/${o3.id}/pay/mock`, { outcome: "success" }); chk("süresi dolan sipariş ödenemez (409)", r.status === 409, r);

@@ -7,7 +7,7 @@ import { logAudit } from "../utils/auditLog.js";
 import { expireDueOrders, markOrderPaid } from "../services/orderFulfilment.js";
 import { activeProvider, isTestProvider } from "../services/payments.js";
 import {
-  PACKAGES, PACKAGE_KEYS, PACKAGE_LABELS, PLAN_DELIVERY_HOURS, CURRENCY,
+  PACKAGES, PACKAGE_KEYS, PACKAGE_LABELS, PLAN_DELIVERY_HOURS, CURRENCY, DISCOUNTS, salePrice,
   findOption, OPEN_STATUSES, MAX_OPEN_UNPAID_ORDERS, paymentWindowHours,
 } from "../utils/packages.js";
 
@@ -25,7 +25,8 @@ ordersRouter.get("/packages", (req, res) => {
     payment: { enabled: !!provider, test: isTestProvider(provider) },
     packages: PACKAGE_KEYS.map((key) => ({
       key, label: PACKAGE_LABELS[key], pharmacology: PACKAGES[key].pharmacology,
-      options: PACKAGES[key].options.map((o) => ({ weeks: o.weeks, price: o.price })),
+      discountPct: DISCOUNTS[key] || 0,
+      options: PACKAGES[key].options.map((o) => ({ weeks: o.weeks, listPrice: o.price, price: salePrice(key, o.price) })),   // price: ödenecek (indirimli) tutar
     })),
   });
 });
@@ -52,10 +53,10 @@ ordersRouter.post("/orders", requireAuth, async (req, res) => {
       const { rows } = await pool.query(
         `INSERT INTO orders (order_number, user_id, buyer_name, buyer_email, package_key, weeks, pharmacology, list_price, subtotal,
                              currency, status, payment_provider, payment_expires_at, consent_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,$9,'pending',$10, now() + interval '1 hour' * $11, now())
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$12,$9,'pending',$10, now() + interval '1 hour' * $11, now())
          RETURNING ${COLS}`,
         [`AVF-${crypto.randomInt(100000, 1000000)}`, req.user.sub, u.rows[0].full_name, u.rows[0].email, packageKey, opt.weeks, PACKAGES[packageKey].pharmacology,
-         opt.price, CURRENCY, provider, paymentWindowHours()]   // tutar SUNUCU kataloğundan; istemci fiyatı kullanılmaz
+         opt.price, CURRENCY, provider, paymentWindowHours(), salePrice(packageKey, opt.price)]   // tutar SUNUCU kataloğundan (liste + indirimli); istemci fiyatı kullanılmaz
       );
       order = rows[0];
     } catch (e) {

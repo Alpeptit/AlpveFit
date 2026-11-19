@@ -26,11 +26,30 @@ sql(`INSERT INTO forum_profiles (user_id, posts, likes) VALUES ('${U.id}', 40, 3
 r = await U.c.call("POST", `/messages/${W.id}`, { body: "Selam" }); chk("arkadaş olmayana mesaj gönderilemez", r.status === 403 && r.body.code === "not_friends", r.body);
 r = await U.c.call("POST", `/messages/${V.id}`, { body: "" }); chk("boş mesaj reddedilir", r.status === 400, r.body);
 r = await U.c.call("POST", `/messages/${V.id}`, { body: "x".repeat(2001) }); chk("2000 karakter sınırı", r.status === 400, r.body);
+// anlık olay akışı (SSE): alıcı yeni mesajı, gönderen "okundu"yu anında alır; "yazıyor" iletilir; misafire kapalı
+async function stream(p) {
+  const ac = new AbortController(), events = [];
+  const res = await fetch(BASE + "/api/live", { headers: { cookie: p.c.cookieHeader(), accept: "text/event-stream" }, signal: ac.signal });
+  const rd = res.body.getReader(); let buf = "";
+  (async () => { try { for (;;) { const { value, done } = await rd.read(); if (done) break; buf += Buffer.from(value).toString(); let i;
+    while ((i = buf.indexOf("\n\n")) >= 0) { const blk = buf.slice(0, i); buf = buf.slice(i + 2); const ev = /event: (\w+)/.exec(blk), d = /data: (.*)/.exec(blk); if (ev) events.push({ ev: ev[1], data: d ? JSON.parse(d[1]) : null }); } } } catch { /* kapandı */ } })();
+  return { res, events, close: () => ac.abort() };
+}
+const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+r = await fetch(BASE + "/api/live"); chk("anlık akış misafire kapalı", r.status === 401, r.status);
+const sV = await stream(V), sU = await stream(U); await wait(300);
+chk("anlık akış açılır (text/event-stream)", sV.res.status === 200 && /text\/event-stream/.test(sV.res.headers.get("content-type")) && sV.events.some((e) => e.ev === "hello"), sV.events);
+r = await U.c.call("POST", `/messages/${V.id}/typing`, {}); await wait(250);
+chk("yazıyor işareti karşı tarafa anında gider", sV.events.some((e) => e.ev === "typing" && e.data.from === U.id), sV.events);
 r = await U.c.call("POST", `/messages/${V.id}`, { body: "Merhaba <script>alert(1)</script> 💪" }); chk("mesaj gönderilir", r.status === 201, r.body);
-const m1 = r.body.id;
+const m1 = r.body.id; await wait(300);
+chk("alıcı yeni mesajı anında alır (metin değil yalnız kimlik)", sV.events.some((e) => e.ev === "dm" && e.data.id === m1 && e.data.from === U.id && e.data.body === undefined), sV.events);
+chk("gönderenin diğer sekmeleri de haberdar", sU.events.some((e) => e.ev === "dm" && e.data.id === m1 && e.data.mine), sU.events);
+r = await W.c.call("POST", `/messages/${U.id}/typing`, {}); chk("arkadaş olmayan 'yazıyor' gönderemez", r.status === 403, r.body);
 r = await V.c.call("GET", "/friends/summary"); chk("okunmamış mesaj sayacı", r.body.dmUnread === 1, r.body);
 r = await V.c.call("GET", `/messages/${U.id}`); chk("alıcı mesajı görür (metin olarak)", r.body.messages.length === 1 && r.body.messages[0].body.includes("<script>") && !r.body.messages[0].mine && r.body.canMessage, r.body);
 r = await V.c.call("GET", "/friends/summary"); chk("açınca okundu olur", r.body.dmUnread === 0, r.body);
+chk("gönderene 'okundu' anında gider", sU.events.some((e) => e.ev === "read" && e.data.by === V.id), sU.events); sU.close(); sV.close();
 r = await U.c.call("GET", `/messages/${V.id}`); chk("gönderen okundu bilgisini görür", r.body.messages[0].read === true && r.body.messages[0].mine, r.body.messages);
 r = await raw(U, `/api/messages/${V.id}/image`, Buffer.from("<svg/>")); chk("görsel olmayan dosya mesajla gönderilemez", r.status === 400, r.body);
 r = await raw(U, `/api/messages/${V.id}/image`, png(320, 240)); chk("görsel mesaj gönderilir", r.status === 201 && r.body.imageId, r.body);

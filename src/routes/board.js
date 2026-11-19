@@ -16,6 +16,7 @@ import { notifyIn, imageInfo } from "../utils/forumRules.js";
 import { stripImageMetadata } from "../utils/imageClean.js";
 import { giphyEnabled, giphyDownload } from "../utils/giphy.js";
 import { raw, sendAttachment } from "./uploads.js";
+import { emit } from "../utils/live.js";
 import {
   clean, contentError, quotedPostIds, mentions, pollIn, REPORT_REASONS, RULES, RULE_ICONS,
   IMAGES_PER_POST, IMAGE_MAX, IMAGE_PX, PENDING_MAX, PAGE_POSTS, PAGE_TOPICS, TAGS_PER_TOPIC,
@@ -95,6 +96,7 @@ async function prefsOf(ids) {
 }
 async function note(userId, text, data) {
   await pool.query(`INSERT INTO notifications (user_id, type, text, data) VALUES ($1, 'forum', $2, $3)`, [userId, text, JSON.stringify(data)]).catch(() => {});
+  emit(userId, "notif", { kind: "forum" });   // açık sekmede zil sayacı anında güncellenir
 }
 const short = (t) => (t.length > 60 ? t.slice(0, 57) + "…" : t);
 

@@ -7,6 +7,12 @@ export const PACKAGES = {
   competitor: { pharmacology: true,  options: [{ weeks: 12, price: 13990 }] },
 };
 export const PACKAGE_KEYS = Object.keys(PACKAGES);
+/** Kampanya indirimi (%): liste fiyatları sabit kalır; ödenecek tutar indirimli fiyattır. Tüm paketler %15, Yarışmacı Paketi %20. */
+export const DISCOUNTS = { starter: 15, advanced: 15, competitor: 20 };
+export function salePrice(key, listPrice) {
+  const pct = DISCOUNTS[key] || 0;
+  return Math.round(listPrice * (100 - pct) / 100);   // tam TL
+}
 export const PACKAGE_LABELS = { starter: "Başlangıç Paketi", advanced: "İleri Seviye Program", competitor: "Yarışmacı Paketi" };
 export const PACKAGE_LABELS_EN = { starter: "Starter Package", advanced: "Advanced Program", competitor: "Competitor Package" };
 /** Ödemeden sonra planların hazırlanma süresi (saat). */

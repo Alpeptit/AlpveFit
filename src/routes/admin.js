@@ -22,6 +22,7 @@ import { notePlanChange } from "../utils/planNotify.js";
 import { syncLevel } from "../utils/levelSync.js";
 import { allowedExercises, memberLogs } from "./progress.js";
 import { catalog as planCatalog } from "../utils/planCatalog.js";
+import { emit } from "../utils/live.js";
 
 export const adminRouter = withAsyncErrors(express.Router());
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -624,6 +625,7 @@ adminRouter.post("/tickets/:id/reply", requireAdmin, async (req, res) => {
   await linkAttachments(pool, req.user.sub, rows[0].id, att.ids);
   await pool.query(`UPDATE tickets SET status = 'answered', updated_at = now() WHERE id = $1 RETURNING id`, [req.params.id]);
   await pool.query(`INSERT INTO notifications (user_id, type, text, data) VALUES ($1, 'ticket', $2, $3) RETURNING id`, [t.rows[0].user_id, `${t.rows[0].ticket_number} numaralı destek talebinize yanıt verildi.`, JSON.stringify({ ticketId: req.params.id, ticketNumber: t.rows[0].ticket_number })]);
+  emit(t.rows[0].user_id, "notif", { kind: "ticket" });
   pool.query(`SELECT email, preferred_lang FROM users WHERE id = $1`, [t.rows[0].user_id])
     .then(({ rows: u }) => u[0] && sendMail(u[0].email, ticketReplyMail(u[0].preferred_lang || mailLang(req), { ticketNumber: t.rows[0].ticket_number })))
     .catch(() => {});   // bildirim e-postası gönderilemezse yanıt yine kaydedilmiş olur
@@ -637,6 +639,7 @@ adminRouter.patch("/tickets/:id/close", requireAdmin, async (req, res) => {
     `UPDATE tickets SET status = 'closed', closed_at = now(), closed_by = 'admin', updated_at = now() WHERE id = $1 AND status <> 'closed' RETURNING id, user_id, ticket_number`, [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: "Destek talebi bulunamadı veya zaten kapatılmış." });
   await pool.query(`INSERT INTO notifications (user_id, type, text, data) VALUES ($1, 'ticket', $2, $3) RETURNING id`, [rows[0].user_id, `${rows[0].ticket_number} numaralı destek talebiniz sonuçlandırılarak kapatıldı.`, JSON.stringify({ ticketId: rows[0].id, ticketNumber: rows[0].ticket_number })]);
+  emit(rows[0].user_id, "notif", { kind: "ticket" });
   await logAudit(req.user.sub, "ticket_close", "ticket", req.params.id, {}, ip(req));
   res.json({ ok: true });
 });
