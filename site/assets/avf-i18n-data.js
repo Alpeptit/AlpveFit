@@ -4,6 +4,12 @@
   var AVF = (window.AVF = window.AVF || {});
   AVF.DICT = AVF.DICT || {}; AVF.PATTERNS = AVF.PATTERNS || [];
   var D = {
+"Adres çubuğundaki Paylaş düğmesine dokunun, ardından “Ana Ekrana Ekle”yi seçin. AlpveFit, simgesiyle bir uygulama gibi tam ekran açılır.": "Tap the Share button in the address bar, then choose “Add to Home Screen”. AlpveFit then opens full screen from its icon, like an app.",
+"Sağ üstteki ⋮ menüsüne dokunun, ardından “Yükle” ya da “Ana ekrana ekle”yi seçin.": "Tap the ⋮ menu at the top right, then choose “Install” or “Add to Home screen”.",
+"Safari menüsünde Dosya → “Dock'a Ekle”yi seçin. AlpveFit, Dock'tan ayrı bir uygulama gibi açılır.": "In Safari, choose File → “Add to Dock”. AlpveFit then opens from the Dock as its own app.",
+"Sağ üstteki ⋮ menüsüne dokunun, ardından “Uygulamayı yükle”yi seçin.": "Tap the ⋮ menu at the top right, then choose “Install app”.",
+"Adres çubuğunun sağındaki yükleme simgesine ya da ⋮ menüsündeki “Uygulamayı yükle”ye tıklayın.": "Click the install icon at the right of the address bar, or “Install app” in the ⋮ menu.",
+"AlpveFit'i uygulama olarak yükleyin": "Install AlpveFit as an app",
 "Uygulamayı yükle": "Install the app",
 "AlpveFit'i ana ekrana ekleyin": "Add AlpveFit to your Home Screen",
 "Safari'de alttaki Paylaş düğmesine dokunun, ardından “Ana Ekrana Ekle”yi seçin. AlpveFit, simgesiyle bir uygulama gibi tam ekran açılır.": "In Safari, tap the Share button at the bottom, then choose “Add to Home Screen”. AlpveFit then opens full screen from its icon, like an app.",
