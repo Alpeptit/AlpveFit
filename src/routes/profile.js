@@ -83,7 +83,10 @@ profileRouter.put("/profile", requireAuth, async (req, res) => {
   let workNote = null;
   if (flexMode && b.workNote) { workNote = clean(b.workNote, 300); if (workNote === null) return res.status(400).json({ error: "Çalışma notu en fazla 300 karakter olabilir." }); }
   for (const x of [h, bd, td, meals, wh, ws, ...Object.values(ms)]) if (x.err) return res.status(400).json({ error: x.err });
-  const by = { v: bd.v ? bd.year : null };
+  // Yaş: doğum tarihi yerine yalnız yaş istenir (14–90); doğum yılı olarak saklanır. Eski istemciler doğum tarihi gönderebilir.
+  const ag = intIn(b.age, 14, 90, "Yaş"); if (ag.err) return res.status(400).json({ error: ag.err });
+  const by = { v: ag.v ? new Date().getFullYear() - ag.v : bd.v ? bd.year : null };
+  if (ag.v) bd.v = null;
   const gender = b.gender === "" || b.gender == null ? null : String(b.gender);
   if (gender !== null && !GENDERS.includes(gender)) return res.status(400).json({ error: "Geçersiz cinsiyet seçimi." });
   const stepsRange = b.stepsRange === "" || b.stepsRange == null ? null : String(b.stepsRange);

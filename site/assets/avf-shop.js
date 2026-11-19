@@ -210,15 +210,20 @@
       var pr = res[0], P = pr || {}, f = {}, D = AVF.draft("profile"), restoring = false;
       function changed() { if (!restoring) D.set(snapshot()); }
       f.gender = AVF.choice({ label: "Cinsiyet", value: P.gender || "", clearable: true, onChange: changed, items: [{ value: "female", label: "Kadın", icon: "female" }, { value: "male", label: "Erkek", icon: "male" }] });
-      f.birth = AVF.dateSelect(P.birth_date || "", 14, changed);
+      // Yaş (doğum tarihi sorulmaz): kayıtlı doğum tarihi / yılından bugünkü yaş hesaplanır
+      var age0 = P.birth_date ? (function (d) { var n = new Date(), a = n.getFullYear() - d[0]; if (n.getMonth() + 1 < d[1] || (n.getMonth() + 1 === d[1] && n.getDate() < d[2])) a--; return a; })(P.birth_date.split("-").map(Number)) : P.birth_year ? new Date().getFullYear() - P.birth_year : "";
+      f.age = AVF.input("number", { value: age0 ? String(age0) : "", min: "14", max: "90", step: "1", inputmode: "numeric", placeholder: "Örn. 28", "aria-label": "Yaş" });
+      f.age.addEventListener("input", changed);
+      var ageBox = h("div", { class: "unitin" }, f.age, h("span", { class: "unit-s", text: "yaş" }));
       f.work = AVF.workHours(P.work_hours || "", changed, P.work_schedule || null, P.work_note || "");
       f.height = AVF.measure("height", P.height_cm, changed);
       f.weight = AVF.measure("weight", P.weight_kg, changed);
       MEAS.forEach(function (m) { f[m[0]] = AVF.measure(m[0], P[m[0] + "_cm"], changed); });
-      f.tdays = AVF.choice({ label: "Haftada kaç gün antrenmana gidebilirsiniz", value: P.training_days ? String(P.training_days) : "", clearable: true, cols: 6, onChange: changed,
-        items: [1, 2, 3, 4, 5, 6].map(function (n) { return { value: String(n), label: n + " gün", icon: "dumb" }; }) });
-      f.meals = AVF.choice({ label: "Günde kaç öğün tüketebilirsiniz", value: P.meals_per_day ? String(P.meals_per_day) : "", clearable: true, cols: 6, onChange: changed,
-        items: [1, 2, 3, 4, 5, 6].map(function (n) { return { value: String(n), label: n + " öğün", icon: "apple" }; }) });
+      // Haftalık antrenman günü ve günlük öğün: kan grubu gibi simgeli açılır liste (mobilde seçenekler sıkışıp iç içe girmez)
+      f.tdays = AVF.iconSelect({ label: "Haftada kaç gün antrenmana gidebilirsiniz", icon: "dumb", placeholder: "Gün sayısını seçin", value: P.training_days ? String(P.training_days) : "", onChange: changed,
+        items: [1, 2, 3, 4, 5, 6].map(function (n) { return { value: String(n), label: n + " gün", icon: "dumb", level: (n - 1) / 5 }; }) });
+      f.meals = AVF.iconSelect({ label: "Günde kaç öğün tüketebilirsiniz", icon: "apple", placeholder: "Öğün sayısını seçin", value: P.meals_per_day ? String(P.meals_per_day) : "", onChange: changed,
+        items: [1, 2, 3, 4, 5, 6].map(function (n) { return { value: String(n), label: n + " öğün", icon: "apple", level: (n - 1) / 5 }; }) });
       f.blood = AVF.iconSelect({ label: "Kan grubu", icon: "drop", placeholder: "Kan grubunuzu seçin", value: P.blood_type || "", onChange: changed, items: BLOOD.map(function (x) { return { value: x, label: x + (x.slice(-1) === "+" ? " · Rh pozitif" : " · Rh negatif"), icon: "drop" }; }) });
       f.goal = AVF.choice({ label: "Hedefiniz", value: P.goal || "", clearable: true, onChange: changed, items: GOALS.map(function (g) { return { value: g[0], label: g[0], icon: g[1] }; }) });
       f.steps = AVF.iconSelect({ label: "Günlük ortalama adım sayısı", icon: "steps", placeholder: "Adım aralığınızı seçin", value: P.steps_range || "", onChange: changed, items: STEPS.map(function (x, i) { return { value: x[0], label: x[1] + " adım", icon: "steps", level: i / (STEPS.length - 1) }; }) });
@@ -233,17 +238,17 @@
       f.bloodFiles = AVF.fileBox({ scope: "blood", max: 2, icon: "drop", label: "Kan tahlili ekle", files: res[3] || [], locked: consented ? "" : "Kan tahlili eklemek için önce açık rızanızı onaylayıp bilgilerinizi kaydedin." });
 
       function snapshot() {
-        return { gender: f.gender.get(), birth: f.birth.raw(), work: f.work.raw(), height: f.height.raw(), weight: f.weight.raw(), arm: f.arm.raw(), shoulder: f.shoulder.raw(), waist: f.waist.raw(), neck: f.neck.raw(), tdays: f.tdays.get(), meals: f.meals.get(), blood: f.blood.get(), goal: f.goal.get(), steps: f.steps.get(), occupation: f.occupation.value, notes: f.notes.value, consent: consent.checked };
+        return { gender: f.gender.get(), age: f.age.value, work: f.work.raw(), height: f.height.raw(), weight: f.weight.raw(), arm: f.arm.raw(), shoulder: f.shoulder.raw(), waist: f.waist.raw(), neck: f.neck.raw(), tdays: f.tdays.get(), meals: f.meals.get(), blood: f.blood.get(), goal: f.goal.get(), steps: f.steps.get(), occupation: f.occupation.value, notes: f.notes.value, consent: consent.checked };
       }
       function apply(d) {
         restoring = true;
-        f.gender.set(d.gender || ""); f.birth.set(d.birth || ""); f.work.setRaw(d.work || ""); f.height.setRaw(d.height); f.weight.setRaw(d.weight); MEAS.forEach(function (m) { f[m[0]].setRaw(d[m[0]]); }); f.tdays.set(d.tdays || ""); f.meals.set(d.meals || "");
+        f.gender.set(d.gender || ""); f.age.value = d.age || ""; f.work.setRaw(d.work || ""); f.height.setRaw(d.height); f.weight.setRaw(d.weight); MEAS.forEach(function (m) { f[m[0]].setRaw(d[m[0]]); }); f.tdays.set(d.tdays || ""); f.meals.set(d.meals || "");
         f.blood.set(d.blood || ""); f.goal.set(d.goal || ""); f.steps.set(d.steps || ""); f.occupation.value = d.occupation || ""; f.notes.value = d.notes || ""; consent.checked = !!d.consent; count();
         restoring = false;
       }
       function payload() {
         return { heightCm: f.height.getMetric(), weightKg: f.weight.getMetric(), armCm: f.arm.getMetric(), shoulderCm: f.shoulder.getMetric(), waistCm: f.waist.getMetric(), neckCm: f.neck.getMetric(),
-          trainingDays: f.tdays.get() ? Number(f.tdays.get()) : "", mealsPerDay: f.meals.get() ? Number(f.meals.get()) : "", birthDate: f.birth.get(), gender: f.gender.get(), stepsRange: f.steps.get(), workHours: f.work.get(), workSchedule: f.work.schedule(), workNote: f.work.note(), bloodType: f.blood.get(),
+          trainingDays: f.tdays.get() ? Number(f.tdays.get()) : "", mealsPerDay: f.meals.get() ? Number(f.meals.get()) : "", age: f.age.value.trim() ? Number(f.age.value) : "", gender: f.gender.get(), stepsRange: f.steps.get(), workHours: f.work.get(), workSchedule: f.work.schedule(), workNote: f.work.note(), bloodType: f.blood.get(),
           occupation: f.occupation.value.trim(), goal: f.goal.get(), healthNotes: f.notes.value.trim() };
       }
       var consent = h("input", { type: "checkbox", id: "pf-consent" }); consent.addEventListener("change", changed);
@@ -253,9 +258,9 @@
       var form = h("div", { class: "pgrid" },
         h("div", { class: "note" }, "Bu bilgileri paylaşmak isteğe bağlıdır; size uygun program hazırlanmasına yardımcı olur. Yalnızca siz ve koçunuz görebilirsiniz. Dilediğiniz zaman silebilirsiniz."),
         restoredNote,
-        psec("id", "Genel Bilgiler", "Cinsiyet, doğum tarihi ve meslek", [
+        psec("id", "Genel Bilgiler", "Cinsiyet, yaş ve meslek", [
           h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("users")), "Cinsiyet"), f.gender),
-          h("div", { class: "field" }, h("label", null, h("span", { class: "tile" }, AVF.icon("calendar")), "Doğum tarihi"), f.birth),
+          h("div", { class: "field" }, h("label", { for: f.age.id }, h("span", { class: "tile" }, AVF.icon("calendar")), "Yaş"), ageBox),
           AVF.field("Meslek", f.occupation, { optional: true, icon: "briefcase" })]),
         psec("clock", "Çalışma Saati", "Programınız iş düzeninize göre planlanır", [f.work]),
         psec("pulse", "Vücut Ölçüleri", "Boy, kilo ve kan grubu — birimi dilediğiniz gibi seçin", [
@@ -289,7 +294,7 @@
       function fail(t) { msg.textContent = t; msg.style.display = ""; msg.scrollIntoView({ block: "center", behavior: "smooth" }); }
       save.addEventListener("click", function () {
         msg.style.display = "none";
-        if (f.birth.partial()) return fail("Doğum tarihini gün, ay ve yıl olarak tamamlayın.");
+        var av = f.age.value.trim(); if (av && (!/^\d+$/.test(av) || +av < 14 || +av > 90)) return fail("Yaş 14–90 arasında olmalıdır.");
         var me = f.height.error() || f.weight.error(); if (me) return fail(me);
         var wi = f.work.incomplete(); if (wi) return fail(wi);
         if (f.files.busy() || f.bloodFiles.busy()) return fail("Dosyalar yükleniyor; lütfen yükleme bitince kaydedin.");

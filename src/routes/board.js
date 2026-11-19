@@ -10,15 +10,15 @@ import { pool } from "../db/pool.js";
 import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/auditLog.js";
 import { checkHourlyActionLimit } from "../utils/rateLimit.js";
-import { forumLevel, publicLevel, LEVELS } from "../utils/forumLevels.js";
+import { forumLevel, publicLevel, forumScore, LEVELS } from "../utils/forumLevels.js";
 import { syncLevel } from "../utils/levelSync.js";
 import { notifyIn, imageInfo } from "../utils/forumRules.js";
 import { stripImageMetadata } from "../utils/imageClean.js";
 import { giphyEnabled, giphyDownload } from "../utils/giphy.js";
 import { raw, sendAttachment } from "./uploads.js";
 import {
-  clean, contentError, quotedPostIds, mentions, pollIn, REPORT_REASONS, RULES,
-  IMAGES_PER_POST, IMAGE_MAX, IMAGE_PX, PENDING_MAX, PAGE_POSTS, PAGE_TOPICS,
+  clean, contentError, quotedPostIds, mentions, pollIn, REPORT_REASONS, RULES, RULE_ICONS,
+  IMAGES_PER_POST, IMAGE_MAX, IMAGE_PX, PENDING_MAX, PAGE_POSTS, PAGE_TOPICS, TAGS_PER_TOPIC,
 } from "../utils/forumContent.js";
 
 export const boardRouter = withAsyncErrors(express.Router());
@@ -30,25 +30,27 @@ const int = (v, d, min, max) => { const n = Number.parseInt(v, 10); return Numbe
 const AUTHOR = `u.id AS uid, u.username, u.role, u.created_at AS joined_at,
   (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'avatar') AS avatar_id,
   f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld, coalesce(f.signature, '') AS signature,
-  (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'sig') AS sig_image_id, f.last_seen_at`;
+  (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'sig') AS sig_image_id, f.last_seen_at, f.hide_online, f.is_official`;
 function authorOut(r) {
   if (!r || !r.username) return { username: null, deleted: true };
-  return { id: r.uid, username: r.username, avatarId: r.avatar_id, level: publicLevel(forumLevel(r, r.role)), joinedAt: r.joined_at,
+  const lv = forumLevel(r, r.role);
+  // Yönetici ve moderatörlerin katılım tarihi gösterilmez (ekip bilgisi); üyelerinki görünür.
+  return { id: r.uid, username: r.username, avatarId: r.avatar_id, level: publicLevel(lv), joinedAt: lv.assigned ? null : r.joined_at,
     stats: { topics: r.topics || 0, posts: r.posts || 0, likes: r.likes || 0 }, signature: r.signature || "", sigImageId: r.sig_image_id || null,
-    online: !!(r.last_seen_at && Date.now() - new Date(r.last_seen_at).getTime() < 15 * 60000) };
+    online: !r.hide_online && !!(r.last_seen_at && Date.now() - new Date(r.last_seen_at).getTime() < 15 * 60000) };
 }
 
 async function gate(req, res, next) {
   const { rows } = await pool.query(
     `SELECT u.id, u.username, u.role, u.email_verified_at, f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld,
-            f.rules_accepted_at, f.banned_until, f.ban_permanent, f.ban_reason, f.last_seen_at, coalesce(f.notify, '{}'::jsonb) AS notify
+            f.rules_accepted_at, f.banned_until, f.ban_permanent, f.ban_reason, f.last_seen_at, coalesce(f.notify, '{}'::jsonb) AS notify, f.is_official, f.hide_online
        FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1`, [req.user.sub]);
   const me = rows[0];
   if (!me || !me.email_verified_at) return res.status(403).json({ error: "Foruma katılmak için e-posta adresinizi doğrulayın.", code: "verify" });
-  if (!me.rules_accepted_at) return res.status(403).json({ error: "Foruma girmek için forum kurallarını ve 18 yaş beyanını onaylayın.", code: "rules", rules: RULES });
+  if (!me.rules_accepted_at) return res.status(403).json({ error: "Foruma girmek için forum kurallarını ve 18 yaş beyanını onaylayın.", code: "rules", rules: RULES, icons: RULE_ICONS });
   const banned = me.ban_permanent || (me.banned_until && new Date(me.banned_until) > new Date());
   const lv = forumLevel(me, me.role);
-  req.fm = { id: me.id, username: me.username, role: me.role, level: lv, mod: me.role === "admin" || me.forum_role === "moderator", admin: me.role === "admin",
+  req.fm = { id: me.id, username: me.username, role: me.role, level: lv, mod: me.role === "admin" || me.forum_role === "moderator", admin: me.role === "admin", hideOnline: !!me.hide_online,
     banned, banUntil: me.ban_permanent ? null : me.banned_until, banReason: me.ban_reason || "", since: me.rules_accepted_at, notify: notifyIn(me.notify) };
   if (!me.last_seen_at || Date.now() - new Date(me.last_seen_at).getTime() > 120000)
     pool.query(`UPDATE forum_profiles SET last_seen_at = now() WHERE user_id = $1`, [me.id]).catch(() => {});
@@ -102,7 +104,29 @@ async function category(slugOrId) {
   const { rows } = await pool.query(`SELECT * FROM forum_categories WHERE ${q}`, [slugOrId]);
   return rows[0] || null;
 }
-function catOut(c) { return { id: c.id, slug: c.slug, name: c.name, description: c.description, icon: c.icon, kind: c.kind, isLocked: c.is_locked, notice: c.notice, minLevel: c.min_level_topic }; }
+function catOut(c) { return { id: c.id, slug: c.slug, name: c.name, description: c.description, icon: c.icon, color: c.color || "slate", kind: c.kind, isLocked: c.is_locked, notice: c.notice, minLevel: c.min_level_topic, parentId: c.parent_id || null }; }
+/** Kategori + alt kategorileri (üst kategori sayfası alt kategorilerin konularını da listeler). */
+async function familyOf(cat) {
+  const kids = (await pool.query(`SELECT * FROM forum_categories WHERE parent_id = $1 ORDER BY sort, id`, [cat.id])).rows;
+  const parent = cat.parent_id ? await category(cat.parent_id) : null;
+  return { ids: [cat.id, ...kids.map((k) => k.id)], kids, parent };
+}
+async function tagsOf(topicIds) {
+  if (!topicIds.length) return {};
+  const { rows } = await pool.query(`SELECT tt.topic_id, g.slug, g.name, g.icon FROM forum_topic_tags tt JOIN forum_tags g ON g.id = tt.tag_id
+      WHERE tt.topic_id = ANY(SELECT jsonb_array_elements_text($1::jsonb)::uuid) ORDER BY g.name`, [JSON.stringify(topicIds)]);
+  const out = {}; for (const r of rows) (out[r.topic_id] = out[r.topic_id] || []).push({ slug: r.slug, name: r.name, icon: r.icon });
+  return out;
+}
+/** Konu etiketleri: tanımlı listeden en fazla 5 tane (bilinmeyen etiket reddedilir). */
+async function tagsIn(v) {
+  if (v === undefined || v === null) return { ids: [] };
+  if (!Array.isArray(v) || v.length > TAGS_PER_TOPIC || v.some((x) => typeof x !== "string" || !/^[a-z0-9-]{2,40}$/.test(x))) return { err: `En fazla ${TAGS_PER_TOPIC} etiket seçebilirsiniz.` };
+  const uniq = [...new Set(v)]; if (!uniq.length) return { ids: [] };
+  const { rows } = await pool.query(`SELECT id FROM forum_tags WHERE slug = ANY($1::text[])`, [uniq]);
+  if (rows.length !== uniq.length) return { err: "Etiketlerden biri geçersiz." };
+  return { ids: rows.map((r) => r.id) };
+}
 async function topicRow(id, req) {
   if (!ID.test(id)) return null;
   const { rows } = await pool.query(`SELECT t.*, c.slug AS cat_slug, c.is_locked AS cat_locked, c.kind AS cat_kind FROM forum_topics t JOIN forum_categories c ON c.id = t.category_id WHERE t.id = $1`, [id]);
@@ -113,7 +137,7 @@ async function topicRow(id, req) {
 function canPostIn(req, t, c) {
   if (req.fm.mod) return { ok: true };
   if (c.is_locked) return { ok: false, why: "Bu kategori yeni mesajlara kapalı." };
-  if (t && t.is_locked) return { ok: false, why: "Bu konu kilitlendi; yeni yanıt yazılamaz." };
+  if (t && t.is_locked) return { ok: false, why: t.official_key ? "Bu duyuru yorumlara kapalıdır." : "Bu konu kilitlendi; yeni yanıt yazılamaz." };
   return { ok: true };
 }
 /** Bekleyen görselleri mesaja bağlar (yalnız sahibinin, forum türündeki ve henüz bağlanmamış görselleri). */
@@ -131,7 +155,7 @@ function imagesIn(v) {
 }
 
 // ------------------------------------------------------------------ kurallar / ana sayfa
-boardRouter.get("/board/rules", requireAuth, (req, res) => res.json({ rules: RULES, reasons: REPORT_REASONS }));
+boardRouter.get("/board/rules", requireAuth, (req, res) => res.json({ rules: RULES, icons: RULE_ICONS, reasons: REPORT_REASONS }));
 
 boardRouter.get("/board/home", member, async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -151,14 +175,25 @@ boardRouter.get("/board/home", member, async (req, res) => {
     `SELECT (SELECT count(*) FROM forum_topics WHERE hidden_at IS NULL)::int AS topics,
             (SELECT count(*) FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id WHERE p.hidden_at IS NULL AND t.hidden_at IS NULL)::int AS posts,
             (SELECT count(*) FROM forum_profiles WHERE rules_accepted_at IS NOT NULL)::int AS members,
-            (SELECT count(*) FROM forum_profiles WHERE last_seen_at > now() - interval '15 minutes')::int AS online,
+            (SELECT count(*) FROM forum_profiles WHERE last_seen_at > now() - interval '15 minutes' AND NOT hide_online)::int AS online,
             (SELECT u.username FROM forum_profiles f JOIN users u ON u.id = f.user_id WHERE f.rules_accepted_at IS NOT NULL ORDER BY f.rules_accepted_at DESC LIMIT 1) AS newest`);
   const reports = req.fm.mod ? (await pool.query(`SELECT count(DISTINCT post_id)::int AS n FROM forum_reports WHERE status = 'open'`)).rows[0].n : 0;
+  // alt kategoriler üst kategorinin içinde döner; üstün sayaçları ve son konusu alt kategorileri de kapsar
+  const all = cats.rows.map((c) => ({ ...catOut(c), topics: c.topic_count, posts: c.post_count, unread: c.unread,
+    last: c.last_id ? { id: c.last_id, title: c.last_title, at: c.last_at, user: c.last_user } : null }));
+  const top = all.filter((c) => !c.parentId);
+  for (const c of top) {
+    c.children = all.filter((k) => k.parentId === c.id);
+    for (const k of c.children) {
+      c.topics += k.topics; c.posts += k.posts; c.unread += k.unread;
+      if (k.last && (!c.last || new Date(k.last.at) > new Date(c.last.at))) c.last = k.last;
+    }
+  }
+  const tags = (await pool.query(`SELECT g.slug, g.name, g.icon, count(tt.topic_id)::int AS n FROM forum_tags g LEFT JOIN forum_topic_tags tt ON tt.tag_id = g.id
+      LEFT JOIN forum_topics t ON t.id = tt.topic_id AND t.hidden_at IS NULL GROUP BY g.id ORDER BY g.name`)).rows;
   res.json({
-    categories: cats.rows.map((c) => ({ ...catOut(c), topics: c.topic_count, posts: c.post_count, unread: c.unread,
-      last: c.last_id ? { id: c.last_id, title: c.last_title, at: c.last_at, user: c.last_user } : null })),
-    stats: stats.rows[0],
-    me: { username: req.fm.username, level: publicLevel(req.fm.level), mod: req.fm.mod, admin: req.fm.admin, banned: req.fm.banned, banUntil: req.fm.banUntil, banReason: req.fm.banReason, openReports: reports },
+    categories: top, tags, stats: stats.rows[0],
+    me: { username: req.fm.username, level: publicLevel(req.fm.level), mod: req.fm.mod, admin: req.fm.admin, banned: req.fm.banned, banUntil: req.fm.banUntil, banReason: req.fm.banReason, openReports: reports, hideOnline: req.fm.hideOnline },
   });
 });
 
@@ -169,7 +204,16 @@ boardRouter.get("/board/topics", member, async (req, res) => {
   const me = req.fm.id, page = int(req.query.page, 1, 1, 1000), sort = SORTS[req.query.sort] ? req.query.sort : "activity";
   const where = ["(t.hidden_at IS NULL OR $3::boolean)"], vals = [me, req.fm.since, req.fm.mod && req.query.hidden === "1"];
   let cat = null;
-  if (req.query.c) { cat = await category(String(req.query.c)); if (!cat) return res.status(404).json({ error: "Kategori bulunamadı." }); vals.push(cat.id); where.push(`t.category_id = $${vals.length}`); }
+  let fam = null, tag = null;
+  if (req.query.c) {
+    cat = await category(String(req.query.c)); if (!cat) return res.status(404).json({ error: "Kategori bulunamadı." });
+    fam = await familyOf(cat); vals.push(fam.ids); where.push(`t.category_id = ANY($${vals.length}::int[])`);
+  }
+  if (req.query.tag) {
+    tag = (await pool.query(`SELECT slug, name, icon FROM forum_tags WHERE slug = $1`, [String(req.query.tag)])).rows[0];
+    if (!tag) return res.status(404).json({ error: "Etiket bulunamadı." });
+    vals.push(tag.slug); where.push(`EXISTS (SELECT 1 FROM forum_topic_tags tt JOIN forum_tags g ON g.id = tt.tag_id WHERE tt.topic_id = t.id AND g.slug = $${vals.length})`);
+  }
   const f = String(req.query.filter || "");
   if (f === "unanswered") where.push("t.reply_count = 0");
   if (f === "questions") where.push("t.kind = 'question'");
@@ -189,23 +233,24 @@ boardRouter.get("/board/topics", member, async (req, res) => {
   const pages = Math.max(1, Math.ceil(total / PAGE_TOPICS));
   const { rows } = await pool.query(
     `SELECT t.id, t.title, t.kind, t.is_pinned, t.is_locked, t.hidden_at, t.accepted_post_id, t.reply_count, t.view_count, t.last_post_at, t.created_at,
-            c.slug AS cat_slug, c.name AS cat_name, c.icon AS cat_icon, fp.like_count, left(regexp_replace(fp.body, '\\[alinti=[^\\]]*\\][\\s\\S]*?\\[/alinti\\]', '', 'g'), 180) AS excerpt,
+            c.slug AS cat_slug, c.name AS cat_name, c.icon AS cat_icon, c.color AS cat_color, fp.like_count, left(regexp_replace(fp.body, '\\[alinti=[^\\]]*\\][\\s\\S]*?\\[/alinti\\]', '', 'g'), 180) AS excerpt,
             (t.last_post_at > greatest($2::timestamptz, coalesce(r.last_read_at, '-infinity'))) AS unread, r.last_read_at IS NOT NULL AS seen,
             EXISTS (SELECT 1 FROM forum_polls pl WHERE pl.topic_id = t.id) AS has_poll,
             EXISTS (SELECT 1 FROM attachments a WHERE a.forum_post_id = fp.id) AS has_images,
             au.username AS author, au.role AS author_role, (SELECT id FROM attachments WHERE user_id = au.id AND scope = 'avatar') AS author_avatar,
-            af.level_override, af.forum_role, af.topics, af.posts, af.likes, af.dislikes, af.reports_upheld,
+            af.level_override, af.forum_role, af.topics, af.posts, af.likes, af.dislikes, af.reports_upheld, af.is_official,
             lu.username AS last_user
        ${base.replace("LEFT JOIN forum_reads", "LEFT JOIN users au ON au.id = t.author_id LEFT JOIN forum_profiles af ON af.user_id = au.id LEFT JOIN users lu ON lu.id = t.last_poster_id LEFT JOIN forum_reads")}
       ORDER BY ${order} LIMIT ${PAGE_TOPICS} OFFSET ${(page - 1) * PAGE_TOPICS}`, vals);
+  const TG = await tagsOf(rows.map((t) => t.id));
   res.json({
-    category: cat ? catOut(cat) : null, page, pages, total,
+    category: cat ? { ...catOut(cat), children: fam.kids.map(catOut), parent: fam.parent ? catOut(fam.parent) : null } : null, tag: tag || null, page, pages, total,
     canTopic: !req.fm.banned && (!cat || req.fm.mod || (!cat.is_locked && cat.kind !== "announce" && req.fm.level.n >= cat.min_level_topic)),
-    topics: rows.map((t) => ({
+    topics: rows.map((t) => ({ tags: TG[t.id] || [], official: !!t.is_official,
       id: t.id, title: t.title, kind: t.kind, pinned: t.is_pinned, locked: t.is_locked, hidden: !!t.hidden_at, solved: !!t.accepted_post_id,
       replies: t.reply_count, views: t.view_count, likes: t.like_count, lastAt: t.last_post_at, createdAt: t.created_at, unread: !!t.unread, seen: !!t.seen,
       hasPoll: t.has_poll, hasImages: t.has_images, excerpt: t.excerpt,
-      category: { slug: t.cat_slug, name: t.cat_name, icon: t.cat_icon },
+      category: { slug: t.cat_slug, name: t.cat_name, icon: t.cat_icon, color: t.cat_color || "slate" },
       author: t.author ? { username: t.author, avatarId: t.author_avatar, level: publicLevel(forumLevel(t, t.author_role)) } : null, lastUser: t.last_user,
     })),
   });
@@ -222,7 +267,9 @@ boardRouter.post("/board/topics", member, async (req, res) => {
     if (cat.is_locked) return res.status(403).json({ error: "Bu kategori yeni konulara kapalı." });
     if (req.fm.level.n < cat.min_level_topic) return res.status(403).json({ error: `Bu kategoride konu açmak için ${LEVELS[cat.min_level_topic - 1].name} seviyesi gerekir.` });
   }
-  const title = clean(b.title).replace(/\s+/g, " ").slice(0, 200), body = clean(b.body), kind = b.kind === "question" ? "question" : "discussion";
+  // Konu türü seçilmez: Soru – Cevap kategorisinde açılan konu sorudur (en iyi yanıt seçilebilir); diğerleri tartışmadır.
+  const title = clean(b.title).replace(/\s+/g, " ").slice(0, 200), body = clean(b.body), kind = cat.slug === "soru-cevap" || (req.fm.mod && b.kind === "question") ? "question" : "discussion";
+  const tg = await tagsIn(b.tags); if (tg.err) return res.status(400).json({ error: tg.err, field: "tags" });
   const e = contentError({ title, body, level: req.fm.level.n, mod: req.fm.mod });
   if (e) return res.status(400).json({ error: e, field: /Başlık/.test(e) ? "title" : "body" });
   const poll = pollIn(b.poll); if (poll.err) return res.status(400).json({ error: poll.err, field: "poll" });
@@ -237,6 +284,7 @@ boardRouter.post("/board/topics", member, async (req, res) => {
     if (poll.v) await c.query(`INSERT INTO forum_polls (topic_id, question, options, multi, closes_at) VALUES ($1, $2, $3, $4, CASE WHEN $5::int > 0 THEN now() + make_interval(days => $5::int) END)`,
       [t.id, poll.v.question, JSON.stringify(poll.v.options), poll.v.multi, poll.v.days]);
     await attachImages(c, req.fm.id, p.id, imgs.ids);
+    if (tg.ids.length) await c.query(`INSERT INTO forum_topic_tags (topic_id, tag_id) SELECT $1, x::int FROM jsonb_array_elements_text($2::jsonb) x ON CONFLICT DO NOTHING`, [t.id, JSON.stringify(tg.ids)]);
     await c.query(`INSERT INTO forum_watches (topic_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [t.id, req.fm.id]);
     await c.query(`INSERT INTO forum_reads (topic_id, user_id, last_read_at) VALUES ($1, $2, $3) ON CONFLICT (topic_id, user_id) DO UPDATE SET last_read_at = EXCLUDED.last_read_at`, [t.id, req.fm.id, t.created_at]);
     await bump(c, req.fm.id, { topics: 1 });
@@ -313,7 +361,9 @@ boardRouter.get("/board/t/:id", member, async (req, res) => {
   }
   const watching = (await pool.query(`SELECT 1 FROM forum_watches WHERE topic_id = $1 AND user_id = $2`, [t.id, req.fm.id])).rows.length > 0;
   const can = canPostIn(req, t, cat);
-  res.json({
+  const parent = cat.parent_id ? await category(cat.parent_id) : null;
+  const TG = await tagsOf([t.id]);
+  res.json({ tags: TG[t.id] || [], parent: parent ? catOut(parent) : null,
     topic: { id: t.id, title: t.title, kind: t.kind, pinned: t.is_pinned, locked: t.is_locked, hidden: !!t.hidden_at, hiddenReason: req.fm.mod ? t.hidden_reason : null,
       acceptedPostId: t.accepted_post_id, replies: t.reply_count, views: t.view_count, createdAt: t.created_at, lastAt: t.last_post_at, own: t.author_id === req.fm.id },
     category: catOut(cat), poll: await pollOut(req, t.id), page, pages, total, firstUnread, watching,
@@ -409,7 +459,12 @@ boardRouter.patch("/board/posts/:id", member, async (req, res) => {
   const e = contentError({ title, body, level: req.fm.level.n, mod: req.fm.mod }); if (e) return res.status(400).json({ error: e, field: /Başlık/.test(e) ? "title" : "body" });
   const imgs = b.images !== undefined ? imagesIn(b.images) : null; if (imgs && imgs.err) return res.status(400).json({ error: imgs.err });
   const reason = clean(b.reason).slice(0, 200);
-  if (body === p.body && (title === undefined || title === p.title) && !imgs) return res.json({ ok: true, unchanged: true });
+  const tg = p.is_first && b.tags !== undefined ? await tagsIn(b.tags) : null; if (tg && tg.err) return res.status(400).json({ error: tg.err, field: "tags" });
+  if (tg) {
+    await pool.query(`DELETE FROM forum_topic_tags WHERE topic_id = $1`, [p.topic_id]);
+    if (tg.ids.length) await pool.query(`INSERT INTO forum_topic_tags (topic_id, tag_id) SELECT $1, x::int FROM jsonb_array_elements_text($2::jsonb) x ON CONFLICT DO NOTHING`, [p.topic_id, JSON.stringify(tg.ids)]);
+  }
+  if (body === p.body && (title === undefined || title === p.title) && !imgs) return res.json({ ok: true, unchanged: !tg });
   await tx(async (c) => {
     await c.query(`INSERT INTO forum_post_edits (post_id, editor_id, old_body, old_title, reason) VALUES ($1, $2, $3, $4, $5)`, [p.id, req.fm.id, p.body, title !== undefined && title !== p.title ? p.title : null, reason || null]);
     await c.query(`UPDATE forum_posts SET body = $2, edited_at = now(), edited_by = $3 WHERE id = $1`, [p.id, body, req.fm.id]);
@@ -512,6 +567,31 @@ boardRouter.get("/board/me/bookmarks", member, async (req, res) => {
        FROM forum_bookmarks b JOIN forum_posts p ON p.id = b.post_id JOIN forum_topics t ON t.id = p.topic_id LEFT JOIN users u ON u.id = p.author_id
       WHERE b.user_id = $1 AND p.hidden_at IS NULL AND t.hidden_at IS NULL ORDER BY b.created_at DESC LIMIT 200`, [req.fm.id]);
   res.json(rows.map((r) => ({ postId: r.id, topicId: r.topic_id, title: r.title, excerpt: r.excerpt, author: r.username, at: r.created_at, savedAt: r.saved_at })));
+});
+// Beğendiklerim: üyenin beğendiği (görünür) mesajlar
+boardRouter.get("/board/me/likes", member, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const { rows } = await pool.query(
+    `SELECT r.created_at AS liked_at, p.id, p.topic_id, left(regexp_replace(p.body, '\\[alinti=[^\\]]*\\][\\s\\S]*?\\[/alinti\\]', '', 'g'), 220) AS excerpt, p.created_at, t.title, u.username
+       FROM forum_reactions r JOIN forum_posts p ON p.id = r.post_id JOIN forum_topics t ON t.id = p.topic_id LEFT JOIN users u ON u.id = p.author_id
+      WHERE r.user_id = $1 AND r.value = 1 AND p.hidden_at IS NULL AND t.hidden_at IS NULL ORDER BY r.created_at DESC LIMIT 200`, [req.fm.id]);
+  res.json(rows.map((r) => ({ postId: r.id, topicId: r.topic_id, title: r.title, excerpt: r.excerpt, author: r.username, at: r.created_at, likedAt: r.liked_at })));
+});
+// Üye listesi: yalnız kullanıcı adı, avatar ve seviye (kişisel bilgi yok); seviyeye göre sıralı. Ekip en üstte.
+boardRouter.get("/board/members", member, async (req, res) => {
+  res.setHeader("Cache-Control", "private, max-age=30");
+  const q = String(req.query.q || "").toLowerCase().replace(/^@/, "").slice(0, 20);
+  if (q && !/^[a-z0-9._]{1,20}$/.test(q)) return res.json({ members: [], total: 0, page: 1, pages: 1 });
+  const { rows } = await pool.query(
+    `SELECT u.username, u.role, f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld, f.is_official, f.hide_online, f.last_seen_at,
+            (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'avatar') AS avatar_id
+       FROM forum_profiles f JOIN users u ON u.id = f.user_id
+      WHERE f.rules_accepted_at IS NOT NULL AND NOT f.ban_permanent AND ($1 = '' OR u.username LIKE $1 || '%') LIMIT 5000`, [q.replace(/[%_\\]/g, (c) => "\\" + c)]);
+  const list = rows.map((r) => { const l = forumLevel(r, r.role); return { username: r.username, avatarId: r.avatar_id, level: publicLevel(l), score: l.assigned ? 1e9 + l.n : forumScore(r),
+    online: !r.hide_online && !!(r.last_seen_at && Date.now() - new Date(r.last_seen_at).getTime() < 15 * 60000) }; });
+  list.sort((a, b) => b.level.n - a.level.n || b.score - a.score || a.username.localeCompare(b.username));
+  const per = 60, pages = Math.max(1, Math.ceil(list.length / per)), page = int(req.query.page, 1, 1, pages);
+  res.json({ total: list.length, page, pages, members: list.slice((page - 1) * per, page * per).map(({ score, ...m }) => m) });
 });
 boardRouter.post("/board/t/:id/watch", member, async (req, res) => {
   const t = await topicRow(req.params.id, req); if (!t) return res.status(404).json({ error: "Konu bulunamadı." });
@@ -617,7 +697,8 @@ boardRouter.get("/board/u/:username", member, async (req, res) => {
   const best = (await pool.query(`SELECT count(*)::int AS n FROM forum_topics t JOIN forum_posts p ON p.id = t.accepted_post_id WHERE p.author_id = $1 AND t.hidden_at IS NULL`, [u.id])).rows[0].n;
   const rel = u.id === req.fm.id ? "self" : ((await pool.query(`SELECT status, requester FROM friendships WHERE user_a = least($1::uuid, $2::uuid) AND user_b = greatest($1::uuid, $2::uuid)`, [req.fm.id, u.id])).rows[0] || {});
   const socials = Object.fromEntries(Object.entries(u.socials || {}).filter(([, v]) => typeof v === "string" && v));
-  res.json({ ...authorOut(u), socials, forumSince: u.rules_accepted_at, bestAnswers: best,
+  const out = authorOut(u);
+  res.json({ ...out, socials, forumSince: out.level.assigned ? null : u.rules_accepted_at, bestAnswers: best,
     banned: req.fm.mod ? !!(u.ban_permanent || (u.banned_until && new Date(u.banned_until) > new Date())) : undefined,
     relation: rel === "self" ? "self" : !rel.status ? "none" : rel.status === "accepted" ? "friend" : rel.status === "blocked" ? "none" : rel.requester === req.fm.id ? "outgoing" : "incoming",
     topics: topics.rows.map((t) => ({ id: t.id, title: t.title, replies: t.reply_count, lastAt: t.last_post_at, solved: !!t.accepted_post_id, kind: t.kind, category: { name: t.cat_name, icon: t.icon } })),

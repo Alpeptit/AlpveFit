@@ -1,4 +1,4 @@
-// Forum Ayarları: kullanıcı adı (kurallar, şifre, 30 gün), imza (reklam/müstehcen/siyasi filtre), sosyal bağlantılar, bildirim tercihleri,
+// Forum Ayarları: kullanıcı adı (kurallar, şifre, 14 gün), imza (reklam/müstehcen/siyasi filtre), sosyal bağlantılar, bildirim tercihleri,
 // avatar ve imza görseli (tür ve piksel sınırları), herkese açık görsel, yönetici kaldırması.
 //   node --import ./tools/authsim/register.mjs tests/e2e/forum.mjs   (devserver açıkken)
 process.env.SIM_DB ||= "avfsim"; process.env.DATABASE_URL ||= "postgres://local/avfsim";
@@ -46,7 +46,7 @@ r = await U.c.call("PUT", "/forum/me/username", { username: "demir.adam" + U.use
 const nu = "demir.adam" + U.username.slice(-4);
 r = await U.c.call("PUT", "/forum/me/username", { username: nu, password: PW }); chk("kullanıcı adı değişir", r.status === 200 && r.body.username === nu && r.body.usernameNextChangeAt, r.body);
 r = await new Client().call("POST", "/auth/login", { identifier: nu, password: PW, recaptchaToken: "t" }); chk("yeni kullanıcı adıyla giriş yapılır", r.status === 200, r.body);
-r = await U.c.call("PUT", "/forum/me/username", { username: nu + "x", password: PW }); chk("30 gün dolmadan yeniden değişmez", r.status === 429 && r.body.code === "cooldown", r.body);
+r = await U.c.call("PUT", "/forum/me/username", { username: nu + "x", password: PW }); chk("14 gün dolmadan yeniden değişmez", r.status === 429 && r.body.code === "cooldown", r.body);
 
 // ---- avatar / imza görseli
 r = await up(U, "avatar", gif(256, 256)); chk("avatar GIF olamaz", r.status === 400, r.body);

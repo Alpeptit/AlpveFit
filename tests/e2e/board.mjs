@@ -30,10 +30,10 @@ r = await T({ poll: { question: "Hangisi?", options: ["Yulaf"] } }); chk("tek se
 const img = await up(U, png(640, 480)); chk("görsel yüklenir (bekleyen)", img.status === 201 && img.body.id, img.body);
 r = await up(U, Buffer.from("<svg onload=alert(1)>")); chk("görsel olmayan dosya reddedilir", r.status === 400, r.body);
 r = await up(U, png(5000, 100)); chk("çok büyük piksel reddedilir", r.status === 400, r.body);
-r = await T({ kind: "question", poll: { question: "Siz hangisini tercih ediyorsunuz?", options: ["Yulaf", "Yumurta", "İkisi de"], days: 7 }, images: [img.body.id], body: "Hedefim kas kazanmak. @" + V.username + " sen ne dersin?" });
+r = await T({ category: "soru-cevap", poll: { question: "Siz hangisini tercih ediyorsunuz?", options: ["Yulaf", "Yumurta", "İkisi de"], days: 7 }, images: [img.body.id], body: "Hedefim kas kazanmak. @" + V.username + " sen ne dersin?" });
 chk("soru konusu + anket + görsel açılır", r.status === 201 && r.body.id, r.body);
 const tid = r.body.id;
-r = await T({ kind: "question" }); chk("aynı başlıkla tekrar konu açılamaz", r.status === 409, r.body);
+r = await T({ category: "soru-cevap" }); chk("aynı başlıkla tekrar konu açılamaz", r.status === 409, r.body);
 r = await V.c.call("GET", "/notifications"); chk("@anma bildirimi gider", r.body.some((n) => n.type === "forum" && n.data && n.data.kind === "mention" && n.data.topicId === tid), r.body.map((n) => n.text));
 
 // ---- konuyu görüntüleme
@@ -46,17 +46,17 @@ r = await V.c.call("POST", "/board/t/" + tid + "/vote", { choices: [0, 1] }); ch
 r = await V.c.call("POST", "/board/t/" + tid + "/vote", { choices: [1] }); chk("oy verilir ve sonuç görünür", r.status === 200 && r.body.counts[1] === 1 && r.body.mine[0] === 1 && r.body.voters === 1, r.body);
 
 // ---- yanıt, alıntı, bildirim, okunmamış
-r = await V.c.call("GET", "/board/topics?c=beslenme"); chk("V için konu okunmuş", r.body.topics.find((t) => t.id === tid).unread === false, r.body.topics);
+r = await V.c.call("GET", "/board/topics?c=soru-cevap"); chk("V için konu okunmuş", r.body.topics.find((t) => t.id === tid).unread === false, r.body.topics);
 r = await V.c.call("POST", "/board/t/" + tid + "/posts", { body: "Bence yumurta, protein açısından daha iyi." }); chk("yanıt yazılır", r.status === 201 && r.body.page === 1, r.body);
 const p1 = r.body.id;
 r = await V.c.call("POST", "/board/t/" + tid + "/posts", { body: "Bence yumurta, protein açısından daha iyi." }); chk("aynı mesaj tekrar gönderilemez", r.status === 409, r.body);
 r = await U.c.call("GET", "/notifications"); chk("konu sahibine yanıt bildirimi", r.body.some((n) => n.data && n.data.kind === "reply" && n.data.topicId === tid), r.body.map((n) => n.text));
-r = await U.c.call("GET", "/board/topics?c=beslenme&filter=unread"); chk("konu sahibi için konu okunmamış", r.body.topics.some((t) => t.id === tid), r.body);
+r = await U.c.call("GET", "/board/topics?c=soru-cevap&filter=unread"); chk("konu sahibi için konu okunmamış", r.body.topics.some((t) => t.id === tid), r.body);
 r = await W.c.call("POST", "/board/t/" + tid + "/posts", { body: `[alinti=${V.username}#${p1}]Bence yumurta[/alinti]\nKatılıyorum, ben de yumurta derim.` }); chk("alıntılı yanıt", r.status === 201, r.body);
 const p2 = r.body.id;
 r = await V.c.call("GET", "/notifications"); chk("alıntılanana bildirim", r.body.some((n) => n.data && n.data.kind === "quote"), r.body.map((n) => n.text));
 r = await U.c.call("GET", "/board/t/" + tid + "?page=unread"); chk("ilk okunmamış mesaj işaretlenir", r.body.firstUnread === p1 && r.body.posts.length === 3, r.body.firstUnread);
-r = await U.c.call("GET", "/board/topics?c=beslenme&filter=unread"); chk("okununca okunmamıştan çıkar", !r.body.topics.some((t) => t.id === tid), r.body.topics);
+r = await U.c.call("GET", "/board/topics?c=soru-cevap&filter=unread"); chk("okununca okunmamıştan çıkar", !r.body.topics.some((t) => t.id === tid), r.body.topics);
 r = await U.c.call("GET", `/board/t/${tid}/since?after=${encodeURIComponent(new Date(Date.now() - 3600e3).toISOString())}`); chk("yeni yanıt sayısı (canlı uyarı)", r.body.count === 2, r.body);
 
 // ---- tepki ve seviye puanı
@@ -108,8 +108,8 @@ r = await U.c.call("GET", "/board/t/" + tid); chk("kaldırılan en iyi yanıt se
 r = await A.c.call("GET", "/board/t/" + tid); chk("yönetici kaldırılan içeriği ve gerekçeyi görür", r.body.posts.find((p) => p.id === p1).body.length > 0 && r.body.posts.find((p) => p.id === p1).hiddenReason === "Kural 4", r.body.posts);
 r = await A.c.call("POST", "/board/t/" + tid + "/mod", { action: "lock" }); r = await V.c.call("POST", "/board/t/" + tid + "/posts", { body: "kilitli konuya yazıyorum" });
 chk("kilitli konuya yanıt yazılamaz", r.status === 403, r.body);
-r = await A.c.call("POST", "/board/t/" + tid + "/mod", { action: "move", category: "soru-cevap" }); r = await U.c.call("GET", "/board/t/" + tid); chk("konu taşınır", r.body.category.slug === "soru-cevap", r.body.category);
-r = await A.c.call("POST", "/board/t/" + tid + "/mod", { action: "pin" }); r = await U.c.call("GET", "/board/topics?c=soru-cevap"); chk("sabitlenen konu üstte", r.body.topics[0].id === tid && r.body.topics[0].pinned, r.body.topics);
+r = await A.c.call("POST", "/board/t/" + tid + "/mod", { action: "move", category: "antrenman" }); r = await U.c.call("GET", "/board/t/" + tid); chk("konu taşınır", r.body.category.slug === "antrenman", r.body.category);
+r = await A.c.call("POST", "/board/t/" + tid + "/mod", { action: "pin" }); r = await U.c.call("GET", "/board/topics?c=antrenman"); chk("sabitlenen konu üstte", r.body.topics[0].id === tid && r.body.topics[0].pinned, r.body.topics);
 r = await U.c.call("POST", "/board/t/" + tid + "/mod", { action: "unlock" }); chk("üye moderasyon yapamaz", r.status === 404, r.body);
 
 // ---- forum yasağı
@@ -135,4 +135,52 @@ chk("HTML olduğu gibi metin olarak saklanır", r.status === 201, r.body);
 r = await U.c.call("GET", "/board/t/" + r.body.id); chk("başlık ve gövde ham metin", r.body.topic.title.includes("<script>") && r.body.posts[0].body.startsWith("<img"), r.body.topic.title);
 r = await U.c.call("GET", "/board/t/00000000-0000-4000-8000-000000000001"); chk("olmayan konu 404", r.status === 404, r.status);
 r = await U.c.call("GET", "/board/t/' OR 1=1--"); chk("geçersiz kimlik 404", r.status === 404, r.status);
+
+// ---- v17: alt kategoriler, etiketler, tür, üyeler, beğenilenler, çevrimiçi gizleme, resmî hesap, ekip katılım tarihi
+sql(`UPDATE forum_profiles SET level_override = 5 WHERE user_id = '${U.id}'`);   // saatlik konu sınırı yükselsin
+r = await U.c.call("GET", "/board/home");
+const tk = r.body.categories.find((c) => c.slug === "takviye"), fk = r.body.categories.find((c) => c.slug === "farmakoloji");
+chk("alt kategoriler üst kategorinin içinde gelir", tk.children.map((c) => c.slug).join() === "supplement,vitamin,mineral" && fk.children.length === 4 && r.body.categories.length === 8, tk);
+chk("etiket listesi gelir", r.body.tags.length >= 20 && r.body.tags.every((g) => g.slug && g.name), r.body.tags.length);
+r = await U.c.call("POST", "/board/topics", { category: "vitamin", title: "D vitamini kışın şart mı sizce?", body: "Kışın güneş az, ne yapıyorsunuz?", tags: ["vitamin", "saglik"], kind: "question" });
+chk("alt kategoride etiketli konu açılır (üye tür seçemez)", r.status === 201, r.body); const vt = r.body.id;
+r = await U.c.call("GET", "/board/t/" + vt); chk("konu etiketleri ve üst kategori döner; tür tartışma", r.body.tags.length === 2 && r.body.parent.slug === "takviye" && r.body.topic.kind === "discussion", r.body.tags);
+r = await U.c.call("GET", "/board/topics?c=takviye"); chk("üst kategori alt kategorinin konusunu listeler", r.body.topics.some((t) => t.id === vt) && r.body.category.children.length === 3, r.body.total);
+r = await U.c.call("GET", "/board/topics?tag=vitamin"); chk("etiket sayfası", r.body.topics.some((t) => t.id === vt && t.tags.some((g) => g.slug === "vitamin")) && r.body.tag.name === "Vitamin", r.body.tag);
+r = await U.c.call("POST", "/board/topics", { category: "vitamin", title: "Uydurma etiketli bir konu", body: "deneme", tags: ["yok-boyle-etiket"] }); chk("tanımsız etiket reddedilir", r.status === 400 && r.body.field === "tags", r.body);
+r = await U.c.call("POST", "/board/topics", { category: "vitamin", title: "Çok etiketli bir konu deneme", body: "deneme", tags: ["vitamin", "mineral", "saglik", "kalp", "uyku", "kafein"] }); chk("5'ten fazla etiket reddedilir", r.status === 400, r.body);
+r = await U.c.call("PATCH", "/board/posts/" + (await U.c.call("GET", "/board/t/" + vt)).body.posts[0].id, { body: "Kışın güneş az, ne yapıyorsunuz?", tags: ["vitamin"] });
+r = await U.c.call("GET", "/board/t/" + vt); chk("konu sahibi etiketleri düzenler", r.body.tags.length === 1, r.body.tags);
+r = await U.c.call("POST", "/board/topics", { category: "soru-cevap", title: "Soru cevapta açılan konu soru olur", body: "Nasıl?" }); r = await U.c.call("GET", "/board/t/" + r.body.id); chk("Soru – Cevap'ta konu kendiliğinden soru", r.body.topic.kind === "question", r.body.topic);
+// beğenilenler
+const vp = (await V.c.call("GET", "/board/t/" + vt)).body.posts[0].id;
+await V.c.call("POST", "/board/posts/" + vp + "/react", { value: 1 });
+r = await V.c.call("GET", "/board/me/likes"); chk("beğenilenler listesi", r.status === 200 && r.body.some((x) => x.postId === vp), r.body);
+// üyeler: yalnız ad, avatar, seviye
+r = await U.c.call("GET", "/board/members"); const keys = Object.keys(r.body.members[0] || {}).sort().join();
+chk("üye listesi seviyeye göre ve kişisel bilgi içermez", r.status === 200 && r.body.total >= 4 && keys === "avatarId,level,online,username" && r.body.members[0].level.n >= r.body.members[r.body.members.length - 1].level.n, keys);
+r = await U.c.call("GET", "/board/members?q=" + U.username.slice(0, 5)); chk("üye araması", r.body.members.some((m) => m.username === U.username), r.body.total);
+r = await new Client().call("GET", "/board/members"); chk("üye listesi misafire kapalı", r.status === 401, r.status);
+// çevrimiçi gizleme: Pump Avcısı seviyesinde açılır
+r = await V.c.call("PUT", "/forum/me", { hideOnline: true }); chk("düşük seviyede çevrimiçi gizleme açılmaz", r.status === 403 && r.body.field === "hideOnline", r.body);
+sql(`UPDATE forum_profiles SET level_override = 3 WHERE user_id = '${V.id}'`);
+r = await V.c.call("PUT", "/forum/me", { hideOnline: true }); chk("Pump Avcısı çevrimiçi durumunu gizler", r.status === 200 && r.body.hideOnline === true, r.body);
+r = await U.c.call("GET", "/board/u/" + V.username); chk("gizleyenin çevrimiçi işareti görünmez", r.body.online === false, r.body.online);
+r = await U.c.call("GET", "/board/members?q=" + V.username); chk("üye listesinde de gizli", r.body.members[0].online === false, r.body.members[0]);
+await V.c.call("PUT", "/forum/me", { hideOnline: false }); sql(`UPDATE forum_profiles SET level_override = NULL WHERE user_id = '${V.id}'`);
+// ekip: katılım tarihi gizli; resmî hesap
+r = await U.c.call("GET", "/board/u/" + A.username); chk("yöneticinin katılım tarihi gösterilmez", r.body.joinedAt === null && r.body.forumSince === null, r.body);
+r = await A.c.call("GET", "/board/u/" + U.username); chk("üyenin katılım tarihi görünür", !!r.body.joinedAt && !!r.body.forumSince, r.body.joinedAt);
+const off = sql(`SELECT u.username FROM users u JOIN forum_profiles f ON f.user_id = u.id WHERE f.is_official`);
+chk("resmî forum hesabı var ve giriş yapamaz", !!off && sql(`SELECT locked_reason FROM users WHERE username='${off}'`) === "system_account", off);
+r = await U.c.call("GET", "/board/u/" + off); chk("resmî hesap 'AlpveFit Ekibi' unvanıyla görünür", r.body.level.official === true && r.body.level.name === "AlpveFit Ekibi" && r.body.joinedAt === null, r.body.level);
+r = await U.c.call("POST", "/friends/request", { username: off }); chk("resmî hesaba arkadaşlık isteği gönderilemez", r.status === 404, r.body);
+r = await new Client().call("POST", "/auth/login", { identifier: off, password: "x", recaptchaToken: "t" }); chk("resmî hesapla giriş yapılamaz", r.status !== 200, r.status);
+// bildirim grupları
+sql(`INSERT INTO notifications (user_id, type, text) VALUES ('${U.id}', 'security', 'Test güvenlik bildirimi')`);
+r = await U.c.call("GET", "/notifications"); chk("bildirimler grup bilgisiyle döner", r.body.length && r.body.every((n) => n.group === (["forum", "level_up", "friend"].includes(n.type) ? "forum" : "coach")), r.body.map((n) => n.type));
+const fN = r.body.filter((n) => n.group === "forum").length;
+r = await U.c.call("POST", "/notifications/read-all?group=forum", {}); r = await U.c.call("GET", "/notifications"); chk("grup bazında okundu", r.body.filter((n) => n.group === "forum").every((n) => n.read_at), "");
+r = await U.c.call("DELETE", "/notifications?group=forum"); chk("grup bazında silme", r.status === 200 && fN > 0, r.body);
+r = await U.c.call("GET", "/notifications"); chk("yalnız o grup silinir, diğeri korunur", r.body.length > 0 && r.body.every((n) => n.group === "coach"), r.body.map((n) => n.type));
 finish();

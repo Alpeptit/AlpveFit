@@ -44,6 +44,20 @@
     unlock: "M6 11h12v10H6zM8 11V7a4 4 0 017.7-1.5", sun: "M12 16a4 4 0 100-8 4 4 0 000 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4", moon: "M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z",
     chart: "M4 20V10M10 20V4M16 20v-7M22 20H2", trash2: "M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3",
     atsign: "M16 12a4 4 0 10-1.2 2.8M16 8v5a2.5 2.5 0 005 0v-1a9 9 0 10-3.5 7.1", pen: "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4", phone: "M7 2h10a1 1 0 011 1v18a1 1 0 01-1 1H7a1 1 0 01-1-1V3a1 1 0 011-1zM11 18h2", search: "M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3", bookmark: "M6 3h12v18l-6-4-6 4z", quote: "M5 8h5v5c0 3-1.6 4.8-4.5 5.5M14 8h5v5c0 3-1.6 4.8-4.5 5.5", pushpin: "M9 3h6l-1 6 4 4H6l4-4zM12 13v8", link: "M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1", printer: "M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7zM17 12.5h.01",
+    // forum ve içerik simgeleri
+    leaf: "M11 20A7 7 0 019.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10zM2 21c0-3 1.9-5.4 5.1-6",
+    wheat: "M2 22L16 8M3.5 12.5L5 11l1.5 1.5a3.5 3.5 0 010 5L5 19l-1.5-1.5a3.5 3.5 0 010-5zM7.5 8.5L9 7l1.5 1.5a3.5 3.5 0 010 5L9 15l-1.5-1.5a3.5 3.5 0 010-5zM11.5 4.5L13 3l1.5 1.5a3.5 3.5 0 010 5L13 11l-1.5-1.5a3.5 3.5 0 010-5zM20 2h2v2a4 4 0 01-4 4h-2V6a4 4 0 014-4z",
+    coffee: "M10 2v2M14 2v2M6 2v2M16 8a1 1 0 011 1v8a4 4 0 01-4 4H7a4 4 0 01-4-4V9a1 1 0 011-1h12zM17 9h1a3 3 0 010 6h-1",
+    smile: "M12 22a10 10 0 100-20 10 10 0 000 20zM8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01",
+    star: "M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z",
+    crown: "M2 19h20M3 7l5 5 4-7 4 7 5-5-2 11H5z",
+    rocket: "M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 00-2.9-.1zM12 15l-3-3a22 22 0 012-3.9A12.9 12.9 0 0122 2c0 2.7-.8 7.5-6 11a22.4 22.4 0 01-4 2zM9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5",
+    hash: "M4 9h16M4 15h16M10 3L8 21M16 3l-2 18", type: "M4 7V4h16v3M9 20h6M12 4v16", heading: "M6 4v16M18 4v16M6 12h12",
+    marker: "M9 11l-6 6v3h9l3-3M22 12l-4.6 4.6a2 2 0 01-2.8 0l-5.2-5.2a2 2 0 010-2.8L14 4", table: "M3 3h18v18H3zM3 9h18M3 15h18M12 3v18",
+    omega: "M4 20h4a7 7 0 118 0h4", gift: "M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8S10.5 3 8 3a2.5 2.5 0 000 5M12 8s1.5-5 4-5a2.5 2.5 0 010 5",
+    hand: "M18 11V6a2 2 0 00-4 0M14 10V4a2 2 0 00-4 0v2M10 10.5V6a2 2 0 00-4 0v8M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 012.8-2.8L7 15",
+    party: "M5.8 11.3L2 22l10.7-3.8M4 3h.01M22 8h.01M15 2h.01M22 20h.01M22 2l-2.2.7a2.9 2.9 0 00-1.9 3.6v0c.4 1.1-.6 2.2-1.7 1.9h0a2.9 2.9 0 00-3.4 1.6L12 12M9.2 7.3l7.5 7.5c1.2 1.2 1.6 2.6.7 3.4-.8.8-2.3.4-3.4-.7L6.5 10c-1.1-1.1-1.5-2.6-.7-3.4.8-.9 2.3-.5 3.4.7z",
+    microscope: "M6 18h8M3 22h18M14 22a7 7 0 100-14h-1M9 14h2M9 12a2 2 0 01-2-2V6h6v4a2 2 0 01-2 2zM12 6V3a1 1 0 00-1-1H9a1 1 0 00-1 1v3"
   };
   AVF.icon = function (n, cls) {
     var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -328,6 +342,23 @@
     var t = e.target; if (!t || !t.closest || !t.closest(".dlg") || !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
     setTimeout(function () { vvSync(); try { t.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (x) { /* eski tarayıcı */ } }, 320);
   });
+  /** Yatay kaydırmalı sekme şeridi: seçili sekme şeridin tam ortasına yumuşakça gelir. Şerit her geçişte yeniden çizildiği için
+   *  önceki kaydırma konumu anahtarla hatırlanır (sıfırdan zıplamaz). */
+  AVF.stripCenter = function (nav, key, sel) {
+    var mem = AVF._strip || (AVF._strip = {});
+    requestAnimationFrame(function () {
+      if (!nav.isConnected) return;
+      if (key && mem[key] != null) nav.scrollLeft = mem[key];
+      var c = nav.querySelector(sel || "[aria-current]");
+      if (c && nav.scrollWidth > nav.clientWidth + 2) {
+        var nr = nav.getBoundingClientRect(), cr = c.getBoundingClientRect();
+        var t = Math.max(0, Math.min(nav.scrollWidth - nav.clientWidth, nav.scrollLeft + (cr.left - nr.left) - (nr.width - cr.width) / 2));
+        var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        try { nav.scrollTo({ left: t, behavior: reduce || key && mem[key] == null ? "auto" : "smooth" }); } catch (e) { nav.scrollLeft = t; }
+      }
+      if (key) nav.addEventListener("scroll", function () { mem[key] = nav.scrollLeft; }, { passive: true });
+    });
+  };
   AVF.lockScroll = function (on) {
     var b = document.body, de = document.documentElement;
     if (on) {
@@ -563,7 +594,7 @@
   // Çalışma saati: düzen (sabit / vardiyalı / esnek / çalışmıyorum).
   //   • Sabit → başlangıç ve bitiş saati (30 dakikalık).
   //   • Diğerleri → isteğe bağlı gün gün saat (Pazartesi–Pazar) ve kısa not.
-  var DAYS = [["mon", "Pazartesi"], ["tue", "Salı"], ["wed", "Çarşamba"], ["thu", "Perşembe"], ["fri", "Cuma"], ["sat", "Cumartesi"], ["sun", "Pazar"]];
+  var DAYS = [["mon", "Pazartesi", "Pt"], ["tue", "Salı", "Sa"], ["wed", "Çarşamba", "Ça"], ["thu", "Perşembe", "Pe"], ["fri", "Cuma", "Cu"], ["sat", "Cumartesi", "Ct"], ["sun", "Pazar", "Pz"]];
   AVF.WORK_DAYS = DAYS;
   AVF.workHours = function (value, onChange, schedule, note) {
     var h = AVF.h, times = []; for (var i = 0; i < 48; i++) times.push(String(Math.floor(i / 2)).padStart(2, "0") + ":" + (i % 2 ? "30" : "00"));
@@ -576,21 +607,34 @@
     // gün gün
     var rows = DAYS.map(function (d) {
       var cb = h("input", { type: "checkbox", "aria-label": d[1] }), a = sel(d[1] + " başlangıç"), b = sel(d[1] + " bitiş");
-      var r = h("div", { class: "wd" }, h("label", { class: "wd-d" }, cb, h("span", { text: d[1] })), h("div", { class: "wd-t" }, a, h("span", { class: "wh-dash", text: "–" }), b));
-      function sync() { r.classList.toggle("on", cb.checked); a.disabled = b.disabled = !cb.checked; }
+      // gün simgesi: kısaltmalı rozet (Pt, Sa, Ça…); seçilince dolar
+      var r = h("div", { class: "wd" }, h("label", { class: "wd-d" }, cb, h("span", { class: "wd-ic", "aria-hidden": "true", text: d[2] }), h("span", { class: "wd-n", text: d[1] }), AVF.icon("check", "wd-ok")), h("div", { class: "wd-t" }, a, h("span", { class: "wh-dash", text: "–" }), b));
+      function sync() { r.classList.toggle("on", cb.checked); a.disabled = b.disabled = !cb.checked; paintSum(); }
       cb.addEventListener("change", function () { if (cb.checked && !a.value) { a.value = "09:00"; b.value = "17:00"; } sync(); paint(); fire(); });
       [a, b].forEach(function (x) { x.addEventListener("change", function () { paint(); fire(); }); });
-      return { key: d[0], name: d[1], cb: cb, a: a, b: b, el: r, sync: sync };
+      return { key: d[0], name: d[1], short: d[2], cb: cb, a: a, b: b, el: r, sync: sync };
     });
     var noteIn = h("textarea", { class: "inp", rows: "3", maxlength: "300", placeholder: "Örn. İki hafta gece, iki hafta gündüz vardiyası; hafta sonları değişken…" });
     var noteCnt = h("span", { class: "cnt", text: "0/300" });
     noteIn.addEventListener("input", function () { noteCnt.textContent = noteIn.value.length + "/300"; fire(); });
+    // Çalışma günleri: kan grubu seçicisi gibi açılır liste (çoklu seçim); kapalıyken seçilen günler özetlenir.
+    var sumT = h("span", { class: "dd-t" }), dOpen = false;
+    var dBtn = h("button", { class: "dd-btn inp wd-btn", type: "button", "aria-expanded": "false" }, h("span", { class: "dd-ic" }, AVF.icon("calendar")), sumT, AVF.icon("chev", "dd-c"));
+    var dList = h("div", { class: "wd-list" }, rows.map(function (r) { return r.el; }));
+    var dPanel = h("div", { class: "wh-wrap wd-pan" }, h("div", { class: "wh-in" }, dList));
+    function paintSum() {
+      var on = rows.filter(function (r) { return r.cb.checked; });
+      sumT.textContent = on.length ? on.map(function (r) { return r.short; }).join(" · ") + " — " + on.length + " gün" : AVF.t("Çalıştığınız günleri seçin");
+      dBtn.classList.toggle("empty", !on.length);
+    }
+    function setDOpen(v) { dOpen = v; dPanel.classList.toggle("open", v); dBtn.setAttribute("aria-expanded", v ? "true" : "false"); dBtn.parentNode && dBtn.parentNode.classList.toggle("open", v); }
+    dBtn.addEventListener("click", function () { setDOpen(!dOpen); });
     var days = h("div", { class: "wh-days" },
-      h("p", { class: "wh-sub" }, AVF.icon("calendar"), h("span", { text: "Gün gün saat belirtin (isteğe bağlı)" })),
-      h("div", { class: "wd-list" }, rows.map(function (r) { return r.el; })),
+      h("p", { class: "wh-sub" }, AVF.icon("calendar"), h("span", { text: "Çalışma günleri ve saatleri (isteğe bağlı)" })),
+      h("div", { class: "dd wd-dd" }, dBtn), dPanel,
       h("p", { class: "wh-sub" }, AVF.icon("notes"), h("span", { text: "Not (isteğe bağlı)" })), noteIn, noteCnt);
     var mode = AVF.choice({ label: "Çalışma düzeni", cols: 4, clearable: true, items: [{ value: "fixed", label: "Sabit saatler", icon: "clock" }, { value: "shift", label: "Vardiyalı", icon: "refresh" }, { value: "flexible", label: "Esnek", icon: "timer" }, { value: "none", label: "Çalışmıyorum", icon: "pause" }],
-      onChange: function () { paint(); fire(); } });
+      onChange: function () { paint(); fire(); var m = mode.get(); if ((m === "shift" || m === "flexible") && !rows.some(function (r) { return r.cb.checked; })) setDOpen(true); } });
     var rw = h("div", { class: "wh-wrap" }, h("div", { class: "wh-in" }, range)), dw = h("div", { class: "wh-wrap" }, h("div", { class: "wh-in" }, days));
     var el = h("div", { class: "wh" }, mode, rw, dw, msg);
     function badDay() { for (var i = 0; i < rows.length; i++) { var r = rows[i]; if (r.cb.checked && (!r.a.value || !r.b.value || r.a.value === r.b.value)) return r.name; } return ""; }

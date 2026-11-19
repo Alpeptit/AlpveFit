@@ -4,7 +4,8 @@
 import { hasBannedTerm, fold } from "./forumRules.js";
 import { LEVELS } from "./forumLevels.js";
 
-export const TITLE_MIN = 8, TITLE_MAX = 120, BODY_MIN = 2, BODY_MAX = 10000;
+export const TITLE_MIN = 8, TITLE_MAX = 120, BODY_MIN = 2, BODY_MAX = 10000, BODY_MAX_STAFF = 40000;
+export const TAGS_PER_TOPIC = 5;
 export const IMAGES_PER_POST = 4, IMAGE_MAX = 4 * 1024 * 1024, IMAGE_PX = 4096, PENDING_MAX = 12;
 export const PAGE_POSTS = 20, PAGE_TOPICS = 25;
 export const LINK_LEVEL = 2;   // bağlantı paylaşımı: Barın Çırağı ve üstü (yeni hesaplarla reklam/spam önlenir)
@@ -13,15 +14,18 @@ export const REPORT_REASONS = [
   ["political", "Siyasi veya ideolojik içerik"], ["sales", "Satış, kaynak veya tedarik paylaşımı"], ["medical", "Tehlikeli sağlık yönlendirmesi"],
   ["scam", "Dolandırıcılık veya sahte bilgi"], ["other", "Diğer"],
 ];
+// Kurallar: **kalın** vurgu içerir; ön yüz her kuralı kendi simgesiyle gösterir (RULE_ICONS aynı sırada).
 export const RULES = [
-  "Forum yalnız 18 yaşından büyük üyelere açıktır.",
-  "Saygılı olun: hakaret, taciz, nefret söylemi ve kışkırtma yasaktır.",
-  "Siyasi, ideolojik ve dini tartışmalar ile müstehcen içerik yasaktır.",
-  "Ürün satışı, kaynak / tedarik paylaşımı, iletişim bilgisi (telefon, e-posta, mesajlaşma uygulaması) ve reklam kesinlikle yasaktır.",
-  "Paylaşımlar bilgi amaçlıdır, tıbbi tavsiye değildir; sağlıkla ilgili her durumda hekiminize danışın.",
-  "Başkasının kişisel bilgisini veya izinsiz fotoğrafını paylaşmayın.",
-  "Kurallara aykırı içerik kaldırılır; tekrarında forumdan süreli veya kalıcı olarak uzaklaştırılırsınız.",
+  "Forum yalnız **18 yaşından büyük** üyelere açıktır.",
+  "**Saygılı ol:** hakaret, taciz, nefret söylemi ve kışkırtmaya yer yok. Burada herkes aynı barın altında ter döküyor.",
+  "**Siyaset, ideoloji ve din tartışmaları** ile **müstehcen içerik** yasaktır.",
+  "**Satış, kaynak / tedarik, iletişim bilgisi** (telefon, e-posta, mesajlaşma uygulaması) ve **reklam** kesinlikle yasaktır.",
+  "Paylaşımlar **bilgi amaçlıdır, tıbbi tavsiye değildir**; sağlıkla ilgili her durumda **hekimine danış**.",
+  "Başkasının **kişisel bilgisini** veya **izinsiz fotoğrafını** paylaşma.",
+  "Konunu doğru kategoride aç; konu dışı içerik taşınır, tekrarında **ihtar** alırsın.",
+  "Kurala aykırı içerik kaldırılır; tekrarında forumdan **süreli veya kalıcı** olarak uzaklaştırılırsın.",
 ];
+export const RULE_ICONS = ["shield", "smile", "flag", "coin", "heart", "eyeoff", "compass", "alert"];
 
 export const clean = (v) => String(v ?? "").replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F​-‏‪-‮⁦-⁩]/g, "").replace(/\n{4,}/g, "\n\n\n").trim();
 
@@ -53,7 +57,8 @@ export function contentError({ title, body, level, mod }) {
   }
   if (body !== undefined) {
     if (body.length < BODY_MIN) return "Mesaj boş olamaz.";
-    if (body.length > BODY_MAX) return `Mesaj en fazla ${BODY_MAX.toLocaleString("tr-TR")} karakter olabilir.`;
+    const max = mod ? BODY_MAX_STAFF : BODY_MAX;
+    if (body.length > max) return `Mesaj en fazla ${max.toLocaleString("tr-TR")} karakter olabilir.`;
     if (hasBannedTerm(stripQuotes(body))) return "Mesaj müstehcen, küfürlü, siyasi veya ideolojik ifade içeremez.";
     if (!mod) {
       const s = salesError(stripQuotes(body)); if (s) return s;

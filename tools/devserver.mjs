@@ -38,6 +38,8 @@ async function load(file, prefix) {
 await load("auth.js", "/api/auth"); await load("twoFactor.js", "/api"); await load("account.js", "/api"); await load("notifications.js", "/api");
 await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("uploads.js", "/api"); await load("support.js", "/api"); await load("forum.js", "/api"); await load("board.js", "/api"); await load("progress.js", "/api"); await load("friends.js", "/api"); await load("admin.js", "/api/admin");
 const { hideAdminApi, panelUser, sessionUser } = await import(join(root, "src/utils/panelSession.js"));
+// ekip içerikleri (forum) — sunucudaki gibi açılışta; FORUM_SEED=false ile kapatılır
+if (process.env.FORUM_SEED !== "false") { const { seedOfficialContent } = await import(join(root, "src/forum/official.js")); await seedOfficialContent().catch((e) => console.error("[forum] seed:", e.message)); }
 
 function findRoute(method, full) {
   for (const [routes, p] of prefixes) for (const r of routes) {

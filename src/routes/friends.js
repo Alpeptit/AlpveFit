@@ -19,6 +19,8 @@ export const DM_MAX = 2000, DM_IMAGE_MAX = 4 * 1024 * 1024;
 const REPORT_REASONS = ["spam", "abuse", "obscene", "political", "scam", "other"];
 // Engellenmiş / yasaklı (yönetici) hesaplar listelerde ve aramada görünmez.
 const ACTIVE = `NOT (u.locked_at IS NOT NULL AND u.locked_reason LIKE 'admin\\_%' AND (u.locked_until IS NULL OR u.locked_until > now()))`;
+// resmî forum hesabı (sistem hesabı) arkadaş eklenemez ve mesaj almaz
+const NOT_SYSTEM = `coalesce(u.locked_reason, '') <> 'system_account'`;
 const PUB = `u.id, u.username, u.role, (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'avatar') AS avatar_id,
   f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld`;
 function pub(r) { return { id: r.id, username: r.username, avatarId: r.avatar_id, level: publicLevel(forumLevel(r, r.role)) }; }
@@ -80,7 +82,7 @@ friendsRouter.get("/friends/search", requireAuth, async (req, res) => {
 friendsRouter.post("/friends/request", requireAuth, async (req, res) => {
   const me = req.user.sub, uname = String((req.body || {}).username || "").trim().toLowerCase().replace(/^@/, "");
   if (!(await checkHourlyActionLimit(`freq:${me}`, "friend_request", 30))) return res.status(429).json({ error: "Kısa sürede çok fazla istek gönderildi. Lütfen daha sonra tekrar deneyin." });
-  const t = await pool.query(`SELECT u.id FROM users u WHERE u.username = $1 AND u.email_verified_at IS NOT NULL AND ${ACTIVE}`, [uname]);
+  const t = await pool.query(`SELECT u.id FROM users u WHERE u.username = $1 AND u.email_verified_at IS NOT NULL AND ${ACTIVE} AND ${NOT_SYSTEM}`, [uname]);
   const other = t.rows[0] && t.rows[0].id;
   if (!other || other === me) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
   const rel = await relation(me, other), [a, b] = pair(me, other);

@@ -37,9 +37,9 @@ export const USERNAME_RULES = [
   "3–20 karakter; yalnız küçük harf (a–z), rakam, nokta ve alt çizgi.",
   "Harfle başlar; nokta veya alt çizgi ile bitemez, art arda kullanılamaz.",
   "Müstehcen, küfürlü, siyasi veya ideolojik ifade, kişi/kurum taklidi ve reklam içeremez.",
-  "Herkese açıktır ve forumda adınızın yerine görünür. 30 günde bir değiştirilebilir.",
+  "Herkese açıktır ve forumda adınızın yerine görünür. 14 günde bir değiştirilebilir.",
 ];
-export const USERNAME_COOLDOWN_DAYS = 30;
+export const USERNAME_COOLDOWN_DAYS = 14;
 const RESERVED = ["admin", "administrator", "moderator", "mod", "yonetici", "destek", "support", "alpvefit", "alpeptit", "sistem", "system", "root", "official", "resmi", "forum", "uzman", "coach", "koc"];
 export function forumUsernameError(raw) {
   const u = String(raw ?? "").trim();

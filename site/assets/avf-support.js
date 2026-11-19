@@ -42,7 +42,7 @@
         var items = (o.kinds || []).map(function (k) { return { value: k.kind, label: AVF.KIND[k.kind].label, icon: AVF.KIND[k.kind].icon }; });
         if (!items.length) return AVF.mount(pkBox, h("p", { class: "hint", text: "Hesabınızda henüz açık bir plan bölümü yok." }));
         if (items.every(function (x) { return x.value !== planKind; })) planKind = "";
-        pkc = AVF.choice({ label: "İlgili plan", cols: 3, value: planKind, onChange: function (v) { planKind = v && v.value !== undefined ? v.value : (pkc ? pkc.get() : v); save(); }, items: items });
+        pkc = AVF.iconSelect({ label: "İlgili plan", icon: "list", placeholder: "Planınızı seçin", value: planKind, onChange: function (v) { planKind = v || ""; save(); }, items: items });
         AVF.mount(pkBox, h("label", null, h("span", { class: "tile" }, AVF.icon("list")), "Hangi planınızla ilgili?", h("span", { class: "req", text: "Zorunlu" })), pkc);
       }, function () { AVF.mount(pkBox, h("p", { class: "err", text: "Planlarınız yüklenemedi, sayfayı yenileyin." })); });
     }
@@ -67,7 +67,8 @@
         h("div", { class: "field" }, h("label", { for: "tmsg" }, h("span", { class: "tile" }, AVF.icon("chat")), "Mesajınız", h("span", { class: "req", text: "Zorunlu" })), msg, h("div", { class: "row between" }, AVF.emojiPicker(msg), mcnt)),
         files, err, btn));
     AVF.api("GET", "/tickets/subjects").then(function (list) {
-      subj = AVF.choice({ label: "Konu", cols: 3, value: d.subject && list.indexOf(d.subject) >= 0 ? d.subject : "", onChange: function () { save(); paintPk(); }, items: list.map(function (x) { return { value: x, label: x, icon: SUBJ_ICON[x] || "help" }; }) });
+      // Konu: kan grubu seçicisi gibi simgeli açılır liste
+      subj = AVF.iconSelect({ label: "Konu", icon: "list", placeholder: "Talebinizin konusunu seçin", value: d.subject && list.indexOf(d.subject) >= 0 ? d.subject : "", onChange: function () { save(); paintPk(); }, items: list.map(function (x) { return { value: x, label: x, icon: SUBJ_ICON[x] || "help" }; }) });
       AVF.mount(subjBox, subjBox.firstChild, subj); paintPk();
     }, function () { AVF.mount(subjBox, subjBox.firstChild, h("p", { class: "err", text: "Konular yüklenemedi, sayfayı yenileyin." })); });
   }

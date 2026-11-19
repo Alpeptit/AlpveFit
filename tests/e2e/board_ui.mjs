@@ -28,7 +28,11 @@ chk("forum ana sayfası açılır", await q.locator(".fo-c").count() === 8 && aw
 chk("dil seçici forumda yok", await q.evaluate(() => [...document.querySelectorAll(".lang")].every((e) => getComputedStyle(e).display === "none")), "");
 // yeni konu
 await q.click(".fo-new"); await q.waitForTimeout(800);
-await q.selectOption(".fo-nt select", "antrenman"); await q.click(".fo-kind button:nth-child(2)");
+// kategori: simgeli açılır liste; tür alanı yok (Soru – Cevap'ta açılan konu sorudur)
+chk("yeni konuda tür seçimi yok, kategori uyarısı var", await q.locator(".fo-kind").count() === 0 && await q.locator(".fo-warn").count() === 1, "");
+await q.click(".fo-nt .dd-btn"); await q.click(".fo-nt .dd-o:has-text('Soru – Cevap')");
+await q.click(".fo-tagpick .fo-tag:has-text('Teknik')");
+chk("etiket seçilir", await q.locator(".fo-tagpick .fo-tag.on").count() === 1, "");
 await q.fill(".fo-nt input[maxlength='120']", "Deadlift sırasında bel ağrısı neden olur?");
 await q.fill(".fo-ta", "Son iki haftadır **deadlift** sonrası belimde ağrı var. Formumu nasıl kontrol edebilirim?\n- 3x5 çalışıyorum\n- 120 kg");
 await q.setInputFiles(".fo-comp input[type=file]", { name: "a.png", mimeType: "image/png", buffer: png }); await q.waitForTimeout(800);

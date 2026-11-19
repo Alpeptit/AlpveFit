@@ -4,7 +4,7 @@
 (function () {
   "use strict";
   var AVF = window.AVF, h = AVF.h;
-  AVF.FORUM_TABS = [["profil", "user", "Profil"], ["imza", "pen", "İmza"], ["baglantilar", "globe", "Bağlantılar"], ["bildirimler", "bell", "Bildirim Tercihleri"], ["seviye", "award", "Seviye"]];
+  AVF.FORUM_TABS = [["profil", "user", "Profil"], ["imza", "pen", "İmza"], ["baglantilar", "globe", "Bağlantılar"], ["bildirimler", "bell", "Bildirim ve Gizlilik"], ["seviye", "award", "Seviye"]];
   var SOC_ICON = { instagram: "instagram", tiktok: "tiktok", facebook: "facebook", twitter: "xlogo" };
   var LV_ICON = ["spark", "dumb", "target", "shield", "layers", "award", "flame", "eye"];
   var R = null, ST = null;
@@ -53,7 +53,7 @@
         var a = h("a", { class: "ktab", href: "/panel/forum-ayarlari/" + t[0], "data-link": "" }, AVF.icon(t[1]), h("span", { text: t[2] }));
         if (t[0] === cur) a.setAttribute("aria-current", "page"); return a;
       }));
-      setTimeout(function () { var c = nav.querySelector("[aria-current]"); if (c && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, c.getBoundingClientRect().left - nav.getBoundingClientRect().left + nav.scrollLeft - 16); }, 0);
+      AVF.stripCenter(nav, "fs-tabs");
       return nav;
     }
     function refresh(n, okText) { ST = n; if (AVF.session.user) { AVF.session.user.avatar_id = n.avatarId; AVF.session.user.username = n.username; if (AVF.renderChrome) AVF.renderChrome(); } if (okText) AVF.toast(AVF.t(okText)); draw(); }
@@ -173,14 +173,25 @@
     // ---- Bildirim tercihleri
     function notify() {
       var box = h("div");
-      return sec("bell", "Forum Bildirimleri", "Hangi forum olaylarında bildirim almak istediğinizi seçin.", [h("div", { class: "fs-tgs" }, R.notify.map(function (n) {
+      return [sec("bell", "Forum Bildirimleri", "Hangi forum olaylarında bildirim almak istediğinizi seçin.", [h("div", { class: "fs-tgs" }, R.notify.map(function (n) {
         var c = h("input", { type: "checkbox", checked: !!ST.notify[n.key], disabled: n.locked });
         c.addEventListener("change", function () {
           var v = {}; R.notify.forEach(function (x) { v[x.key] = x.key === n.key ? c.checked : !!ST.notify[x.key]; });
           AVF.api("PUT", "/forum/me", { notify: v }).then(function (ns) { ST = ns; msg(box, AVF.t("Bildirim tercihi kaydedildi.")); }, function (er) { c.checked = !c.checked; msg(box, AVF.errText(er), true); });
         });
         return h("label", { class: "fs-tg" + (n.locked ? " off" : "") }, h("span", { text: n.label }), h("span", { class: "sw" }, c, h("i")), n.locked ? h("small", { class: "hint", text: "Kapatılamaz" }) : null);
-      })), box]);
+      })), box]), privacy()];
+    }
+    // Gizlilik: çevrimiçi durumunu gizleme (Pump Avcısı seviyesinde açılır)
+    function privacy() {
+      var box = h("div"), open = !!ST.hideOnlineUnlocked, lvName = (R.levels[(ST.hideOnlineLevel || 3) - 1] || {}).name || "Pump Avcısı";
+      var c = h("input", { type: "checkbox", checked: !!ST.hideOnline, disabled: !open });
+      c.addEventListener("change", function () {
+        AVF.api("PUT", "/forum/me", { hideOnline: c.checked }).then(function (ns) { ST = ns; msg(box, AVF.t(c.checked ? "Çevrimiçi durumun artık gizli." : "Çevrimiçi durumun yeniden görünür.")); }, function (er) { c.checked = !c.checked; msg(box, AVF.errText(er), true); });
+      });
+      return sec("eyeoff", "Gizlilik", "Forumda ne kadar göründüğünü sen belirle.", [h("div", { class: "fs-tgs" },
+        h("label", { class: "fs-tg" + (open ? "" : " off") }, h("span", null, h("span", { text: "Çevrimiçi durumumu gizle" }), h("small", { class: "hint", text: "Açıkken profilinde, mesajlarında ve üye listesinde “çevrimiçi” işaretin görünmez." })),
+          h("span", { class: "sw" }, c, h("i")), open ? null : h("small", { class: "hint fs-lock" }, AVF.icon("lock", "bico"), h("span", { text: lvName + " seviyesinde açılır." })))), box]);
     }
 
     // ---- Seviye (yalnız unvanlar; nasıl kazanıldığı gösterilmez)
@@ -192,8 +203,7 @@
           h("ol", { class: "fs-lv" }, R.levels.map(function (l, i) {
             var me = !lv.assigned && lv.n === l.n, done = !lv.assigned && lv.n > l.n;
             return h("li", { class: me ? "on" : done ? "done" : "" }, h("span", { class: "chi" }, AVF.icon(LV_ICON[i])), h("b", { text: l.name }), l.n === R.messagingLevel ? h("span", { class: "chip", text: "Mesajlaşma açılır" }) : null, me ? h("span", { class: "chip lime", text: "Siz" }) : done ? AVF.icon("check", "lv-ok") : null);
-          })),
-          h("p", { class: "hint", text: "Moderatör ve Admin unvanları puanla kazanılmaz; yalnız atama ile verilir." })])];
+          }))])];
     }
   };
 

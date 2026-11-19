@@ -346,6 +346,27 @@
     paint(0);
   }
 
+  // ---- forum içine gömülü araç: aynı hesaplayıcı, sayfa kabuğu olmadan (ekip içeriklerinde [arac=anahtar]) ----
+  AVF.toolEmbed = function (key) {
+    var t = TOOLS.filter(function (x) { return x.key === key; })[0];
+    if (!t || t.custom || t.wide) return null;
+    var out = h("div", { class: "tout", "aria-live": "polite" }), form = h("div", { class: "tpanel tform-p" });
+    emptyState(out, t);
+    var f2 = formFor(t, out), sw = null;
+    if (f2._hasUnits) {
+      sw = h("div", { class: "tunit", role: "radiogroup", "aria-label": "Birim sistemi" }, [["met", "cm · kg"], ["imp", "inç · lb"]].map(function (o) {
+        return h("button", { type: "button", role: "radio", "aria-checked": String(UNITS === o[0]), "data-notr": "", onclick: function () {
+          f2._setUnits(o[0]); Array.prototype.forEach.call(sw.children, function (b2) { b2.setAttribute("aria-checked", "false"); }); this.setAttribute("aria-checked", "true");
+          if (!out.classList.contains("empty") && f2.requestSubmit) f2.requestSubmit();
+        } }, o[1]);
+      }));
+    }
+    AVF.mount(form, h("div", { class: "tfl head row-u" }, h("span", { text: "Bilgilerin" }), sw), f2);
+    return h("div", { class: "fo-tool" }, h("div", { class: "fo-tool-h" }, h("span", { class: "tc-ic" }, AVF.icon(t.icon)), h("div", null, h("b", { text: t.title }), h("small", { text: "Değerlerin hiçbir yere gönderilmez; hesap tarayıcında yapılır." })),
+        link("/araclar/" + t.key, [h("span", { text: "Tam sayfa" }), AVF.icon("ext")], { class: "fo-tool-x" })),
+      h("div", { class: "tlayout fo-tool-b" }, form, h("div", { class: "tpanel tres-p" }, out)));
+  };
+
   // ---- sayfalar ----
   var filter = "all";
   AVF.pages.tools = function (view, key) {

@@ -9,6 +9,7 @@ import compression from "compression";
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
 import { runMigrations } from "./db/runMigrations.js";
+import { seedOfficialContent } from "./forum/official.js";
 import { authRouter } from "./routes/auth.js";
 import { twoFactorRouter } from "./routes/twoFactor.js";
 import { adminRouter } from "./routes/admin.js";
@@ -309,6 +310,8 @@ let jobsStarted = false;
 function startBackgroundJobs() {   // 180 gün veri saklama — migration bittikten sonra, bir kez
   if (jobsStarted || process.env.RUN_BACKGROUND_JOBS === "false") return;
   jobsStarted = true; startDataRetentionJob(); startPlanMailJob();
+  // ekip içerikleri (forum): eksikler eklenir, sürümü artanlar güncellenir; hata açılışı durdurmaz
+  if (process.env.FORUM_SEED !== "false") setTimeout(() => { seedOfficialContent().catch((e) => console.error("[forum] ekip içerikleri eklenemedi:", e.message)); }, 1500);
 }
 export const dbMigrations = { state: "pending", detail: "açılışta uygulanacak" };
 async function applyMigrationsOnBoot() {
