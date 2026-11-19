@@ -65,6 +65,9 @@ r = await U.c.call("POST", "/friends/request", { username: V.username }); chk("e
 r = await U.c.call("GET", "/friends/search?q=" + V.username); chk("engelleyen aramada görünmez", !r.body.some((x) => x.id === V.id), r.body);
 r = await V.c.call("GET", "/friends"); chk("engellenenler listesinde", r.body.blocked.some((x) => x.id === U.id), r.body);
 r = await U.c.call("DELETE", `/friends/${V.id}`); r = await V.c.call("GET", "/friends"); chk("engelleneni karşı taraf kaldıramaz", r.body.blocked.some((x) => x.id === U.id), r.body);
+r = await U.c.call("POST", `/friends/${V.id}/block`, {}); r = await U.c.call("DELETE", `/friends/${V.id}`); r = await V.c.call("GET", "/friends");
+chk("engellenen, kendisi de engelleyip silerek engeli devralıp kaldıramaz", r.body.blocked.some((x) => x.id === U.id), r.body);
+r = await U.c.call("POST", "/friends/request", { username: V.username }); chk("engelleyene istek gönderilemez", r.status === 404, r);
 r = await V.c.call("DELETE", `/friends/${U.id}`); r = await V.c.call("GET", "/friends"); chk("engel kaldırılır", !r.body.blocked.length, r.body);
 
 // ---------------- ağırlık takibi ----------------

@@ -122,7 +122,8 @@ friendsRouter.post("/friends/:id/block", requireAuth, async (req, res) => {
   if (!u.rows.length) return res.status(404).json({ error: "Bulunamadı." });
   const [a, b] = pair(req.user.sub, req.params.id);
   await pool.query(`INSERT INTO friendships (user_a, user_b, requester, status, blocked_by) VALUES ($1, $2, $3, 'blocked', $3)
-    ON CONFLICT (user_a, user_b) DO UPDATE SET status = 'blocked', blocked_by = $3, updated_at = now()`, [a, b, req.user.sub]);
+    ON CONFLICT (user_a, user_b) DO UPDATE SET status = 'blocked', blocked_by = $3, updated_at = now()
+    WHERE friendships.status <> 'blocked'`, [a, b, req.user.sub]);   // karşı tarafın koyduğu engel devralınamaz (sonra silinip kaldırılamasın)
   res.json({ ok: true });
 });
 
