@@ -14,7 +14,22 @@ function lit(v) {
   return dq(String(v));
 }
 function dq(s) { let tag = "q"; while (s.includes("$" + tag + "$")) tag += "x"; return "$" + tag + "$" + s + "$" + tag + "$"; }
+// Gerçek sürücü gibi parametre türü denetimi: node-pg parametreleri türsüz gönderir; PostgreSQL her $n'in türünü sorgudan
+// çıkaramazsa (42P18) ya da değer sayısı tutmazsa üretimde hata verir. Metinle yerine koyma bunu gizlediği için aynı SQL bir kez
+// PREPARE edilerek denetlenir (sonuç önbellekte; işlem dışı, şema yeterli).
+const CHECKED = new Set();
+function typecheck(sql, params = []) {
+  const src = String(sql).trim().replace(/;\s*$/, "");
+  const nums = [...src.matchAll(/\$(\d+)(?!\d)/g)].map((m) => Number(m[1]));
+  const max = nums.length ? Math.max(...nums) : 0;
+  if ((params || []).length !== max) { const e = new Error(`bind message supplies ${(params || []).length} parameters, but prepared statement requires ${max}\nSQL: ${src.slice(0, 400)}`); e.code = "08P01"; throw e; }
+  if (!max || !/^(select|with|insert|update|delete)\b/i.test(src) || CHECKED.has(src)) return;
+  const r = spawnSync(PSQL, [...ARGS, "-c", "PREPARE __tc AS " + src], { encoding: "utf8" });
+  if (r.status !== 0) { const e = new Error((r.stderr || "psql hata").trim() + "\nSQL: " + src.slice(0, 400)); const m = /could not determine data type/.test(r.stderr) ? "42P18" : null; if (m) e.code = m; throw e; }
+  CHECKED.add(src);
+}
 function run(sql, params = []) {
+  typecheck(sql, params);
   const text = String(sql).trim().replace(/;\s*$/, "").replace(/\$(\d+)(?!\d)/g, (_, n) => lit(params[Number(n) - 1]));
   const isSel = /^(select|with)\b/i.test(text), hasRet = /\breturning\b/i.test(text);
   const q = isSel ? `SELECT coalesce(json_agg(q), '[]'::json) FROM (${text}) q` : hasRet ? `WITH q AS (${text}) SELECT coalesce(json_agg(q), '[]'::json) FROM q` : text;
@@ -52,6 +67,7 @@ class Client {
     }
   }
   query(sql, params) {
+    try { typecheck(sql, params); } catch (e) { return Promise.reject(e); }
     const { text, q, json } = prep(sql, params);
     const mark = "__ALP_END_" + (++this.n) + "__";
     return new Promise((resolve, reject) => {

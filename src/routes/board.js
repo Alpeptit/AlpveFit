@@ -184,7 +184,8 @@ boardRouter.get("/board/topics", member, async (req, res) => {
       JOIN forum_posts fp ON fp.topic_id = t.id AND fp.is_first
       LEFT JOIN forum_reads r ON r.topic_id = t.id AND r.user_id = $1
      WHERE ${where.join(" AND ")}`;
-  const total = (await pool.query(`SELECT count(*)::int AS n ${base}`, vals)).rows[0].n;
+  // $2 yalnız "okunmamış" süzgecinde kullanılır; türü her durumda belli olsun diye sorguda da anılır (PostgreSQL 42P18)
+  const total = (await pool.query(`SELECT count(*)::int AS n, $2::timestamptz AS since ${base}`, vals)).rows[0].n;
   const pages = Math.max(1, Math.ceil(total / PAGE_TOPICS));
   const { rows } = await pool.query(
     `SELECT t.id, t.title, t.kind, t.is_pinned, t.is_locked, t.hidden_at, t.accepted_post_id, t.reply_count, t.view_count, t.last_post_at, t.created_at,
