@@ -198,6 +198,7 @@
             p.data && AVF.planDataView ? AVF.planDataView(p.kind, p.data) : null, p.body || !p.data ? h("div", { class: "plan-body", text: p.body || "(içerik yok)" }) : null,
             h("div", { class: "row", style: "margin-top:14px" },
               p.status !== "archived" ? h("button", { class: "btn ghost sm", type: "button", onclick: function () { editor(p, [p.kind]); } }, "Düzenle") : null,
+              (p.data || p.body) && AVF.printPlan ? AVF.printButton(function () { AVF.printPlan({ kind: p.kind, plan: p, member: m.full_name }); }) : null,
               p.status === "draft" ? h("button", { class: "btn sm", type: "button", onclick: function () { act(p, "publish", "Plan üyenin paneline eklenecek. Onaylıyor musunuz?"); } }, "Üyeye göster") : null,
               p.status === "published" ? h("button", { class: "btn ghost sm", type: "button", onclick: function () { act(p, "unpublish", "Plan üyenin panelinden hemen kalkacak (silinmez). Onaylıyor musunuz?"); } }, "Üyeden gizle") : null,
               p.status === "published" ? h("button", { class: "btn ghost sm", type: "button", onclick: function () { act(p, "archive", "Plan arşivlenecek ve üyenin panelinden kalkacak. Onaylıyor musunuz?"); } }, "Arşivle") : null,
@@ -498,7 +499,7 @@
       AVF.mount(c, h("h2", { class: "ptitle" }, AVF.icon("msg"), " Forum"),
         h("div", { class: "note" }, "Forum yönetimi (genel konular, kilitleme, şikâyetler, içerik düzenleme, kullanıcı engelleme) forum aşamasında bu sekmeye eklenecek. Üyelerin forum seviyesi ve moderatör ataması şimdiden Üyeler › Yönet bölümünden yapılabilir."),
         h("div", { class: "card", style: "padding:18px;margin-top:14px" }, h("h3", { style: "margin-bottom:6px" }, "Seviye kuralları"),
-          h("p", { class: "hint", text: "Puan = konu × 5 + mesaj × 2 + alınan beğeni × 3 − alınan beğenmeme × 2 − haklı bulunan şikâyet × 25 (en düşük 0). Kullanıcılar arası mesajlaşma Pump Avcısı seviyesinde açılır. Moderatör ve Admin yalnız atamayla verilir." }),
+          h("p", { class: "hint", text: "Kullanıcılar arası mesajlaşma Pump Avcısı seviyesinde açılır. Moderatör ve Admin yalnız atamayla verilir." }),
           h("ol", { class: "lvl-list" }, L.map(function (l) { return h("li", null, h("span", { class: "tile" }, AVF.icon("award")), h("b", { text: l.name }), h("small", { text: l.min + "+ puan" })); }),
             h("li", null, h("span", { class: "tile" }, AVF.icon("shield")), h("b", { text: "Moderatör" }), h("small", { text: "atama ile" })),
             h("li", null, h("span", { class: "tile" }, AVF.icon("key")), h("b", { text: "Admin" }), h("small", { text: "atama ile" })))));

@@ -50,6 +50,7 @@
     rye_bread: ["bread", "o", "ÇAV"], ww_bread: ["bread", "o", "TAM"], banana: ["banana", "y"], pineapple: ["pineapple", "y"], apple_green: ["apple", "g"], apple_red: ["apple", "r"], blueberry: ["berries", "b"],
     raspberry: ["raspberry", "r"], blackberry: ["berries", "p"], honey: ["honey", "y"], olive_oil: ["oil", "g"], coconut_oil: ["coconut", "s"], avocado: ["avocado", "g"],
   };
+  var CODE_EN = { TON: "TUN", MEZ: "WHT", YAS: "JAS", "ÇAV": "RYE", TAM: "WW" };   // kısa rozet kodları (İngilizce arayüz)
   var SHAPE_TONE = { tub: "s", capsule: "b", softgel: "y", tablet: "s", bottle: "b", leaf: "g", element: "p", vial: "o", lyo: "b", blister: "s" };
   function svg(parts) {
     var el = document.createElementNS(NS, "svg");
@@ -66,7 +67,7 @@
   AVF.glyph = function (kind, key, opt) {
     opt = opt || {};
     var draw, tone, code;
-    if (kind === "food") { var f = FOOD[key] || ["oats", "s"]; draw = f[0]; tone = f[1]; code = f[2]; }
+    if (kind === "food") { var f = FOOD[key] || ["oats", "s"]; draw = f[0]; tone = f[1]; code = f[2]; if (code && AVF.lang === "en") code = CODE_EN[code] || code; }
     else { draw = opt.shape || "tablet"; tone = SHAPE_TONE[draw] || "s"; code = opt.code; }
     var span = document.createElement("span");
     span.className = "gly t-" + tone + (draw === "element" ? " el" : "");

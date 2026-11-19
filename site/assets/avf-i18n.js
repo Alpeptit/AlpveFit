@@ -11,14 +11,30 @@
   // Dil değişimi sayfa YENİLENMEDEN yapılır: çevrilen her metnin Türkçe aslı saklanır; TR'ye dönüşte asıllar geri yazılır,
   // EN'ye geçişte tüm sayfa çevrilir. Ardından uygulama görünümü yeniden çizer (AVF.onLangChange).
   AVF.onLangChange = AVF.onLangChange || [];
-  AVF.setLang = function (l) {
-    if (l !== "tr" && l !== "en") return;
-    try { localStorage.setItem("avf_lang", l); } catch (e) { /* yok say */ }
-    if (l === AVF.lang) return;
+  var locked = false;
+  function swap(l) {
     AVF.lang = l; document.documentElement.lang = l;
     if (l === "en") { node(document.body); title(); } else restore(document.body);
+  }
+  AVF.setLang = function (l) {
+    if (l !== "tr" && l !== "en") return;
+    if (locked) return;   // forum alanında dil seçimi yoktur (aşağıda AVF.langLock)
+    try { localStorage.setItem("avf_lang", l); } catch (e) { /* yok say */ }
+    if (l === AVF.lang) return;
+    swap(l);
     AVF.onLangChange.forEach(function (f) { try { f(l); } catch (e) { /* bir dinleyicinin hatası diğerlerini durdurmaz */ } });
   };
+  // Forum alanı yalnız Türkçedir: girildiğinde dil seçici kalkar ve arayüz Türkçe gösterilir (kullanıcının dil tercihi SAKLANIR ve
+  // değiştirilmez); forumdan çıkınca tercih edilen dile kendiliğinden dönülür. Dönüş: dil değiştiyse true (çağıran görünümü yeniden çizer).
+  AVF.langLock = function (on) {
+    on = !!on; if (on === locked) return false;
+    locked = on; document.documentElement.classList.toggle("lang-locked", on);
+    var pref = null; try { pref = localStorage.getItem("avf_lang"); } catch (e) { /* depolama yok */ }
+    var want = on ? "tr" : (pref === "en" || pref === "tr" ? pref : stored === "en" || stored === "tr" ? stored : AVF.lang);
+    if (want === AVF.lang) return false;
+    swap(want); return true;
+  };
+  AVF.langLocked = function () { return locked; };
 
   AVF.DICT = AVF.DICT || {};      // tam eşleşme: { "Türkçe": "English" }
   AVF.PATTERNS = AVF.PATTERNS || []; // değişkenli: [ /regex/, "English $1" ]

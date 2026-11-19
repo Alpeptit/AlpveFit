@@ -151,6 +151,47 @@
     }));
   }
 
+  // ================================================================== PDF / YAZDIR
+  // Plan, yazdırma penceresinde tek başına (site arayüzü olmadan), her zaman aydınlık renklerle A4'e dizilir. Kullanıcı yazıcıyı
+  // ya da "PDF olarak kaydet"i seçer (masaüstü ve telefon tarayıcılarının hepsinde aynı pencere). Sunucuya ek istek yapılmaz.
+  // o: { kind, plan, ctx, member } — member yalnız uzman ekranında (kimin planı olduğu baskıda görünsün).
+  AVF.printPlan = function (o) {
+    var p = o.plan || {}, m = AVF.KIND[o.kind] || {}, prev = document.getElementById("avf-print");
+    if (prev) prev.remove();
+    var when = p.starts_on || p.ends_on ? [p.starts_on ? AVF.fmtDate(p.starts_on) : "…", p.ends_on ? AVF.fmtDate(p.ends_on) : "…"].join(" – ") : "";
+    var meta = [p.author_name ? T("Hazırlayan") + ": " + p.author_name : "", (p.updated_at || p.published_at) ? T("Güncelleme") + ": " + AVF.fmtDate(p.updated_at || p.published_at) : "", when ? T("Dönem") + ": " + when : ""].filter(Boolean);
+    var box = h("div", { id: "avf-print", "data-norv": "", "aria-hidden": "true" },
+      h("header", { class: "pr-head" }, h("div", { class: "pr-brand" }, h("span", { class: "pr-dia", "aria-hidden": "true" }), h("span", { "data-notr": "", text: "ALPVEFIT" })),
+        h("div", { class: "pr-kind" }, AVF.icon(m.icon || "list"), h("span", { text: m.label || "" }))),
+      h("h1", { class: "pr-title", "data-notr": "", text: p.title || "" }),
+      o.member ? h("p", { class: "pr-member" }, h("span", { text: T("Üye") + ": " }), h("b", { "data-notr": "", text: o.member })) : null,
+      meta.length ? h("p", { class: "pr-meta", "data-notr": "", text: meta.join("  ·  ") }) : null,
+      p.data ? AVF.planDataView(o.kind, p.data, o.ctx) : null,
+      p.body ? h("div", { class: "plan-body", "data-notr": "", text: p.body }) : null,
+      h("footer", { class: "pr-foot" }, h("span", { text: T("Bu plan size özel hazırlanmıştır; başkalarıyla paylaşmayın.") }), h("span", { "data-notr": "", text: "alpvefit.com · " + AVF.fmtDateTime(new Date()) })));
+    document.body.appendChild(box);
+    var root = document.documentElement, theme = root.getAttribute("data-theme"), cs = root.style.colorScheme, title = document.title, cleaned = false;
+    root.setAttribute("data-theme", "light"); root.style.colorScheme = "light";
+    document.body.classList.add("avf-printing");
+    document.title = String((p.title || "Plan") + " - AlpveFit").replace(/[\\/:*?"<>|]+/g, " ").slice(0, 120);   // kaydedilen PDF'in dosya adı
+    function done() {
+      if (cleaned) return; cleaned = true;
+      window.removeEventListener("afterprint", done); document.removeEventListener("pointerdown", late, true);
+      box.remove(); document.body.classList.remove("avf-printing");
+      if (theme) root.setAttribute("data-theme", theme); else root.removeAttribute("data-theme");
+      root.style.colorScheme = cs; document.title = title;
+    }
+    function late() { setTimeout(done, 0); }   // "afterprint" göndermeyen tarayıcılar: pencere kapandıktan sonraki ilk dokunuşta temizlenir
+    window.addEventListener("afterprint", done);
+    setTimeout(function () {
+      try { window.print(); } catch (e) { done(); return; }
+      setTimeout(function () { if (!cleaned) document.addEventListener("pointerdown", late, true); }, 400);
+    }, 80);
+  };
+  AVF.printButton = function (fn) {
+    return h("button", { class: "btn ghost sm pr-btn", type: "button", title: T("Yazdırma penceresinde “PDF olarak kaydet”i seçerek indirebilirsiniz."), onclick: fn }, AVF.icon("printer", "bico"), h("span", { text: T("PDF indir / Yazdır") }));
+  };
+
   // ================================================================== OLUŞTURUCU (uzman / yönetici)
   function ta(val, ph, max) { var t = h("textarea", { class: "inp", rows: "2", maxlength: String(max || 500), placeholder: ph || "Not (isteğe bağlı)" }); t.value = val || ""; return t; }
   function numIn(val, ph, w, dec) { var i = AVF.numInput({ placeholder: ph || "", style: w ? "max-width:" + w : "", "aria-label": ph || "" }, dec === undefined ? 3 : dec); i.value = val === null || val === undefined ? "" : String(val); return i; }

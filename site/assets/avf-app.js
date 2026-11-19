@@ -224,6 +224,7 @@
   // ---------- yönlendirme ----------
   function route(rerender) {
     var p = location.pathname.replace(/\/+$/, "") || "/";
+    if (AVF.langLock && AVF.langLock(p === "/forum" || p.indexOf("/forum/") === 0)) renderFooter();   // forum: yalnız Türkçe, dil seçici yok
     renderChrome(); document.title = "AlpveFit";
     if (!rerender) document.body.classList.remove("lang-swap");
     if (p === "/giris" || p === "/kayit" || p === "/sifremi-unuttum") { if (AVF.session.user) return go("/panel", true); homePage(); return AVF.auth.open(p === "/kayit" ? "register" : "login"); }
@@ -436,7 +437,8 @@
         return AVF.accordion({ icon: m.icon, open: i === 0, title: p.title, sub: "Hazırlayan: " + p.author_name + " · " + AVF.fmtDate(p.updated_at || p.published_at),
           content: [h("div", { class: "meta" }, h("span", null, "Hazırlayan: ", h("b", { text: p.author_name })), h("span", null, "Eklenme: " + AVF.fmtDate(p.published_at)),
             p.updated_at && new Date(p.updated_at) - new Date(p.published_at) > 60000 ? h("span", null, "Son güncelleme: " + AVF.fmtDate(p.updated_at)) : null, when ? h("span", null, "Dönem: " + when) : null),
-            p.data && AVF.planDataView ? AVF.planDataView(kind, p.data, ctx) : null, p.body ? h("div", { class: "plan-body", text: p.body }) : null] });
+            p.data && AVF.planDataView ? AVF.planDataView(kind, p.data, ctx) : null, p.body ? h("div", { class: "plan-body", text: p.body }) : null,
+            AVF.printPlan ? h("div", { class: "row pr-row" }, AVF.printButton(function () { AVF.printPlan({ kind: kind, plan: p, ctx: ctx }); })) : null] });
       }));
     }
     function load() {
