@@ -1,0 +1,36 @@
+name: Güvenlik taraması (OWASP ZAP)
+
+# Elle (Actions → Run workflow) ya da "security-scan" dalına gönderimle çalışır. Raporlar "security-reports" dalına yazılır.
+# Geçici veritabanı ve rastgele anahtarlarla çalışır; canlı siteye yalnız pasif (saldırısız) tarama yapılır.
+on:
+  workflow_dispatch:
+  push:
+    branches: [security-scan]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: security-scan
+  cancel-in-progress: true
+
+jobs:
+  zap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Bağımlılıklar
+        run: if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+      - name: Tarama
+        env:
+          LIVE_URL: https://www.alpvefit.com
+        run: bash tools/security/zap-scan.sh
+      - name: Raporları yayınla
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash tools/security/publish.sh
