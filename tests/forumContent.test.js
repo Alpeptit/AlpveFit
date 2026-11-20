@@ -22,14 +22,14 @@ test("her konunun anahtarı tekil, alanları geçerli", () => {
     assert.ok(c.tags.length >= 1 && c.tags.length <= 5, c.key + " etiket");
     for (const t of c.tags) assert.ok(SQL.includes("'" + t + "'"), c.key + " etiket yok: " + t);
   }
-  assert.equal(CONTENT.length, 35);
+  assert.equal(CONTENT.length, 36);
 });
 
 test("ekip konularının tümü yoruma kapalı ve sabit; kimse yoruma davet edilmez", () => {
   for (const c of CONTENT) {
-    assert.equal(c.locked, true, c.key);
+    assert.equal(c.locked, c.key !== "koca-sor", c.key);   // tek istisna: Koça Sor yoruma açıktır
     assert.notEqual(c.pinned, false, c.key);
-    assert.ok(!/aşağıya yaz|yorumlara yaz|Soru – Cevap/i.test(c.body), c.key + " yorum daveti / kaldırılan kategori");
+    assert.ok(c.key === "koca-sor" || !/aşağıya yaz|yorumlara yaz|Soru – Cevap/i.test(c.body), c.key + " yorum daveti / kaldırılan kategori");
   }
 });
 

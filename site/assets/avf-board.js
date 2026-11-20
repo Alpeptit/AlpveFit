@@ -81,7 +81,7 @@
   var ART = /^[a-z0-9-]{2,40}$/;
   function inline(text, out) {
     // sırasıyla: bağlantı, @anma, `kod`, **kalın**, ~~üstü çizili~~, ==vurgu==, [kaynak=…], [ikon=…], *italik* / _italik_
-    var re = /(https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)|(^|[\s(])@([a-z][a-z0-9._]{1,18}[a-z0-9])\b|`([^`\n]{1,200})`|\*\*([^*\n]{1,300})\*\*|~~([^~\n]{1,300})~~|(^|[\s(])[*_]([^*_\n]{1,300})[*_](?=[\s.,!?;:)]|$)|==([^=\n]{1,300})==|\[kaynak=(\d{5,9})(?:\|([^\]\n]{1,80}))?\]|\[ikon=([a-z0-9]{2,20})\]/g;
+    var re = /(https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)|(^|[\s(])@([a-z][a-z0-9._]{1,18}[a-z0-9])\b|`([^`\n]{1,200})`|\*\*([^*\n]{1,300})\*\*|~~([^~\n]{1,300})~~|(^|[\s(])[*_]([^*_\n]{1,300})[*_](?=[\s.,!?;:)]|$)|==([^=\n]{1,300})==|\[kaynak=(\d{5,9})(?:\|([^\]\n]{1,80}))?\]|\[ikon=([a-z0-9]{1,20})\]/g;
     var last = 0, m;
     while ((m = re.exec(text))) {
       var start = m.index;
@@ -653,7 +653,7 @@
     var aside = h("div", { class: "fo-pa" }, avatar(a, "lg"), h("div", { class: "fo-pai" }, uname(a, "fo-un b"), lvl(a.level),
       a.username ? h("small", { class: "fo-pas" }, h("span", { text: num(a.stats && a.stats.posts || 0) + " mesaj" }), h("span", { text: num(a.stats && a.stats.likes || 0) + " beğeni" })) : null,
       a.online ? h("small", { class: "fo-onl" }, h("i", { "aria-hidden": "true" }), h("span", { text: "Çevrimiçi" })) : null));
-    var headR = h("div", { class: "fo-phr" }, p.first ? chip(null, "Konu sahibi", "op") : null, accepted ? chip("check", "En iyi yanıt", "ok") : null,
+    var headR = h("div", { class: "fo-phr" }, p.first ? chip(null, "Konu sahibi", "op") : null, !p.first && p.author && p.author.expert ? chip("award", "Uzman yanıtı", "pro") : null, accepted ? chip("check", "En iyi yanıt", "ok") : null,
       p.editedAt ? h("small", { class: "fo-ed", title: AVF.fmtDateTime(p.editedAt) }, AVF.icon("pen"), h("span", { text: p.editedByMod ? "Moderatör düzenledi" : "Düzenlendi" })) : null,
       h("a", { class: "fo-pn", href: "/forum/konu/" + t.id + "?m=" + p.id, title: "Bu mesajın bağlantısı", onclick: function (e) { e.preventDefault(); copy(location.origin + "/forum/konu/" + t.id + "?m=" + p.id); } }, "#" + n));
     var head = h("div", { class: "fo-ph2" }, h("div", { class: "fo-pmob" }, avatar(a, "sm"), h("div", null, uname(a, "fo-un b"), lvl(a.level))), timeEl(p.createdAt), headR);
@@ -786,6 +786,15 @@
   }
 
   // ------------------------------------------------------------------ yeni konu
+  // Yönetici şablonu (Farmakoloji ve benzeri bölümler): yalnız iskelet; metni yönetici yazar. Sonda değiştirilemeyen uyarı kutusu yer alır.
+  var PHARMA_TEMPLATE = [
+    "## [ikon=book] Genel bakış", "Bu bölüme kısa tanıtım yazısı gelecek.", "", "[gif=1]", "",
+    "## [ikon=layers] Artılar ve eksiler", "[tablo]", "Artılar (+) | Eksiler (−)", " | ", " | ", " | ", "[/tablo]", "",
+    "## [ikon=microscope] Araştırmalar ne diyor?", "- Bulgu [kaynak=PMID|Yazar Yıl]", "", "## [ikon=alert] Bilinen yan etkiler ve riskler", "- ", "",
+    "## [ikon=check] Hangi kontroller yapılmalı?", "- ", "",
+    "[kutu=tehlike]", "**Bu içerik bilgi amaçlıdır; kullanımı teşvik etmez ve tıbbi tavsiye değildir.** Reçeteli ilaçlar ve hormonlar yalnız hekim kontrolünde kullanılır; reçetesiz kullanım ciddi sağlık riskleri taşır ve sporda dopingtir. Satış, kaynak, doz ve kür paylaşımı bu forumda yasaktır.", "[/kutu]"
+  ].join("\n");
+
   function newTopic() {
     title("Yeni konu");
     var Q = qs(), allowed = allCats().filter(function (c) { return S.me.mod || (c.kind !== "announce" && !c.isLocked && (S.me.level.n >= (c.minLevel || 1))); });
@@ -829,11 +838,20 @@
       onSubmit: function (body, images) {
         if (!catSel.get()) { catSel.querySelector("button").focus(); return Promise.reject({ status: 400, data: { error: "Önce bir kategori seç." } }); }
         var poll = pollOn ? { question: pq.value.trim(), options: [].slice.call(opts.querySelectorAll("input")).map(function (i) { return i.value.trim(); }).filter(Boolean), multi: multi.checked, days: Number(days.value) } : undefined;
-        return api("POST", "/topics", { category: catSel.get(), title: tIn.value.trim(), body: body, poll: poll, images: images, tags: picked }).then(function (x) {
+        return api("POST", "/topics", { category: catSel.get(), title: tIn.value.trim(), body: body, poll: poll, images: images, tags: picked, openComments: S.me.admin ? openC.checked : undefined }).then(function (x) {
           try { localStorage.removeItem(DKEY); } catch (e) { /* yok */ }
           AVF.toast("Konun yayında! Şimdi yanıtları bekle. 🚀"); go("/forum/konu/" + x.id);
         });
       } });
+    // yönetici: ekip konuları sabit ve yoruma kapalı açılır; "Koça Sor" gibi konular için yoruma açık bırakılabilir. Farmakoloji için boş şablon.
+    var openC = h("input", { type: "checkbox" });
+    var adminBox = !S.me.admin ? null : h("div", { class: "fo-adm" },
+      h("label", { class: "fo-chk" }, openC, h("span", null, h("b", { text: "Yoruma açık bırak" }), h("small", { text: "Ekip konuları sabit ve yoruma kapalı açılır. Koça Sor gibi soru-cevap konuları için işaretle." }))),
+      h("button", { type: "button", class: "btn ghost sm", onclick: function () { insertTemplate(); } }, AVF.icon("table", "bico"), "Farmakoloji şablonu ekle"));
+    function insertTemplate() {
+      var ta = comp.querySelector("textarea"); if (!ta) return;
+      ta.value = (ta.value.trim() ? ta.value.trim() + "\n\n" : "") + PHARMA_TEMPLATE; ta.dispatchEvent(new Event("input", { bubbles: true })); ta.focus();
+    }
     var main = shell({ h1: "Yeni konu aç", sub: "Sorunu sor, deneyimini paylaş — topluluk burada.", crumbs: [["Yeni konu"]], noNew: true, icon: "pen", color: "lime" }, []);
     if (S.me.banned) return AVF.mount(main, AVF.state("lock", "Şu an konu açamazsın", "Forumdan uzaklaştırıldın; süre dolunca yeniden yazabilirsin."));
     function lab(icon, text, extra) { return h("span", { class: "fo-lab" }, h("span", { class: "fo-labi" }, AVF.icon(icon)), h("span", { text: text }), extra || null); }
@@ -841,6 +859,7 @@
       h("div", { class: "fld" }, lab("layers", "Kategori"), catSel, catInfo,
         h("p", { class: "fo-warn" }, AVF.icon("alert"), h("span", null, h("b", { text: "Doğru kategoriyi seç: " }), h("span", { text: "kategorisiyle ilgisi olmayan konular taşınır; tekrarında hesabına ihtar verilir." })))),
       h("label", { class: "fld" }, lab("file", "Başlık", tc), tIn),
+      adminBox,
       h("div", { class: "fld" }, lab("pen", "Mesaj"), comp),
       h("div", { class: "fld" }, lab("hash", "Etiketler", tagN), h("p", { class: "hint", text: "Konunu bulunur kılmak için en fazla 5 etiket seç (isteğe bağlı)." }), tagQ, tagBox),
       h("p", { class: "hint fo-ntr" }, AVF.icon("shield"), h("span", { text: "Satış, kaynak / tedarik ve iletişim bilgisi paylaşımı yasaktır. Paylaşımlar tıbbi tavsiye değildir." }), h("button", { class: "fo-lnk", type: "button", onclick: showRules }, "Kurallar"))));

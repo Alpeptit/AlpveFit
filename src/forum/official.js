@@ -4,6 +4,7 @@
 // Resmî hesap: giriş yapamaz (kalıcı kilit + kullanılamaz şifre, ".invalid" e-posta), yetkisi yoktur; forumda "AlpveFit Ekibi" unvanıyla görünür.
 // GIF'ler GIPHY'den (anahtar varsa) "g" derecesiyle aranır, sunucuya indirilip mesaja bağlanır (ziyaretçi GIPHY'ye bağlanmaz).
 import crypto from "node:crypto";
+import { readFile } from "node:fs/promises";
 import axios from "axios";
 import bcrypt from "bcrypt";
 import { pool } from "../db/pool.js";
@@ -70,8 +71,16 @@ async function setTags(topicId, slugs) {
   if (slugs && slugs.length) await pool.query(`INSERT INTO forum_topic_tags (topic_id, tag_id) SELECT $1, id FROM forum_tags WHERE slug = ANY($2::text[]) ON CONFLICT DO NOTHING`, [topicId, slugs]);
 }
 
+/** Ekip hesabının profil fotoğrafı: yoksa uygulama simgesi (AlpveFit "A") konur; yöneticinin sonradan yüklediği görsel korunur. */
+async function officialAvatar(uid) {
+  if ((await pool.query(`SELECT 1 FROM attachments WHERE user_id = $1 AND scope = 'avatar'`, [uid])).rows.length) return;
+  const buf = await readFile(new URL("../../site/assets/icons/icon-512.png", import.meta.url));
+  await pool.query(`INSERT INTO attachments (user_id, scope, filename, mime, size_bytes, data) VALUES ($1, 'avatar', 'avatar.png', 'image/png', $2, $3)`, [uid, buf.length, buf]);
+}
+
 export async function seedOfficialContent(log = console) {
   const uid = await officialAccount();
+  try { await officialAvatar(uid); } catch (e) { log.warn && log.warn("[forum] ekip profil fotoğrafı konamadı: " + e.message); }
   let created = 0, updated = 0, gifs = 0;
   // Sıra: listede sonra gelen, sabit konular arasında üstte görünsün diye zaman damgası ters sırayla verilir.
   const base = Date.now();

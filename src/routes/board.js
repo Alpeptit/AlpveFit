@@ -39,6 +39,7 @@ function authorOut(r) {
   const lv = forumLevel(r, r.role);
   // Yönetici ve moderatörlerin katılım tarihi gösterilmez (ekip bilgisi); üyelerinki görünür.
   return { id: r.uid, username: r.username, avatarId: r.avatar_id, level: publicLevel(lv), joinedAt: lv.assigned ? null : r.joined_at,
+    expert: r.role === "coach" || r.role === "admin" || !!r.is_official,   // koç / yönetici / ekip: yanıtlarında "Uzman yanıtı" rozeti
     stats: { topics: r.topics || 0, posts: r.posts || 0, likes: r.likes || 0 }, signature: r.signature || "", sigImageId: r.sig_image_id || null,
     online: !r.hide_online && !!(r.last_seen_at && Date.now() - new Date(r.last_seen_at).getTime() < 15 * 60000) };
 }
@@ -288,7 +289,7 @@ boardRouter.post("/board/topics", member, async (req, res) => {
   const dup = await pool.query(`SELECT id FROM forum_topics WHERE author_id = $1 AND lower(title) = lower($2) AND created_at > now() - interval '1 day' AND hidden_at IS NULL`, [req.fm.id, title]);
   if (dup.rows.length) return res.status(409).json({ error: "Aynı başlıkla kısa süre önce bir konu açtınız.", topicId: dup.rows[0].id });
   const out = await tx(async (c) => {
-    const t = (await c.query(`INSERT INTO forum_topics (category_id, author_id, title, kind, last_poster_id, created_at, last_post_at, is_pinned, is_locked) VALUES ($1, $2, $3, $4, $2, clock_timestamp(), clock_timestamp(), $5, $5) RETURNING id, created_at`, [cat.id, req.fm.id, title, kind, !!req.fm.admin])).rows[0];
+    const t = (await c.query(`INSERT INTO forum_topics (category_id, author_id, title, kind, last_poster_id, created_at, last_post_at, is_pinned, is_locked) VALUES ($1, $2, $3, $4, $2, clock_timestamp(), clock_timestamp(), $5, $6) RETURNING id, created_at`, [cat.id, req.fm.id, title, kind, !!req.fm.admin, !!req.fm.admin && req.body.openComments !== true])).rows[0];
     const p = (await c.query(`INSERT INTO forum_posts (topic_id, author_id, body, is_first, created_at) VALUES ($1, $2, $3, true, $4) RETURNING id`, [t.id, req.fm.id, body, t.created_at])).rows[0];
     await c.query(`UPDATE forum_topics SET last_post_id = $2, last_post_at = $3 WHERE id = $1`, [t.id, p.id, t.created_at]);
     if (poll.v) await c.query(`INSERT INTO forum_polls (topic_id, question, options, multi, closes_at) VALUES ($1, $2, $3, $4, CASE WHEN $5::int > 0 THEN now() + make_interval(days => $5::int) END)`,

@@ -2347,3 +2347,9 @@ footer.foot{padding-bottom:env(safe-area-inset-bottom)}
 .swipe-back{position:fixed;left:0;top:50%;z-index:90;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--ink);box-shadow:var(--shadow-up);transform:translate(-44px,-50%);opacity:0;pointer-events:none;transition:background .15s,color .15s}
 .swipe-back.go{background:var(--ink);color:var(--on-ink,#fff)}
 .swipe-back .ico{width:22px;height:22px}
+.fo-chip.pro{color:#fff;border-color:transparent;background:linear-gradient(135deg,#2563EB,#7C3AED)}
+.fo-chip.pro .ico{color:#fff}
+/* yönetici: yeni konu seçenekleri */
+.fo-adm{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px dashed var(--line2);border-radius:14px;background:var(--soft,#F6F6F4);margin:4px 0 14px}
+.fo-adm .fo-chk{align-items:flex-start}.fo-adm .fo-chk span{display:flex;flex-direction:column;gap:2px}.fo-adm .fo-chk small{font-weight:500;color:var(--muted);font-size:12.5px}
+.fo-adm .fo-chk input{margin-top:2px}

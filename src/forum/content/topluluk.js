@@ -155,4 +155,36 @@ Serbest Kürsü'nün resmî olmayan bir kuralı daha var: "Bugün antrenman var 
 
 — **AlpveFit Ekibi**`,
   },
+  {
+    key: "koca-sor", icon: "chat", rev: 1, category: "serbest-kursu", locked: false, tags: ["motivasyon", "baslangic", "program"],
+    gifs: ["coach whistle", "raise hand question"],
+    title: "Koça Sor — Sorunu yaz, koçlarımız yanıtlasın",
+    body: `## Koçlarımız burada!
+Bu konu **yoruma açık.** Antrenman, beslenme, takviye ya da motivasyonla ilgili sorunu aşağıya yaz; AlpveFit koçları düzenli olarak yanıtlıyor. Koç yanıtları **"Uzman yanıtı"** rozetiyle görünür.
+
+[gif=1]
+
+## [ikon=check] İyi bir soru nasıl sorulur?
+- **Hedefin:** yağ yakımı, kas kazanımı, güç…
+- **Durumun:** yaş aralığı, kilo, haftada kaç gün antrenman, deneyim süren
+- **Ne denedin:** "3 haftadır 2.100 kcal, kilo sabit"
+- **Tek net soru:** sonunda tek cümleyle sor
+
+## [ikon=x] Burada yanıt verilmeyenler
+- **Kişiye özel tam program ya da diyet listesi:** bunlar koçluk paketlerinin işidir; seni tanımadan yazılan program sana uymaz.
+- **İlaç, hormon, doz ya da kür soruları:** yanıtlanmaz ve kaldırılır.
+- **Sağlık şikâyetleri:** göğüs ağrısı, bayılma gibi durumlarda forum yerine **112**, diğer şikâyetlerde **hekimin.**
+
+[kutu=ipucu]
+Sorunun yanıtı sabitlenmiş rehberlerde olabilir: önce yukarıdaki **arama** kutusunu dene. Bulamazsan burada sor, koçlar sana doğru rehberi de gösterir.
+[/kutu]
+
+[gif=2]
+
+[kutu=mizah]
+Koçlar her soruyu yanıtlar; "Göğüs günü mü, bacak günü mü?" hariç. Yanıt belli: bacak. 🦵😄
+[/kutu]
+
+— **AlpveFit Koçluk Ekibi**`,
+  },
 ];

@@ -161,6 +161,13 @@ const cp = r.body.posts[0].id;
 r = await U.c.call("POST", "/board/posts/" + cp + "/react", { value: -1 }); chk("ekip konusunda beğenmeme reddedilir", r.status === 400, r.body);
 r = await U.c.call("POST", "/board/posts/" + cp + "/react", { value: 1 }); chk("ekip konusu beğenilebilir", r.status === 200, r.body);
 r = await U.c.call("GET", "/board/topics?c=antrenman"); chk("listede ∞ işareti", r.body.topics.find((t) => t.id === ct).infinite === true, "");
+// Koça Sor: yönetici yoruma açık ekip konusu açabilir; yönetici yanıtı "uzman"
+r = await A.c.call("POST", "/board/topics", { category: "antrenman", title: "Koça sor deneme konusu açık", body: "Sorularını yaz.", openComments: true }); const ks = r.body.id;
+r = await U.c.call("GET", "/board/t/" + ks); chk("yoruma açık ekip konusu: sabit ama kilitsiz, üye yanıtlayabilir", r.body.topic.pinned === true && r.body.topic.locked === false && r.body.canReply === true, r.body.topic);
+r = await U.c.call("POST", "/board/t/" + ks + "/posts", { body: "Kesimde kardiyo ne kadar olmalı?" }); chk("üye Koça Sor'a yazar", r.status === 201, r.body);
+r = await A.c.call("POST", "/board/t/" + ks + "/posts", { body: "Önce adım sayını artır." });
+r = await U.c.call("GET", "/board/t/" + ks); chk("yönetici yanıtı uzman rozetli, üyeninki değil", r.body.posts.some((p) => !p.first && p.author.expert === true) && r.body.posts.some((p) => !p.first && p.author.expert === false), r.body.posts.map((p) => p.author));
+r = await V.c.call("POST", "/board/topics", { category: "antrenman", title: "Üye yoruma kapatmayı deneyemez", body: "Üye olarak openComments göndermek bir şey değiştirmez.", openComments: false }); chk("üye konusu açılır", r.status === 201, r.body); r = await V.c.call("GET", "/board/t/" + r.body.id); chk("üyenin konusu sabit/kilitli olmaz", r.body.topic.pinned === false && r.body.topic.locked === false, r.body.topic);
 // beğenilenler
 const vp = (await V.c.call("GET", "/board/t/" + vt)).body.posts[0].id;
 await V.c.call("POST", "/board/posts/" + vp + "/react", { value: 1 });
