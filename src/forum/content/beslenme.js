@@ -1,9 +1,9 @@
-// Beslenme rehberleri: sabit, yoruma açık ekip yazıları.
+// Beslenme rehberleri: sabit ve yoruma kapalı ekip yazıları.
 export const BESLENME = [
   {
-    key: "beslenme-protein-nedir", rev: 1, category: "beslenme", tags: ["protein", "kas-kazanimi", "makro", "baslangic"],
+    key: "beslenme-protein-nedir", icon: "egg", rev: 2, category: "beslenme", locked: true, tags: ["protein", "kas-kazanimi", "makro", "baslangic"],
     gifs: ["chicken breast cooking", "protein shake gym"],
-    title: "🥩 Protein Nedir? Ne kadar, ne zaman, hangi kaynaktan?",
+    title: "Protein Nedir? Ne kadar, ne zaman, hangi kaynaktan?",
     body: `## Protein: kasın tuğlası, ama tek başına duvar örmez
 Protein, amino asitlerden oluşan bir besin ögesidir. Antrenman kası "hasarlar", protein onarım malzemesini sağlar. **Gram başına 4 kcal** enerji verir.
 
@@ -52,12 +52,12 @@ Böbrek hastalığı olanlar yüksek proteinli beslenmeye geçmeden önce mutlak
 - Günü 3–5 öğüne yay; her öğünde ~0,4 g/kg.
 - Antrenman olmadan protein yalnız pahalı bir yemektir. 😄
 
-Sorun mu var? Aşağıya yaz; topluluk ve ekip burada.`,
+Aklına takılan mı var? **Beslenme** kategorisinde yeni bir konu aç; topluluk ve ekip burada.`,
   },
   {
-    key: "beslenme-karbonhidrat-nedir", rev: 1, category: "beslenme", tags: ["karbonhidrat", "makro", "kalori", "baslangic"],
+    key: "beslenme-karbonhidrat-nedir", icon: "wheat", rev: 2, category: "beslenme", locked: true, tags: ["karbonhidrat", "makro", "kalori", "baslangic"],
     gifs: ["pasta eating happy", "running energy"],
-    title: "🍝 Karbonhidrat Nedir? Düşman mı, yakıt mı?",
+    title: "Karbonhidrat Nedir? Düşman mı, yakıt mı?",
     body: `## Karbonhidrat: antrenmanın benzini
 Karbonhidrat vücudun en hızlı kullanılan enerji kaynağıdır. Kas ve karaciğerde **glikojen** olarak depolanır; ağır setlerde ve yüksek tempolu antrenmanda ana yakıttır. Gram başına **4 kcal** verir.
 
@@ -100,9 +100,9 @@ Gece 23.00'te yenen pilav, sabah 08.00'de yenenden daha "şişmanlatıcı" deği
 - Kaynakların çoğu lifli ve az işlenmiş olsun.`,
   },
   {
-    key: "beslenme-yag-nedir", rev: 1, category: "beslenme", tags: ["yag", "makro", "hormon", "saglik"],
+    key: "beslenme-yag-nedir", icon: "drop", rev: 2, category: "beslenme", locked: true, tags: ["yag", "makro", "hormon", "saglik"],
     gifs: ["avocado", "olive oil pour"],
-    title: "🥑 Yağ Nedir? Hormonlar, kalp ve doğru yağ seçimi",
+    title: "Yağ Nedir? Hormonlar, kalp ve doğru yağ seçimi",
     body: `## Yağ: yoğun enerji, hayati görevler
 Yağ, gram başına **9 kcal** ile en yoğun enerji kaynağıdır. Hücre zarlarının yapısında, A-D-E-K vitaminlerinin emiliminde ve **hormon üretiminde** rol oynar.
 
@@ -142,9 +142,9 @@ Erkeklerde yapılan müdahale çalışmalarının meta-analizi, **düşük yağl
 - Kalori yoğun olduğu için ölç-tart.`,
   },
   {
-    key: "beslenme-lif-nedir", rev: 1, category: "beslenme", tags: ["lif", "karbonhidrat", "saglik"],
+    key: "beslenme-lif-nedir", icon: "leaf", rev: 2, category: "beslenme", locked: true, tags: ["lif", "karbonhidrat", "saglik"],
     gifs: ["broccoli dance"],
-    title: "🥦 Lif Nedir ve Günde Ne Kadar Almalıyız?",
+    title: "Lif Nedir ve Günde Ne Kadar Almalıyız?",
     body: `## Lif: sindirilmeyen ama çok iş yapan karbonhidrat
 Lif, bitkisel besinlerde bulunan ve ince bağırsakta sindirilemeyen karbonhidrattır. Kalın bağırsaktaki bakterilerin besinidir, tokluk verir, kan şekeri dalgalanmalarını yumuşatır.
 
@@ -187,9 +187,9 @@ Lif alımını artırdığın ilk hafta tuvalet sıran sana "abone" olabilir. Sa
 - Yavaş artır, bol su iç.`,
   },
   {
-    key: "beslenme-makro-hesaplama", rev: 1, category: "beslenme", tags: ["makro", "kalori", "protein", "yag", "karbonhidrat"],
+    key: "beslenme-makro-hesaplama", icon: "calc", rev: 2, category: "beslenme", locked: true, tags: ["makro", "kalori", "protein", "yag", "karbonhidrat"],
     gifs: ["calculator math"],
-    title: "🧮 Makro Nasıl Hesaplanır? (İçinde hesaplayıcı var)",
+    title: "Makro Nasıl Hesaplanır? (İçinde hesaplayıcı var)",
     body: `## 4 adımda makro hesabı
 Makro = **protein, karbonhidrat ve yağ.** Önce günlük kaloriyi bilmen gerekir (bkz. TDEE rehberi), sonra kaloriyi bu üçüne dağıtırsın.
 
@@ -230,9 +230,9 @@ Makrolarını tutturmak için gece yarısı 40 g yağ eksiğini tek kaşık fıs
 [/kutu]`,
   },
   {
-    key: "beslenme-tdee-hesaplama", rev: 1, category: "beslenme", tags: ["tdee", "kalori", "yag-yakimi", "kas-kazanimi"],
+    key: "beslenme-tdee-hesaplama", icon: "flame", rev: 2, category: "beslenme", locked: true, tags: ["tdee", "kalori", "yag-yakimi", "kas-kazanimi"],
     gifs: ["fire burning calories"],
-    title: "🔥 TDEE Nasıl Hesaplanır? Günlük kalori harcamanı öğren (hesaplayıcı içinde)",
+    title: "TDEE Nasıl Hesaplanır? Günlük kalori harcamanı öğren (hesaplayıcı içinde)",
     body: `## TDEE nedir?
 **TDEE (Total Daily Energy Expenditure)** = bir günde harcadığın toplam enerji. Kilonu korumak için bu kadar kalori almalısın; altına inersen kilo verirsin, üstüne çıkarsan alırsın.
 
@@ -277,9 +277,9 @@ Spor saatin "bugün 900 kcal yaktın" diyorsa, bunu "450" diye oku. Akıllı saa
 [/kutu]`,
   },
   {
-    key: "beslenme-gercek-mi-sirayla-tuketme", rev: 1, category: "beslenme", tags: ["efsane", "karbonhidrat", "arastirma", "saglik"],
+    key: "beslenme-gercek-mi-sirayla-tuketme", icon: "help", rev: 2, category: "beslenme", locked: true, tags: ["efsane", "karbonhidrat", "arastirma", "saglik"],
     gifs: ["mind blown"],
-    title: "🤔 Gerçek mi? Gıdaları sırasıyla tüketmek (önce sebze, sonra karbonhidrat)",
+    title: "Gerçek mi? Gıdaları sırasıyla tüketmek (önce sebze, sonra karbonhidrat)",
     body: `## İddia: "Önce salata ve proteini ye, ekmeği en sona bırak; kan şekerin daha az yükselir."
 **Kararımız: KISMEN GERÇEK ✅** — etkisi ölçülmüş, ama asıl önemli olan yine ne ve ne kadar yediğin.
 
@@ -313,9 +313,9 @@ Annenin "önce yemeğini ye, sonra tatlı" kuralı bilimsel çıktı. Anneler ka
 [/kutu]`,
   },
   {
-    key: "beslenme-gercek-mi-protein-karbonhidrat", rev: 1, category: "beslenme", tags: ["efsane", "protein", "karbonhidrat", "kas-kazanimi"],
+    key: "beslenme-gercek-mi-protein-karbonhidrat", icon: "scale", rev: 2, category: "beslenme", locked: true, tags: ["efsane", "protein", "karbonhidrat", "kas-kazanimi"],
     gifs: ["versus fight"],
-    title: "🥊 Gerçek mi? Protein vs Karbonhidrat — kas için hangisi, kilo için hangisi?",
+    title: "Gerçek mi? Protein vs Karbonhidrat — kas için hangisi, kilo için hangisi?",
     body: `## Üç popüler iddia, üç net yanıt
 [gif=1]
 

@@ -24,13 +24,13 @@ chk("18 yaş onayı istenir", await q.locator("text=18 yaşından büyüğüm, d
 await q.click("text=18 yaşından büyüğüm, devam et"); await q.waitForTimeout(900);
 chk("kurallar ekranı (ilk giriş)", await q.locator(".fo-gate").count() === 1 && await q.locator(".fo-gate button.btn").isDisabled(), "");
 await q.check(".fo-gate input[type=checkbox]"); await q.click(".fo-gate button.btn"); await q.waitForTimeout(1200);
-chk("forum ana sayfası açılır", await q.locator(".fo-c").count() === 8 && await q.locator(".fo-band h1").textContent() === "Forum", "");
+chk("forum ana sayfası açılır", await q.locator(".fo-c").count() === 7 && await q.locator(".fo-band h1").textContent() === "Forum", "");
 chk("dil seçici forumda yok", await q.evaluate(() => [...document.querySelectorAll(".lang")].every((e) => getComputedStyle(e).display === "none")), "");
 // yeni konu
 await q.click(".fo-new"); await q.waitForTimeout(800);
-// kategori: simgeli açılır liste; tür alanı yok (Soru – Cevap'ta açılan konu sorudur)
+// kategori: simgeli açılır liste; tür alanı yok (Soru – Cevap kategorisi kaldırıldı)
 chk("yeni konuda tür seçimi yok, kategori uyarısı var", await q.locator(".fo-kind").count() === 0 && await q.locator(".fo-warn").count() === 1, "");
-await q.click(".fo-nt .dd-btn"); await q.click(".fo-nt .dd-o:has-text('Soru – Cevap')");
+await q.click(".fo-nt .dd-btn"); chk("kategori listesinde Soru – Cevap yok", await q.locator(".fo-nt .dd-o:has-text('Soru – Cevap')").count() === 0, ""); await q.click(".fo-nt .dd-o:has-text('Antrenman')");
 await q.click(".fo-tagpick .fo-tag:has-text('Teknik')");
 chk("etiket seçilir", await q.locator(".fo-tagpick .fo-tag.on").count() === 1, "");
 await q.fill(".fo-nt input[maxlength='120']", "Deadlift sırasında bel ağrısı neden olur?");
@@ -59,7 +59,8 @@ await r.keyboard.press("Enter"); await r.waitForTimeout(200);
 chk("öneri seçilince kullanıcı adı tamamlanır", (await r.inputValue(".fo-reply .fo-ta")).includes("@" + U.username + " "), await r.inputValue(".fo-reply .fo-ta"));
 await r.click("text=Yanıtı gönder"); await r.waitForTimeout(1500);
 chk("yanıt görünür, alıntı kutusu çizilir", await r.locator(".fo-p").count() === 2 && await r.locator(".fo-quote").count() === 1 && await r.locator(".fo-men").count() >= 1, "");
-// sahibi: canlı yeni yanıt uyarısı yerine bildirim; en iyi yanıt
+// sahibi: canlı yeni yanıt uyarısı yerine bildirim; en iyi yanıt (soru türünü moderatör verir — Soru – Cevap kategorisi kaldırıldı)
+sql(`UPDATE forum_topics SET kind = 'question' WHERE title = 'Deadlift sırasında bel ağrısı neden olur?'`);
 await q.reload(); await q.waitForTimeout(1200);
 await q.click("text=En iyi yanıt seç"); await q.waitForTimeout(1200);
 chk("en iyi yanıt seçilir", await q.locator(".fo-p.best").count() === 1 && await q.locator(".fo-chip.ok").count() >= 1, "");

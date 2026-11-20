@@ -1,9 +1,9 @@
-// Takviye rehberleri (Supplement / Vitamin / Mineral alt kategorileri): sabit, yoruma açık ekip yazıları.
+// Takviye rehberleri (Supplement / Vitamin / Mineral alt kategorileri): sabit ve yoruma kapalı ekip yazıları.
 export const TAKVIYE = [
   {
-    key: "takviye-supplement-rehberi", rev: 1, category: "supplement", tags: ["arastirma", "kreatin", "kafein", "aminoasit", "efsane"],
+    key: "takviye-supplement-rehberi", icon: "pill", rev: 2, category: "supplement", locked: true, tags: ["arastirma", "kreatin", "kafein", "aminoasit", "efsane"],
     gifs: ["shopping cart supplements", "money flying away"],
-    title: "💊 Supplement Rehberi — Hangisi işe yarıyor, hangisi para israfı?",
+    title: "Supplement Rehberi — Hangisi işe yarıyor, hangisi para israfı?",
     body: `## Raflar dolu, kanıt az
 Spor takviyesi piyasası "bunu iç, uçarsın" vaadiyle dolu. Uluslararası Olimpiyat Komitesi'nin (IOC) uzlaşı raporu ise net: performansı gerçekten destekleyen takviye **bir avuç**tur [kaynak=29540367|Maughan 2018].
 
@@ -54,9 +54,9 @@ Takviye piramidi: en altta uyku, üstünde yemek, onun üstünde antrenman, en t
 [/kutu]`,
   },
   {
-    key: "takviye-kreatin-yuklemesi", rev: 1, category: "supplement", tags: ["kreatin", "guc", "kas-kazanimi", "arastirma", "efsane"],
+    key: "takviye-kreatin-yuklemesi", icon: "bolt", rev: 2, category: "supplement", locked: true, tags: ["kreatin", "guc", "kas-kazanimi", "arastirma", "efsane"],
     gifs: ["loading bar", "strong man lifting"],
-    title: "⚡ Kreatin Yüklemesi — Şart mı? Ne kadar, nasıl, güvenli mi?",
+    title: "Kreatin Yüklemesi — Şart mı? Ne kadar, nasıl, güvenli mi?",
     body: `## Kreatin: en çok araştırılan, en çok yanlış anlaşılan takviye
 Kreatin; kaslarda **fosfokreatin** olarak depolanır ve kısa, şiddetli eforlarda (ağır set, sprint) enerjinin hızla yenilenmesine yardım eder. Takviye ile kas kreatin deposu doldurulur; bu da daha fazla tekrar, daha iyi antrenman ve zamanla daha fazla kas demektir [kaynak=28615996|Kreider 2017].
 
@@ -101,9 +101,9 @@ Kreatinin "ne zaman" alınacağı tartışması forumların en uzun savaşıdır
 [/kutu]`,
   },
   {
-    key: "takviye-gercek-mi-bcaa-eaa", rev: 1, category: "supplement", tags: ["aminoasit", "efsane", "protein", "arastirma"],
+    key: "takviye-gercek-mi-bcaa-eaa", icon: "flask", rev: 2, category: "supplement", locked: true, tags: ["aminoasit", "efsane", "protein", "arastirma"],
     gifs: ["boxing match"],
-    title: "🥊 Gerçek mi? BCAA vs EAA — Renkli tozlar gerçekten kas yapar mı?",
+    title: "Gerçek mi? BCAA vs EAA — Renkli tozlar gerçekten kas yapar mı?",
     body: `## Önce terimler
 - **EAA (esansiyel amino asitler):** vücudun üretemediği **9 amino asit.** Kas yapmak için hepsi gerekir.
 - **BCAA (dallı zincirli amino asitler):** bu 9'un içindeki **3'ü**: lösin, izolösin, valin. Lösin, kas protein sentezini "başlatan" sinyaldir.
@@ -137,9 +137,9 @@ BCAA'nın en kanıtlanmış faydası: suyuna güzel bir renk ve meyve tadı katm
 [/kutu]`,
   },
   {
-    key: "takviye-vitamin-rehberi", rev: 1, category: "vitamin", tags: ["vitamin", "saglik", "kan-tahlili", "arastirma"],
+    key: "takviye-vitamin-rehberi", icon: "sun", rev: 2, category: "vitamin", locked: true, tags: ["vitamin", "saglik", "kan-tahlili", "arastirma"],
     gifs: ["fruits vegetables colorful", "sun shining"],
-    title: "🍊 Vitamin Rehberi — A'dan K'ya tüm vitaminler (ne işe yarar, nereden alınır, ne zaman takviye?)",
+    title: "Vitamin Rehberi — A'dan K'ya tüm vitaminler (ne işe yarar, nereden alınır, ne zaman takviye?)",
     body: `## Vitaminler: az miktarda, büyük görevler
 Vitaminler enerji üretiminden kemik sağlığına kadar yüzlerce tepkimede görev alır. Çoğunu **çeşitli bir beslenmeyle** yeterince alırız. Takviye, **eksiklik** varsa ya da beslenme biçimin (vegan, çok düşük kalori, emilim sorunu) riski artırıyorsa anlam kazanır.
 
@@ -195,9 +195,9 @@ Vitamin takviyesinin en garantili etkisi: idrarını parlak sarıya boyamak (te�
 - Megadoz yok; antrenman uyumunu bile bozabilir.`,
   },
   {
-    key: "takviye-mineral-rehberi", rev: 1, category: "mineral", tags: ["mineral", "saglik", "kan-tahlili", "hormon"],
+    key: "takviye-mineral-rehberi", icon: "spark", rev: 2, category: "mineral", locked: true, tags: ["mineral", "saglik", "kan-tahlili", "hormon"],
     gifs: ["sweating workout", "salt shaker"],
-    title: "🧂 Mineral Rehberi — Demir, magnezyum, çinko ve diğerleri: kimin neye ihtiyacı var?",
+    title: "Mineral Rehberi — Demir, magnezyum, çinko ve diğerleri: kimin neye ihtiyacı var?",
     body: `## Mineraller: kemikten kas kasılmasına
 Mineraller kemik yapısı, kas kasılması, sinir iletimi, oksijen taşınması ve hormon üretiminde görev alır. Sporcular terle bir kısmını kaybeder; ama çoğu kişi için çözüm yine **yeterli ve çeşitli beslenme**dir.
 

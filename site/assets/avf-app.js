@@ -21,7 +21,7 @@
   function go(path, replace) {
     var from = location.pathname, y = window.pageYOffset || 0;
     if (location.pathname === path) { route(); return; }
-    history[replace ? "replaceState" : "pushState"](null, "", path); route();
+    history[replace ? "replaceState" : "pushState"]({ i: replace ? idx() : idx() + 1 }, "", path); route();
     // Sayfa geçişinde yumuşak kaydırma kullanılmaz (mobilde dokunuşla çakışıp yenileme hareketini tetikleyebiliyordu).
     var de = document.documentElement, a = area(from), keep = a && a === area(path);
     de.style.scrollBehavior = "auto"; window.scrollTo(0, keep ? y : 0); de.style.scrollBehavior = "";
@@ -66,6 +66,7 @@
     AVF.mount(root,
       h("a", { class: "sr", href: "#main" }, "İçeriğe geç"),
       h("header", { class: "top" }, h("div", { class: "wrap" },
+        h("button", { class: "ibtn plain backbtn", id: "backbtn", type: "button", "aria-label": "Geri", title: "Geri", hidden: "", onclick: function () { AVF.back(); } }, AVF.icon("back")),
         h("button", { class: "ibtn plain burger", type: "button", "aria-label": "Menüyü aç", onclick: function () { drawer.classList.add("open"); } }, AVF.icon("menu")),
         link("/", AVF.logo(false), { class: "logolink", "aria-label": "AlpveFit ana sayfa" }), nav, tools)),
       drawer, view, footEl,
@@ -79,6 +80,7 @@
       e.preventDefault(); drawer.classList.remove("open"); go(a.getAttribute("href"));
     });
     window.addEventListener("popstate", function () { route(); });
+    if (!history.state) { try { history.replaceState({ i: 0 }, "", location.href); } catch (e) { /* yok say */ } }
   }
   var NAV = [["/", "home", "Ana Sayfa"], ["/hakkimizda", "users", "Hakkımızda"], ["/sss", "help", "SSS"], ["/paketler", "tag", "Paketler"], ["/araclar", "wrench", "Araçlar"], ["/forum", "msg", "Forum"]];
   var LEGAL_ICONS = { kvkk: "shield", "kullanim-kosullari": "file", "gizlilik-cerez": "lock" };
@@ -295,8 +297,44 @@
   };
 
   // ---------- yönlendirme ----------
+  // ---------- geri: üst çubukta düğme (ana sayfa dışında) + uygulama modunda sol kenardan kaydırma ----------
+  // Uygulama içinde gelinen bir sayfa varsa tarayıcı geçmişinde bir adım geri gidilir; yoksa (bağlantıyla doğrudan açılmış sayfa) bir üst sayfaya.
+  // Her uygulama içi geçiş geçmiş kaydına sırasını yazar (i); i > 0 ise önceki sayfa bu sitedendir.
+  function idx() { var st = history.state; return st && typeof st.i === "number" ? st.i : 0; }
+  function parentOf(p) {
+    var m;
+    if ((m = /^\/forum\/(konu|k|uye|etiket|yeni|ara)\b/.exec(p))) return "/forum";
+    if (p.indexOf("/panel/") === 0) return "/panel";
+    if ((m = /^(\/[^/]+)\/.+/.exec(p))) return m[1];
+    return "/";
+  }
+  AVF.back = function () {
+    var p = location.pathname.replace(/\/+$/, "") || "/";
+    if (idx() > 0) history.back();
+    else go(parentOf(p), true);
+  };
+  function paintBack(p) { var b = document.getElementById("backbtn"); if (!b) return; var on = p !== "/"; if (on) b.removeAttribute("hidden"); else b.setAttribute("hidden", ""); document.body.classList.toggle("can-back", on); }
+  (function edgeSwipe() {
+    var sa = false; try { sa = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; } catch (e) { /* yok say */ }
+    if (!sa || !("ontouchstart" in window)) return;
+    var x0 = 0, y0 = 0, on = false, hint = null;
+    document.addEventListener("touchstart", function (e) { var t = e.touches[0]; on = e.touches.length === 1 && t.clientX < 24 && (location.pathname !== "/"); x0 = t.clientX; y0 = t.clientY; }, { passive: true });
+    document.addEventListener("touchmove", function (e) {
+      if (!on) return; var t = e.touches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
+      if (dy > 40 && dy > dx) { on = false; if (hint) { hint.remove(); hint = null; } return; }
+      if (!hint && dx > 12) { hint = h("div", { class: "swipe-back", "aria-hidden": "true" }, AVF.icon("back")); document.body.appendChild(hint); }
+      if (hint) { var k = Math.min(1, dx / 90); hint.style.transform = "translate(" + (-44 + k * 56) + "px,-50%)"; hint.style.opacity = String(k); hint.classList.toggle("go", dx > 90); }
+    }, { passive: true });
+    document.addEventListener("touchend", function (e) {
+      if (!on) return; on = false; var t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
+      if (hint) { hint.remove(); hint = null; }
+      if (dx > 90 && dy < 60) AVF.back();
+    }, { passive: true });
+  })();
+
   function route(rerender) {
     var p = location.pathname.replace(/\/+$/, "") || "/";
+    paintBack(p);
     if (AVF.langLock && AVF.langLock(p === "/forum" || p.indexOf("/forum/") === 0)) renderFooter();   // forum: yalnız Türkçe, dil seçici yok
     renderChrome(); document.title = "AlpveFit";
     if (!rerender) document.body.classList.remove("lang-swap");

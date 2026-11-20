@@ -138,10 +138,16 @@ async function topicRow(id, req) {
   if (!t || (t.hidden_at && !req.fm.mod)) return null;
   return t;
 }
+// Ekip konusu: resmî hesabın ya da yöneticinin açtığı konu. Her zaman sabit ve yoruma kapalıdır; ilk mesajın beğenisi "∞" görünür, beğenmeme kapalıdır.
+async function isCrown(uid) {
+  if (!uid) return false;
+  const r = (await pool.query(`SELECT u.role = 'admin' OR coalesce(f.is_official, false) AS s FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1`, [uid])).rows[0];
+  return !!(r && r.s);
+}
 function canPostIn(req, t, c) {
   if (req.fm.mod) return { ok: true };
   if (c.is_locked) return { ok: false, why: "Bu kategori yeni mesajlara kapalı." };
-  if (t && t.is_locked) return { ok: false, why: t.official_key ? "Bu duyuru yorumlara kapalıdır." : "Bu konu kilitlendi; yeni yanıt yazılamaz." };
+  if (t && t.is_locked) return { ok: false, why: t.official_key || t.crown ? "Bu ekip konusu yorumlara kapalıdır." : "Bu konu kilitlendi; yeni yanıt yazılamaz." };
   return { ok: true };
 }
 /** Bekleyen görselleri mesaja bağlar (yalnız sahibinin, forum türündeki ve henüz bağlanmamış görselleri). */
@@ -219,7 +225,7 @@ boardRouter.get("/board/topics", member, async (req, res) => {
     vals.push(tag.slug); where.push(`EXISTS (SELECT 1 FROM forum_topic_tags tt JOIN forum_tags g ON g.id = tt.tag_id WHERE tt.topic_id = t.id AND g.slug = $${vals.length})`);
   }
   const f = String(req.query.filter || "");
-  if (f === "unanswered") where.push("t.reply_count = 0");
+  if (f === "unanswered") where.push("t.reply_count = 0 AND NOT t.is_locked");   // yoruma kapalı konular yanıt beklemez
   if (f === "questions") where.push("t.kind = 'question'");
   if (f === "solved") where.push("t.accepted_post_id IS NOT NULL");
   if (f === "unsolved") where.push("t.kind = 'question' AND t.accepted_post_id IS NULL");
@@ -236,7 +242,7 @@ boardRouter.get("/board/topics", member, async (req, res) => {
   const total = (await pool.query(`SELECT count(*)::int AS n, $2::timestamptz AS since ${base}`, vals)).rows[0].n;
   const pages = Math.max(1, Math.ceil(total / PAGE_TOPICS));
   const { rows } = await pool.query(
-    `SELECT t.id, t.title, t.kind, t.is_pinned, t.is_locked, t.hidden_at, t.accepted_post_id, t.reply_count, t.view_count, t.last_post_at, t.created_at,
+    `SELECT t.id, t.title, t.icon, t.kind, t.is_pinned, t.is_locked, t.hidden_at, t.accepted_post_id, t.reply_count, t.view_count, t.last_post_at, t.created_at,
             c.slug AS cat_slug, c.name AS cat_name, c.icon AS cat_icon, c.color AS cat_color, fp.like_count, left(${plainSql("fp.body")}, 180) AS excerpt,
             (t.last_post_at > greatest($2::timestamptz, coalesce(r.last_read_at, '-infinity'))) AS unread, r.last_read_at IS NOT NULL AS seen,
             EXISTS (SELECT 1 FROM forum_polls pl WHERE pl.topic_id = t.id) AS has_poll,
@@ -250,9 +256,9 @@ boardRouter.get("/board/topics", member, async (req, res) => {
   res.json({
     category: cat ? { ...catOut(cat), children: fam.kids.map(catOut), parent: fam.parent ? catOut(fam.parent) : null } : null, tag: tag || null, page, pages, total,
     canTopic: !req.fm.banned && (!cat || req.fm.mod || (!cat.is_locked && cat.kind !== "announce" && req.fm.level.n >= cat.min_level_topic)),
-    topics: rows.map((t) => ({ tags: TG[t.id] || [], official: !!t.is_official,
+    topics: rows.map((t) => ({ tags: TG[t.id] || [], official: !!t.is_official, icon: t.icon || null,
       id: t.id, title: t.title, kind: t.kind, pinned: t.is_pinned, locked: t.is_locked, hidden: !!t.hidden_at, solved: !!t.accepted_post_id,
-      replies: t.reply_count, views: t.view_count, likes: t.like_count, lastAt: t.last_post_at, createdAt: t.created_at, unread: !!t.unread, seen: !!t.seen,
+      replies: t.reply_count, views: t.view_count, likes: t.like_count, infinite: !!(t.is_official || t.author_role === "admin"), lastAt: t.last_post_at, createdAt: t.created_at, unread: !!t.unread, seen: !!t.seen,
       hasPoll: t.has_poll, hasImages: t.has_images, excerpt: t.excerpt,
       category: { slug: t.cat_slug, name: t.cat_name, icon: t.cat_icon, color: t.cat_color || "slate" },
       author: t.author ? { username: t.author, avatarId: t.author_avatar, level: publicLevel(forumLevel(t, t.author_role)) } : null, lastUser: t.last_user,
@@ -282,7 +288,7 @@ boardRouter.post("/board/topics", member, async (req, res) => {
   const dup = await pool.query(`SELECT id FROM forum_topics WHERE author_id = $1 AND lower(title) = lower($2) AND created_at > now() - interval '1 day' AND hidden_at IS NULL`, [req.fm.id, title]);
   if (dup.rows.length) return res.status(409).json({ error: "Aynı başlıkla kısa süre önce bir konu açtınız.", topicId: dup.rows[0].id });
   const out = await tx(async (c) => {
-    const t = (await c.query(`INSERT INTO forum_topics (category_id, author_id, title, kind, last_poster_id, created_at, last_post_at) VALUES ($1, $2, $3, $4, $2, clock_timestamp(), clock_timestamp()) RETURNING id, created_at`, [cat.id, req.fm.id, title, kind])).rows[0];
+    const t = (await c.query(`INSERT INTO forum_topics (category_id, author_id, title, kind, last_poster_id, created_at, last_post_at, is_pinned, is_locked) VALUES ($1, $2, $3, $4, $2, clock_timestamp(), clock_timestamp(), $5, $5) RETURNING id, created_at`, [cat.id, req.fm.id, title, kind, !!req.fm.admin])).rows[0];
     const p = (await c.query(`INSERT INTO forum_posts (topic_id, author_id, body, is_first, created_at) VALUES ($1, $2, $3, true, $4) RETURNING id`, [t.id, req.fm.id, body, t.created_at])).rows[0];
     await c.query(`UPDATE forum_topics SET last_post_id = $2, last_post_at = $3 WHERE id = $1`, [t.id, p.id, t.created_at]);
     if (poll.v) await c.query(`INSERT INTO forum_polls (topic_id, question, options, multi, closes_at) VALUES ($1, $2, $3, $4, CASE WHEN $5::int > 0 THEN now() + make_interval(days => $5::int) END)`,
@@ -301,7 +307,7 @@ boardRouter.post("/board/topics", member, async (req, res) => {
 });
 
 // ------------------------------------------------------------------ konu görüntüle
-async function postsOut(req, rows) {
+async function postsOut(req, rows, crown = false) {
   const ids = rows.map((p) => p.id);
   const imgs = ids.length ? (await pool.query(`SELECT id, forum_post_id FROM attachments WHERE forum_post_id = ANY(SELECT jsonb_array_elements_text($1::jsonb)::uuid) ORDER BY created_at`, [JSON.stringify(ids)])).rows : [];
   const mine = ids.length ? (await pool.query(`SELECT post_id, value FROM forum_reactions WHERE user_id = $1 AND post_id = ANY(SELECT jsonb_array_elements_text($2::jsonb)::uuid)`, [req.fm.id, JSON.stringify(ids)])).rows : [];
@@ -313,7 +319,7 @@ async function postsOut(req, rows) {
       id: p.id, first: p.is_first, createdAt: p.created_at, editedAt: p.edited_at, editedByMod: !!(p.edited_by && p.edited_by !== p.author_id),
       hidden, hiddenBy: hidden ? (p.deleted_by_author ? "author" : "mod") : null, hiddenReason: hidden && req.fm.mod ? p.hidden_reason : null,
       body: show ? p.body : "", images: show ? imgs.filter((i) => i.forum_post_id === p.id).map((i) => i.id) : [],
-      likes: p.like_count, dislikes: p.dislike_count, myReaction: R[p.id] || 0, bookmarked: B.has(p.id), own,
+      likes: p.like_count, dislikes: p.dislike_count, myReaction: R[p.id] || 0, infinite: !!(crown && p.is_first), bookmarked: B.has(p.id), own,
       canEdit: !hidden && (req.fm.mod || (own && !req.fm.banned && Date.now() - new Date(p.created_at).getTime() < 24 * 3600e3)),
       author: authorOut(p.username ? p : null),
     };
@@ -364,16 +370,17 @@ boardRouter.get("/board/t/:id", member, async (req, res) => {
     if ((r.rows[0] && r.rows[0].fresh) || !lastRead || Date.now() - new Date(lastRead).getTime() > 30 * 60000) await pool.query(`UPDATE forum_topics SET view_count = view_count + 1 WHERE id = $1`, [t.id]);
   }
   const watching = (await pool.query(`SELECT 1 FROM forum_watches WHERE topic_id = $1 AND user_id = $2`, [t.id, req.fm.id])).rows.length > 0;
+  t.crown = await isCrown(t.author_id);
   const can = canPostIn(req, t, cat);
   const parent = cat.parent_id ? await category(cat.parent_id) : null;
   const TG = await tagsOf([t.id]);
   res.json({ tags: TG[t.id] || [], parent: parent ? catOut(parent) : null,
-    topic: { id: t.id, title: t.title, kind: t.kind, pinned: t.is_pinned, locked: t.is_locked, hidden: !!t.hidden_at, hiddenReason: req.fm.mod ? t.hidden_reason : null,
-      acceptedPostId: t.accepted_post_id, replies: t.reply_count, views: t.view_count, createdAt: t.created_at, lastAt: t.last_post_at, own: t.author_id === req.fm.id },
+    topic: { id: t.id, title: t.title, icon: t.icon || null, kind: t.kind, pinned: t.is_pinned, locked: t.is_locked, hidden: !!t.hidden_at, hiddenReason: req.fm.mod ? t.hidden_reason : null,
+      acceptedPostId: t.accepted_post_id, replies: t.reply_count, views: t.view_count, createdAt: t.created_at, lastAt: t.last_post_at, own: t.author_id === req.fm.id, crown: t.crown },
     category: catOut(cat), poll: await pollOut(req, t.id), page, pages, total, firstUnread, watching,
     canReply: !req.fm.banned && can.ok, replyBlocked: req.fm.banned ? "Forumdan uzaklaştırıldınız; yanıt yazamazsınız." : can.why || null,
     canAccept: t.kind === "question" && (t.author_id === req.fm.id || req.fm.mod),
-    posts: await postsOut(req, rows), me: { username: req.fm.username, mod: req.fm.mod, admin: req.fm.admin },
+    posts: await postsOut(req, rows, t.crown), me: { username: req.fm.username, mod: req.fm.mod, admin: req.fm.admin },
   });
 });
 // Konu açıkken yeni yanıt var mı? (sayfa yenilenmeden "N yeni yanıt" uyarısı)
@@ -527,6 +534,7 @@ boardRouter.post("/board/posts/:id/react", member, async (req, res) => {
   if (![1, -1, 0].includes(v)) return res.status(400).json({ error: "Geçersiz tepki." });
   const p = await postRow(req.params.id); if (!p || p.hidden_at || p.topic_hidden) return res.status(404).json({ error: "Mesaj bulunamadı." });
   if (p.author_id === req.fm.id) return res.status(400).json({ error: "Kendi mesajınıza tepki veremezsiniz." });
+  if (v === -1 && p.is_first && await isCrown(p.topic_author)) return res.status(400).json({ error: "Ekip konularında beğenmeme kapalıdır." });
   if (await limited(req, res, "react")) return;
   const r = await tx(async (c) => {
     const old = (await c.query(`SELECT value FROM forum_reactions WHERE post_id = $1 AND user_id = $2 FOR UPDATE`, [p.id, req.fm.id])).rows[0];

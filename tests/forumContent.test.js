@@ -8,7 +8,7 @@ const SQL = readFileSync(new URL("../src/db/migrate-v17.sql", import.meta.url), 
 const CORE = readFileSync(new URL("../site/assets/avf-core.js", import.meta.url), "utf8");
 const TOOLS = readFileSync(new URL("../site/assets/avf-tools.js", import.meta.url), "utf8");
 const ICONS = new Set([...CORE.slice(CORE.indexOf("var P = {"), CORE.indexOf("};", CORE.indexOf("var P = {"))).matchAll(/(?:^|[\s,{])"?([a-z0-9]+)"?\s*:/g)].map((m) => m[1]));
-const CATS = ["duyurular", "beslenme", "antrenman", "supplement", "vitamin", "mineral", "gelisim-gunlukleri", "soru-cevap", "serbest-kursu"];
+const CATS = ["duyurular", "beslenme", "antrenman", "supplement", "vitamin", "mineral", "gelisim-gunlukleri", "serbest-kursu"];
 
 test("her konunun anahtarı tekil, alanları geçerli", () => {
   const keys = new Set();
@@ -22,11 +22,23 @@ test("her konunun anahtarı tekil, alanları geçerli", () => {
     assert.ok(c.tags.length >= 1 && c.tags.length <= 5, c.key + " etiket");
     for (const t of c.tags) assert.ok(SQL.includes("'" + t + "'"), c.key + " etiket yok: " + t);
   }
-  assert.equal(CONTENT.length, 23);
+  assert.equal(CONTENT.length, 26);
 });
 
-test("yalnız Duyurular yoruma kapalı; diğerleri açık", () => {
-  for (const c of CONTENT) assert.equal(!!c.locked, c.category === "duyurular", c.key);
+test("ekip konularının tümü yoruma kapalı ve sabit; kimse yoruma davet edilmez", () => {
+  for (const c of CONTENT) {
+    assert.equal(c.locked, true, c.key);
+    assert.notEqual(c.pinned, false, c.key);
+    assert.ok(!/aşağıya yaz|yorumlara yaz|Soru – Cevap/i.test(c.body), c.key + " yorum daveti / kaldırılan kategori");
+  }
+});
+
+test("antrenman sistemleri Antrenman'da; bölgesel program (bro split) önerilmez", () => {
+  for (const c of CONTENT.filter((x) => x.key.startsWith("gelisim-") && !["gelisim-gunlugu-nasil-tutulur", "gelisim-fotograf-kurallari"].includes(x.key))) assert.equal(c.category, "antrenman", c.key);
+  const o = CONTENT.find((x) => x.key === "gelisim-antrenman-sistemleri");
+  assert.ok(!/\| Klasik bölgesel \(Bro Split\) \|/.test(o.body) && /önermiyoruz/.test(o.body));
+  assert.ok(CONTENT.some((x) => x.category === "gelisim-gunlukleri" && /Gelişim Günlüğü Nasıl Tutulur/.test(x.title)));
+  assert.ok(CONTENT.some((x) => x.category === "serbest-kursu" && /Kuralları/.test(x.title)));
 });
 
 test("biçim etiketleri geçerli: simge, araç, görsel, GIF, kaynak", () => {

@@ -473,15 +473,15 @@
     var href = "/forum/konu/" + t.id + (t.unread && t.seen ? "?s=unread" : "");
     var badges = [t.pinned ? chip("pushpin", "Sabit", "pin") : null, t.locked ? chip("lock", "Kilitli", "lock") : null, t.hidden ? chip("eyeoff", "Gizli", "err") : null,
       t.kind === "question" ? (t.solved ? chip("check", "Çözüldü", "ok") : chip("help", "Soru", "q")) : null, t.hasPoll ? chip("chart", "Anket") : null, t.hasImages ? h("span", { class: "fo-ic", title: "Görsel içeriyor" }, AVF.icon("image")) : null];
-    return h("li", { class: "fo-t" + (t.unread ? " unread" : "") + (t.pinned ? " pinned" : "") },
-      avatar(t.author, "sm"),
+    return h("li", { class: "fo-t" + (t.unread ? " unread" : "") + (t.pinned ? " pinned" : "") + (t.icon ? " has-ic" : "") },
+      t.icon ? catTile({ icon: t.icon, color: t.category && t.category.color }, "sm") : avatar(t.author, "sm"),
       h("div", { class: "fo-tm" },
         h("div", { class: "fo-tt" }, t.unread ? h("i", { class: "fo-dot", title: "Okunmamış" }) : null, lk(href, t.title, { class: "fo-tl", "data-notr": "" }), t.official ? chip("star", "Ekip içeriği", "off") : null, badges),
         t.excerpt ? h("p", { class: "fo-ex", "data-notr": "", text: t.excerpt.replace(/\s+/g, " ").replace(/\*\*|~~|`|==/g, "") }) : null,
         h("div", { class: "fo-meta" }, showCat ? lk("/forum/k/" + t.category.slug, [catTile(t.category, "xs"), h("span", { text: t.category.name })], { class: "fo-cat" }) : null,
           t.author ? uname(t.author) : h("span", { class: "fo-un del", text: "silinmiş üye" }), t.author ? lvl(t.author.level) : null, timeEl(t.createdAt)),
         t.tags && t.tags.length ? h("div", { class: "fo-tags sm" }, t.tags.slice(0, 4).map(tagChip)) : null),
-      h("div", { class: "fo-ts" }, h("span", { title: "Yanıt" }, AVF.icon("chat"), h("b", { text: num(t.replies) })), h("span", { title: "Görüntülenme" }, AVF.icon("eye"), h("b", { text: num(t.views) })), t.likes ? h("span", { title: "Beğeni" }, AVF.icon("like"), h("b", { text: num(t.likes) })) : null),
+      h("div", { class: "fo-ts" }, h("span", { title: "Yanıt" }, AVF.icon("chat"), h("b", { text: num(t.replies) })), h("span", { title: "Görüntülenme" }, AVF.icon("eye"), h("b", { text: num(t.views) })), t.infinite ? h("span", { class: "fo-inf", title: "Ekip konusu: sınırsız beğeni" }, AVF.icon("like"), h("b", { text: "∞" })) : t.likes ? h("span", { title: "Beğeni" }, AVF.icon("like"), h("b", { text: num(t.likes) })) : null),
       h("div", { class: "fo-tlst" }, h("small", { text: t.replies ? "Son yanıt" : "Açıldı" }), lk("/forum/konu/" + t.id + "?page=last", [t.lastUser ? h("span", { "data-notr": "", text: "@" + t.lastUser }) : null, timeEl(t.lastAt)], { class: "fo-last" })));
   }
   function topicList(rows, showCat, empty) {
@@ -492,7 +492,7 @@
   // ------------------------------------------------------------------ ana sayfa
   function home() {
     title("Ana sayfa");
-    var tabs = [["", "Son hareketler"], ["new", "Yeni konular"], ["unread", "Okunmamış"], ["unsolved", "Yanıt bekleyen sorular"]], cur = qs().l || "";
+    var tabs = [["", "Son hareketler"], ["new", "Yeni konular"], ["unread", "Okunmamış"], ["unanswered", "Yanıt bekleyenler"]], cur = qs().l || "";
     var listBox = h("div", { class: "fo-latest" });
     var main = shell({ h1: "Forum", sub: "Demir, tabak ve gelişim üzerine konuşan, birbirine destek olan bir topluluk. Sor, paylaş, ilham ver." }, [
       h("section", { class: "fo-cats" }, S.cats.map(function (c) {
@@ -506,11 +506,11 @@
             : h("small", { class: "hint", text: "Henüz konu yok" })));
       })),
       h("section", { class: "fo-sec" }, h("div", { class: "fo-sh" }, h("div", { class: "fo-tabs2", role: "tablist" }, tabs.map(function (x) {
-        return h("button", { type: "button", role: "tab", class: x[0] === cur ? "on" : "", "aria-selected": String(x[0] === cur), onclick: function () { history.replaceState(null, "", "/forum" + (x[0] ? "?l=" + x[0] : "")); home(); } }, x[1]);
+        return h("button", { type: "button", role: "tab", class: x[0] === cur ? "on" : "", "aria-selected": String(x[0] === cur), onclick: function () { history.replaceState(history.state, "", "/forum" + (x[0] ? "?l=" + x[0] : "")); home(); } }, x[1]);
       })), h("button", { class: "fo-lnk", type: "button", onclick: function () { api("POST", "/read-all", {}).then(function () { AVF.toast("Tüm konular okundu olarak işaretlendi."); load(); }); } }, AVF.icon("checks"), h("span", { text: "Tümünü okundu say" }))), listBox)]);
     void main;
     AVF.mount(listBox, AVF.skeleton(3));
-    var q = cur === "new" ? "?sort=new" : cur === "unread" ? "?filter=unread" : cur === "unsolved" ? "?filter=unsolved" : "";
+    var q = cur === "new" ? "?sort=new" : cur === "unread" ? "?filter=unread" : cur === "unanswered" ? "?filter=unanswered" : "";
     api("GET", "/topics" + q).then(function (r) {
       AVF.mount(listBox, topicList(r.topics.slice(0, 15), true, cur === "unread" ? ["checks", "Okunmamış konu yok", "Her şeye yetiştin, helal olsun! 🙌"] : null));
     }, function (e) { AVF.mount(listBox, errBox(e, home)); });
@@ -578,7 +578,7 @@
     var head = h("header", { class: "fo-th card" },
       h("div", { class: "fo-thc" }, t.pinned ? chip("pushpin", "Sabit", "pin") : null, t.locked ? chip("lock", "Kilitli", "lock") : null, t.hidden ? chip("eyeoff", "Gizli" + (t.hiddenReason ? ": " + t.hiddenReason : ""), "err") : null,
         t.kind === "question" ? (t.acceptedPostId ? chip("check", "Çözüldü", "ok") : chip("help", "Soru", "q")) : null),
-      h("h1", { "data-notr": "", text: t.title }),
+      t.icon ? h("div", { class: "fo-th1" }, catTile({ icon: t.icon, color: c.color }, "lg"), h("h1", { "data-notr": "", text: t.title })) : h("h1", { "data-notr": "", text: t.title }),
       h("div", { class: "fo-thm" }, lk("/forum/k/" + c.slug, [catTile(c, "xs"), h("span", { text: c.name })], { class: "fo-cat" }), h("span", null, AVF.icon("clock"), timeEl(t.createdAt)),
         h("span", null, AVF.icon("chat"), h("b", { text: num(t.replies) }), h("span", { text: " yanıt" })), h("span", null, AVF.icon("eye"), h("b", { text: num(t.views) }), h("span", { text: " görüntülenme" }))),
       r.tags && r.tags.length ? h("div", { class: "fo-tags" }, r.tags.map(tagChip)) : null,
@@ -590,7 +590,7 @@
     AVF.mount(main, head, c.notice ? h("p", { class: "note warn fo-notice" }, AVF.icon("alert", "bico"), h("span", { text: c.notice })) : null,
       r.poll ? pollCard(t, r.poll) : null, pager(r.page, r.pages, hrefOf), posts, live, pager(r.page, r.pages, hrefOf), compBox);
     var firstUnreadShown = false;
-    var ctx = { r: r, jump: function (pid) { var el = document.getElementById("m-" + pid); if (el) { el.scrollIntoView({ block: "center", behavior: "smooth" }); el.classList.add("flash"); setTimeout(function () { el.classList.remove("flash"); }, 1600); } else go("/forum/konu/" + t.id + "?m=" + pid); }, reload: function (p) { var url = "/forum/konu/" + t.id + (p ? "?page=" + p : location.search); history.replaceState(null, "", url); topicPage(t.id); } };
+    var ctx = { r: r, jump: function (pid) { var el = document.getElementById("m-" + pid); if (el) { el.scrollIntoView({ block: "center", behavior: "smooth" }); el.classList.add("flash"); setTimeout(function () { el.classList.remove("flash"); }, 1600); } else go("/forum/konu/" + t.id + "?m=" + pid); }, reload: function (p) { var url = "/forum/konu/" + t.id + (p ? "?page=" + p : location.search); history.replaceState(history.state, "", url); topicPage(t.id); } };
     r.posts.forEach(function (p, i) {
       if (r.firstUnread === p.id && !firstUnreadShown && i > 0) { posts.appendChild(h("div", { class: "fo-unl", role: "separator" }, h("span", { text: "Okunmamış mesajlar" }))); firstUnreadShown = true; }
       posts.appendChild(postCard(p, (r.page - 1) * 20 + i + 1, ctx));
@@ -599,7 +599,7 @@
     var comp = null;
     if (r.canReply) {
       comp = composer({ draftKey: "t_" + t.id, placeholder: "Sen ne düşünüyorsun? Yaz bakalım… (@kullanıcıadı ile birini anabilirsin)", submitText: "Yanıtı gönder", compact: true,
-        onSubmit: function (body, images) { return api("POST", "/t/" + t.id + "/posts", { body: body, images: images }).then(function (x) { AVF.toast("Yanıtın gönderildi. Eline sağlık! 💪"); history.replaceState(null, "", "/forum/konu/" + t.id + "?page=" + x.page + "&m=" + x.id); topicPage(t.id); }); } });
+        onSubmit: function (body, images) { return api("POST", "/t/" + t.id + "/posts", { body: body, images: images }).then(function (x) { AVF.toast("Yanıtın gönderildi. Eline sağlık! 💪"); history.replaceState(history.state, "", "/forum/konu/" + t.id + "?page=" + x.page + "&m=" + x.id); topicPage(t.id); }); } });
       AVF.mount(compBox, h("section", { class: "card fo-rc" }, h("h2", null, AVF.icon("reply"), h("span", { text: "Sohbete katıl" })), comp));
     } else AVF.mount(compBox, h("p", { class: "note fo-notice" }, AVF.icon("lock", "bico"), h("span", { text: r.replyBlocked || "Bu konu yorumlara kapalı." })));
     ctx.composer = comp;
@@ -674,8 +674,9 @@
     var acts = h("div", { class: "fo-acts" });
     function paintActs() {
       if (p.hidden && !r.me.mod) return AVF.mount(acts, null);
-      var like = h("button", { type: "button", class: "fo-ab rx" + (p.myReaction === 1 ? " on" : ""), "aria-pressed": String(p.myReaction === 1), title: p.own ? "Kendi mesajın" : "Beğen", disabled: p.own || p.hidden ? "" : null }, AVF.icon("like"), h("b", { text: num(p.likes) }));
-      var dis = h("button", { type: "button", class: "fo-ab rx neg" + (p.myReaction === -1 ? " on" : ""), "aria-pressed": String(p.myReaction === -1), title: p.own ? "Kendi mesajın" : "Beğenme", disabled: p.own || p.hidden ? "" : null }, AVF.icon("dislike"), h("b", { text: num(p.dislikes) }));
+      var like = h("button", { type: "button", class: "fo-ab rx" + (p.myReaction === 1 ? " on" : ""), "aria-pressed": String(p.myReaction === 1), title: p.infinite ? "Ekip konusu: sınırsız beğeni" : p.own ? "Kendi mesajın" : "Beğen", disabled: p.own || p.hidden ? "" : null }, AVF.icon("like"), h("b", { text: p.infinite ? "∞" : num(p.likes) }));
+      if (p.infinite) like.classList.add("inf");
+      var dis = h("button", { type: "button", class: "fo-ab rx neg" + (p.myReaction === -1 ? " on" : ""), "aria-pressed": String(p.myReaction === -1), title: p.infinite ? "Ekip konularında beğenmeme kapalı" : p.own ? "Kendi mesajın" : "Beğenme", disabled: p.own || p.hidden || p.infinite ? "" : null }, AVF.icon("dislike"), p.infinite ? null : h("b", { text: num(p.dislikes) }));
       function react(v) { var nv = p.myReaction === v ? 0 : v; api("POST", "/posts/" + p.id + "/react", { value: nv }).then(function (x) { p.likes = x.likes; p.dislikes = x.dislikes; p.myReaction = x.myReaction; paintActs(); }, function (e) { AVF.toast(AVF.errText(e), "err"); }); }
       like.onclick = function () { react(1); }; dis.onclick = function () { react(-1); };
       var quote = r.canReply && !p.hidden ? h("button", { type: "button", class: "fo-ab", onclick: function () {
@@ -796,7 +797,7 @@
     function paintCatInfo() {
       var f = findCat(catSel.get()); if (!f) return AVF.mount(catInfo, null);
       AVF.mount(catInfo, h("div", { class: "fo-cati" }, catTile(f.c, "sm"), h("span", { text: f.c.description })),
-        f.c.slug === "soru-cevap" ? h("p", { class: "hint" }, AVF.icon("help", "bico"), h("span", { text: "Soru – Cevap'ta açtığın konu soru olur; gelen yanıtlardan en iyisini sen seçersin." })) : null);
+        null);
     }
     var tIn = AVF.input("text", { maxlength: "120", placeholder: "Konunu tek cümlede anlat (ör. “Bulk döneminde akşam karbonhidratı sorun olur mu?”)", "aria-label": "Başlık" }), tc = h("small", { class: "fo-cnt" });
     var DKEY = "avf_fd_" + (AVF.session.user ? AVF.session.user.id : "x") + "_newtitle";
@@ -855,7 +856,7 @@
     title("Arama");
     // arama sayfasında yazdıkça sonuçlar yerinde yenilenir (adres çubuğu da güncellenir)
     var main = shell({ h1: "Arama", sub: q ? "“" + q + "” için sonuçlar" : "Aklındaki kelimeyi yaz, sonuçlar yazdıkça gelsin.", crumbs: [["Arama"]], q: q, icon: "search", color: "slate",
-      onLive: function (v) { history.replaceState(null, "", "/forum/ara?q=" + encodeURIComponent(v)); var sub = VIEW.querySelector(".fo-bh p"); if (sub) sub.textContent = "“" + v + "” için sonuçlar"; run(v, 1); } }, box);
+      onLive: function (v) { history.replaceState(history.state, "", "/forum/ara?q=" + encodeURIComponent(v)); var sub = VIEW.querySelector(".fo-bh p"); if (sub) sub.textContent = "“" + v + "” için sonuçlar"; run(v, 1); } }, box);
     void main;
     var seq = 0;
     function run(qv, pg) {
@@ -899,7 +900,7 @@
         }), pager(r.page, r.pages, function (p) { return "/forum/uyeler?" + (q ? "q=" + encodeURIComponent(q) + "&" : "") + "page=" + p; }));
       }, function (e) { if (my === seq) AVF.mount(box, errBox(e, function () { load(q, pg); })); });
     }
-    qIn.addEventListener("input", function () { clearTimeout(t0); t0 = setTimeout(function () { var v = qIn.value.trim().replace(/^@/, ""); history.replaceState(null, "", "/forum/uyeler" + (v ? "?q=" + encodeURIComponent(v) : "")); load(v, 1); }, 250); });
+    qIn.addEventListener("input", function () { clearTimeout(t0); t0 = setTimeout(function () { var v = qIn.value.trim().replace(/^@/, ""); history.replaceState(history.state, "", "/forum/uyeler" + (v ? "?q=" + encodeURIComponent(v) : "")); load(v, 1); }, 250); });
     load((Q.q || "").replace(/^@/, ""), page);
   }
 
@@ -976,7 +977,7 @@
     var tabs = [["open", "Açık şikâyetler"], ["upheld", "Haklı bulunanlar"], ["dismissed", "Reddedilenler"], ["bans", "Forum yasakları"]].concat(S.me.admin ? [["cats", "Kategoriler"]] : []);
     var box = h("div");
     var main = shell({ h1: "Moderasyon", crumbs: [["Moderasyon"]], noNew: true }, [h("div", { class: "fo-tabs2", role: "tablist" }, tabs.map(function (x) {
-      return h("button", { type: "button", role: "tab", class: x[0] === tab ? "on" : "", "aria-selected": String(x[0] === tab), onclick: function () { history.replaceState(null, "", "/forum/moderasyon?t=" + x[0]); modPage(); } }, x[1]);
+      return h("button", { type: "button", role: "tab", class: x[0] === tab ? "on" : "", "aria-selected": String(x[0] === tab), onclick: function () { history.replaceState(history.state, "", "/forum/moderasyon?t=" + x[0]); modPage(); } }, x[1]);
     })), box]);
     void main;
     AVF.mount(box, AVF.skeleton(3));

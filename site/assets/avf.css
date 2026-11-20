@@ -1482,6 +1482,10 @@ table.t td .nw{white-space:nowrap}table.t td.wrapc{overflow-wrap:anywhere;max-wi
   --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.35); --shadow-up:0 2px 6px rgba(0,0,0,.5),0 22px 44px rgba(0,0,0,.5);
 }
 :root[data-theme="dark"] .top{background:rgba(11,11,13,.86)}
+/* logo karanlıkta: koyu kare + beyaz "A" (uygulama simgesiyle aynı); kare ince bir çizgiyle zeminden ayrılır */
+:root[data-theme="dark"] .lmk-bg,:root[data-theme="dark"] .logo.ondark .lmk-bg{fill:#1C1C21;stroke:rgba(255,255,255,.16);stroke-width:1.5}
+:root[data-theme="dark"] .lmk-fg,:root[data-theme="dark"] .logo.ondark .lmk-fg{stroke:#fff}
+:root[data-theme="dark"] .lmk-dot,:root[data-theme="dark"] .logo.ondark .lmk-dot{fill:#fff}
 :root[data-theme="dark"] .top.scrolled{background:rgba(11,11,13,.94)}
 :root[data-theme="dark"] .hero:before{background:radial-gradient(800px 420px at 82% 8%,#1d1d22 0,transparent 70%)}
 :root[data-theme="dark"] .ibtn.acct:hover,:root[data-theme="dark"] .ibtn.plain:hover{background:rgba(255,255,255,.08)}
@@ -2328,3 +2332,18 @@ footer.foot{padding-bottom:env(safe-area-inset-bottom)}
 @media (max-width:760px){.totop{bottom:calc(16px + env(safe-area-inset-bottom))}.ck{bottom:calc(8px + env(safe-area-inset-bottom))}}
 /* uygulama olarak açıkken: tarayıcı çubuğu yok; üst çubuk sabit kalır ve ekran kenarına yapışık görünür */
 @media (display-mode:standalone){.top{position:sticky;top:0}body{overscroll-behavior-y:none}}
+/* ekip konuları: sınırsız beğeni */
+.fo-ab.rx.inf b,.fo-ts .fo-inf b{font-size:1.15em;line-height:1;color:var(--pri);font-weight:800}
+.fo-ab.rx.inf{opacity:1}
+/* ekip rehberi simgesi: başlığın solunda kategori renginde net çizgili simge (emoji yerine) */
+.fo-th1{display:flex;align-items:center;gap:14px}.fo-th1 h1{margin:0}
+.fo-t.has-ic>.fo-ct{margin-top:2px}
+@media (max-width:640px){.fo-th1{gap:12px}.fo-th1 .fo-ct.lg{width:48px;height:48px;border-radius:15px}.fo-th1 .fo-ct.lg .ico{width:24px;height:24px}}
+/* geri düğmesi (ana sayfa dışında) ve uygulama modunda kenardan kaydırma ipucu */
+.backbtn[hidden]{display:none!important}
+.top .backbtn{margin-right:2px}
+.top .backbtn .ico{width:22px;height:22px}
+@media (max-width:420px){body.can-back .top .wm{display:none}body.can-back .top .wrap{gap:6px}}
+.swipe-back{position:fixed;left:0;top:50%;z-index:90;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--ink);box-shadow:var(--shadow-up);transform:translate(-44px,-50%);opacity:0;pointer-events:none;transition:background .15s,color .15s}
+.swipe-back.go{background:var(--ink);color:var(--on-ink,#fff)}
+.swipe-back .ico{width:22px;height:22px}

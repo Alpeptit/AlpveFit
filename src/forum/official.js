@@ -84,8 +84,8 @@ export async function seedOfficialContent(log = console) {
     if (!ex) {
       const at = new Date(base - i * 60000);
       const t = (await pool.query(
-        `INSERT INTO forum_topics (category_id, author_id, title, kind, is_pinned, is_locked, last_poster_id, created_at, last_post_at, official_key, official_rev)
-         VALUES ($1, $2, $3, 'discussion', $4, $5, $2, $6, $6, $7, $8) RETURNING id`, [cat.id, uid, it.title, it.pinned !== false, !!it.locked, at, it.key, it.rev || 1])).rows[0];
+        `INSERT INTO forum_topics (category_id, author_id, title, kind, is_pinned, is_locked, last_poster_id, created_at, last_post_at, official_key, official_rev, icon)
+         VALUES ($1, $2, $3, 'discussion', $4, $5, $2, $6, $6, $7, $8, $9) RETURNING id`, [cat.id, uid, it.title, it.pinned !== false, !!it.locked, at, it.key, it.rev || 1, it.icon || null])).rows[0];
       postId = (await pool.query(`INSERT INTO forum_posts (topic_id, author_id, body, is_first, created_at) VALUES ($1, $2, $3, true, $4) RETURNING id`, [t.id, uid, it.body, at])).rows[0].id;
       await pool.query(`UPDATE forum_topics SET last_post_id = $2 WHERE id = $1`, [t.id, postId]);
       await setTags(t.id, it.tags);
@@ -94,7 +94,7 @@ export async function seedOfficialContent(log = console) {
       if (ex.hidden_at) continue;   // ekipten biri kaldırdıysa geri getirilmez
       postId = ex.post_id;
       if ((ex.official_rev || 0) < (it.rev || 1)) {
-        await pool.query(`UPDATE forum_topics SET title = $2, category_id = $3, is_pinned = $4, is_locked = $5, official_rev = $6, updated_at = now() WHERE id = $1`, [ex.id, it.title, cat.id, it.pinned !== false, !!it.locked, it.rev || 1]);
+        await pool.query(`UPDATE forum_topics SET title = $2, category_id = $3, is_pinned = $4, is_locked = $5, official_rev = $6, icon = $7, updated_at = now() WHERE id = $1`, [ex.id, it.title, cat.id, it.pinned !== false, !!it.locked, it.rev || 1, it.icon || null]);
         await pool.query(`UPDATE forum_posts SET body = $2 WHERE id = $1`, [postId, it.body]);
         await setTags(ex.id, it.tags);
         updated++;

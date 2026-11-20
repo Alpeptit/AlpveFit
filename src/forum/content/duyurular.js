@@ -1,9 +1,9 @@
-// Duyurular: sabit, yoruma kapalı ekip yazıları (sıra: üstten alta).
+// Duyurular: sabit ve yoruma kapalı ekip yazıları (sıra: üstten alta).
 export const DUYURULAR = [
   {
-    key: "duyuru-forum-kurallari", rev: 1, category: "duyurular", locked: true, tags: ["duyuru", "baslangic"],
+    key: "duyuru-forum-kurallari", icon: "shield", rev: 2, category: "duyurular", locked: true, tags: ["duyuru", "baslangic"],
     gifs: ["welcome team high five"],
-    title: "📌 Forum Kuralları — önce bunu oku, sonra sahne senin",
+    title: "Forum Kuralları — önce bunu oku, sonra sahne senin",
     body: `## Hoş geldin, demir kardeşi! 👋
 Burası AlpveFit'in üye forumu: antrenman, beslenme, takviye ve gelişim üzerine konuşan, birbirine destek olan insanların yeri. Kurallarımız az ama nettir; herkesin rahat ettiği bir salon gibi düşün.
 
@@ -40,9 +40,9 @@ Tek istisnasız kural: bacak gününü atlayan, "bacak gününü atlıyorum" diy
 — **AlpveFit Ekibi**`,
   },
   {
-    key: "duyuru-icerik-bilgilendirmesi", rev: 1, category: "duyurular", locked: true, tags: ["duyuru", "saglik", "arastirma"],
+    key: "duyuru-icerik-bilgilendirmesi", icon: "microscope", rev: 2, category: "duyurular", locked: true, tags: ["duyuru", "saglik", "arastirma"],
     gifs: ["science reading glasses"],
-    title: "📌 Forum İçerik Bilgilendirmesi — okuduğun bilgiye nasıl bakmalısın?",
+    title: "Forum İçerik Bilgilendirmesi — okuduğun bilgiye nasıl bakmalısın?",
     body: `## Bu forum bir bilgi kütüphanesi, bir reçete defteri değil
 Rehber yazılarımızı (sabitlenmiş konular) bilimsel kaynaklara dayanarak hazırlıyoruz; her iddianın yanında tıklanabilir bir **PubMed** bağlantısı göreceksin. Üye mesajları ise kişisel deneyimdir: kıymetlidir ama genelleştirilemez.
 
@@ -75,9 +75,9 @@ Bilim güncellenir, biz de güncelleriz. Rehber yazılarımızda hatalı ya da e
 — **AlpveFit Ekibi**`,
   },
   {
-    key: "duyuru-biz-kimiz", rev: 1, category: "duyurular", locked: true, tags: ["duyuru"],
+    key: "duyuru-biz-kimiz", icon: "users", rev: 2, category: "duyurular", locked: true, tags: ["duyuru"],
     gifs: ["gym team celebration"],
-    title: "📌 Biz Kimiz? — AlpveFit'in arkasındaki ekip ve forumun amacı",
+    title: "Biz Kimiz? — AlpveFit'in arkasındaki ekip ve forumun amacı",
     body: `## Merhaba, biz AlpveFit! 🙌
 AlpveFit, kişiye özel **beslenme, antrenman ve takviye programları** hazırlayan bir **uzaktan eğitim ve koçluk** platformudur. Programlarını koçun hazırlar, sen panelinden takip edersin; aklına takılanı da bu forumda toplulukla konuşursun.
 
@@ -86,7 +86,7 @@ AlpveFit, kişiye özel **beslenme, antrenman ve takviye programları** hazırla
 ## [ikon=target] Bu forumu neden açtık?
 - **Doğru bilgi, anlaşılır dille.** İnternet "bunu iç, 10 kilo kas al" vaatleriyle dolu. Biz kaynaklı, sade ve dürüst bilgi istiyoruz.
 - **Yalnız değilsin.** Diyetin üçüncü haftasında moral bozulur, plato gelir, motivasyon düşer. Burada aynı yoldan geçen insanlar var.
-- **Deneyim paylaşımı.** Gelişim günlüğünü tut, soru sor, başkasının sorusuna yanıt ver. Herkes bir şey bilir, kimse her şeyi bilmez.
+- **Deneyim paylaşımı.** Gelişim günlüğünü tut, konu aç, başkasının konusuna yanıt ver. Herkes bir şey bilir, kimse her şeyi bilmez.
 
 ## [ikon=shield] Değerlerimiz
 [tablo]
@@ -105,13 +105,13 @@ Kişiye özel bir program istiyorsan forumda rastgele tavsiye toplamak yerine **
 - Forumla ilgili öneri ve sorunlar: **Destek Taleplerim → Yeni talep**
 - Kurallara aykırı içerik: mesajın altındaki **Şikâyet et**
 
-Aramıza hoş geldin. Şimdi git, bir konu aç ya da bir soruya yanıt ver! 💪
+Aramıza hoş geldin. Şimdi git, bir konu aç ya da bir üyenin konusuna yanıt ver! 💪
 — **AlpveFit Ekibi**`,
   },
   {
-    key: "duyuru-icerik-olusturma-kurallari", rev: 1, category: "duyurular", locked: true, tags: ["duyuru", "baslangic"],
+    key: "duyuru-icerik-olusturma-kurallari", icon: "pen", rev: 2, category: "duyurular", locked: true, tags: ["duyuru", "baslangic"],
     gifs: ["typing keyboard fast"],
-    title: "📌 İçerik Oluşturma Kuralları — iyi bir konu nasıl açılır?",
+    title: "İçerik Oluşturma Kuralları — iyi bir konu nasıl açılır?",
     body: `## İyi bir konu = hızlı ve doğru yanıt
 "Kilo veremiyorum, ne yapayım?" diye soran konu genelde 3 cevap alır: "kaloriye bak", "sabret", "🙂". Aynı soruyu ayrıntılı soran konu ise gerçekten işe yarayan yanıtlar toplar.
 
@@ -120,7 +120,8 @@ Aramıza hoş geldin. Şimdi git, bir konu aç ya da bir soruya yanıt ver! 💪
 ## [ikon=check] Konu açmadan önce
 1. **Ara.** Üstteki arama kutusuna yazmaya başla; sorun büyük ihtimalle konuşulmuştur.
 2. **Sabitlenmiş rehberlere bak.** Protein, makro, TDEE, kreatin gibi temel konuların hepsinin kaynaklı rehberi var.
-3. **Doğru kategoriyi seç.** Beslenme sorusu Beslenme'ye, antrenman sorusu Antrenman'a. Emin değilsen **Soru – Cevap.**
+3. **Doğru kategoriyi seç.** Beslenme sorusu **Beslenme**'ye, antrenman sorusu **Antrenman**'a, takviye sorusu **Takviye**'deki ilgili alt kategoriye (Supplement, Vitamin, Mineral), kendi sürecin **Gelişim Günlükleri**'ne. Hiçbirine uymuyorsa **Serbest Kürsü**.
+4. **Ekip rehberleri yoruma kapalıdır.** Sabitlenmiş bir rehberle ilgili sorunu, o rehberin kategorisinde yeni bir konu açarak sor; başlığa rehberin adını yazman yeterli.
 
 ## [ikon=file] Başlık nasıl yazılır?
 [tablo]

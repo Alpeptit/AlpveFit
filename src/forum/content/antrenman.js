@@ -1,9 +1,9 @@
-// Antrenman sistemleri rehberleri (Gelişim Günlükleri): sabit, yoruma açık ekip yazıları.
+// Antrenman sistemleri rehberleri (Antrenman): sabit ve yoruma kapalı ekip yazıları.
 export const ANTRENMAN = [
   {
-    key: "gelisim-antrenman-sistemleri", rev: 1, category: "gelisim-gunlukleri", tags: ["program", "hipertrofi", "guc", "baslangic", "arastirma"],
+    key: "gelisim-antrenman-sistemleri", icon: "calendar", rev: 2, category: "antrenman", locked: true, tags: ["program", "hipertrofi", "guc", "baslangic", "arastirma"],
     gifs: ["gym motivation lifting", "calendar planning"],
-    title: "🗓️ Antrenman Sistemleri — Haftada kaç gün varsan, o sisteme göre çalış",
+    title: "Antrenman Sistemleri — Haftada kaç gün varsan, o sisteme göre çalış",
     body: `## En iyi program, sürdürebildiğin programdır
 Full body mi, split mi, PPL mi? Forumun en sevilen kavgası. Bilimsel yanıt şaşırtıcı derecede sade: **haftalık toplam set sayısı (hacim)** ve **her kas grubunu haftada en az 2 kez çalışmak** çoğu sistemden daha belirleyici.
 
@@ -24,10 +24,13 @@ Haftada | Önerilen sistem | Kimler için? | Kas başına sıklık
 3 gün | PPL (İtiş/Çekiş/Bacak) | Orta seviye, zamanı kısıtlı | 1× (hacim yüksek tutulmalı)
 4 gün | Upper/Lower (Üst/Alt) | Orta seviye; en dengeli seçeneklerden | 2×
 4 gün | PHUL | Güç + hipertrofi isteyenler | 2×
-5 gün | Upper/Lower + PPL melezi ya da PHAT | Orta-ileri seviye | ~2×
-5 gün | Klasik bölgesel (Bro Split) | İleri seviye, pompa sevenler | 1×
+5 gün | Upper/Lower + PPL melezi (Üst · Alt · İtiş · Çekiş · Bacak) ya da PHAT | Orta-ileri seviye | ~2×
 6 gün | PPL × 2 ya da Arnold Split | İleri seviye, toparlanması iyi olanlar | 2×
 [/tablo]
+
+[kutu=uyari]
+**Klasik bölgesel programı (Bro Split: her güne tek kas grubu) önermiyoruz.** Kas grubunu haftada yalnız bir kez çalıştırır; araştırmalar haftada en az iki kez çalışmanın daha iyi sonuç verdiğini gösteriyor [kaynak=27102172|Schoenfeld 2016]. Haftada 5 gün gelebiliyorsan aynı zamanı **Upper/Lower + PPL melezine** ver.
+[/kutu]
 
 [kutu=ipucu]
 Kendine şu soruyu sor: "Önümüzdeki 3 ay boyunca **haftada kaç gün kesin** gelebilirim?" Ne kadar gelmek istediğini değil, gerçekten gelebileceğin gün sayısını seç. 6 günlük programı 3 gün yapmak, 3 günlük programı tam yapmaktan kötüdür.
@@ -38,22 +41,21 @@ Aşağıdaki sabit konularda her sistemin örnek haftasını, avantajını ve de
 - **Full Body** — haftada 2–3 gün
 - **Upper/Lower** — haftada 4 gün
 - **Push/Pull/Legs (PPL)** — haftada 3 ya da 6 gün
-- **Bölgesel program (Bro Split)** — haftada 5 gün
 - **Güç sistemleri (5×5, PHUL, PHAT)** — haftada 3–5 gün
 
 [gif=2]
 
 ## [ikon=pen] Gelişim günlüğünü tut!
-Bu kategoride kendi gelişim günlüğünü açabilirsin. Başlığa sistemini ve hedefini yaz (ör. "Upper/Lower · Kesim · 12 hafta"), her hafta kilonu, ana hareketlerdeki ağırlıklarını ve nasıl hissettiğini ekle. Topluluk seni takip eder, destekler, gerektiğinde dürter. 😉
+**Gelişim Günlükleri** kategorisinde kendi günlüğünü açabilirsin (nasıl tutulacağını oradaki sabit rehberde anlattık). Başlığa sistemini ve hedefini yaz (ör. "Upper/Lower · Kesim · 12 hafta"), her hafta kilonu, ana hareketlerdeki ağırlıklarını ve nasıl hissettiğini ekle. Topluluk seni takip eder, destekler, gerektiğinde dürter. 😉
 
 [kutu=mizah]
 Haftanın en popüler antrenman günü: Pazartesi, göğüs. Haftanın en çok atlanan günü: tahmin et. 🦵👀
 [/kutu]`,
   },
   {
-    key: "gelisim-full-body", rev: 1, category: "gelisim-gunlukleri", tags: ["program", "baslangic", "hipertrofi", "guc"],
+    key: "gelisim-full-body", icon: "body", rev: 2, category: "antrenman", locked: true, tags: ["program", "baslangic", "hipertrofi", "guc"],
     gifs: ["squat workout"],
-    title: "🏋️ Full Body (Tüm Vücut) Sistemi — Haftada 2–3 gün",
+    title: "Full Body (Tüm Vücut) Sistemi — Haftada 2–3 gün",
     body: `## Her antrenmanda tüm vücut
 Full body sisteminde her seansta büyük kas gruplarının hepsi çalışılır. Kas başına sıklık yüksektir (haftada 2–3), seans başına kas başına set sayısı düşüktür.
 
@@ -88,9 +90,9 @@ Full body'nin gizli bonusu: ertesi gün vücudunun her yeri ağrıdığı için 
 [/kutu]`,
   },
   {
-    key: "gelisim-upper-lower", rev: 1, category: "gelisim-gunlukleri", tags: ["program", "hipertrofi", "guc"],
+    key: "gelisim-upper-lower", icon: "layers", rev: 2, category: "antrenman", locked: true, tags: ["program", "hipertrofi", "guc"],
     gifs: ["bench press"],
-    title: "⚖️ Upper/Lower (Üst/Alt) Sistemi — Haftada 4 gün",
+    title: "Upper/Lower (Üst/Alt) Sistemi — Haftada 4 gün",
     body: `## Üst vücut, alt vücut, tekrar
 Upper/Lower sisteminde haftada 2 üst vücut, 2 alt vücut günü yapılır. Her kas grubu haftada **2 kez** çalışılır; hacim ve toparlanma dengesi çok iyidir.
 
@@ -125,9 +127,9 @@ Upper/Lower: bacak gününü atlamanın matematiksel olarak imkânsız olduğu s
 [/kutu]`,
   },
   {
-    key: "gelisim-ppl", rev: 1, category: "gelisim-gunlukleri", tags: ["program", "hipertrofi"],
+    key: "gelisim-ppl", icon: "refresh", rev: 2, category: "antrenman", locked: true, tags: ["program", "hipertrofi"],
     gifs: ["push pull workout"],
-    title: "🔁 Push/Pull/Legs (PPL) — Haftada 3 ya da 6 gün",
+    title: "Push/Pull/Legs (PPL) — Haftada 3 ya da 6 gün",
     body: `## İtiş, çekiş, bacak
 PPL sisteminde hareketler işlevine göre gruplanır:
 - **Push (İtiş):** göğüs, omuz, triceps
@@ -169,11 +171,11 @@ PPL'nin en zor kısmı antrenman değil; "Bugün push mıydı pull mu?" sorusunu
 [/kutu]`,
   },
   {
-    key: "gelisim-bro-split", rev: 1, category: "gelisim-gunlukleri", tags: ["program", "hipertrofi"],
+    key: "gelisim-bro-split", icon: "dumb", rev: 2, category: "antrenman", locked: true, tags: ["program", "hipertrofi"],
     gifs: ["arnold flexing"],
-    title: "💪 Bölgesel Program (Bro Split) — Haftada 5 gün",
-    body: `## Her güne bir kas grubu
-Klasik vücut geliştirme programı: her gün bir ya da iki kas grubu, o grup için yüksek hacim. Kas başına sıklık haftada **1×**.
+    title: "Bölgesel Program (Bro Split) — Neden önermiyoruz, yerine ne yapmalı?",
+    body: `## Her güne bir kas grubu: popüler ama ilk tercihimiz değil
+Klasik vücut geliştirme programı: her gün bir ya da iki kas grubu, o grup için yüksek hacim. Kas başına sıklık haftada **1×**. Salonlarda çok yaygın olduğu için burada anlatıyoruz; ama **önermiyoruz.** Nedenini ve yerine ne yapacağını aşağıda bulacaksın.
 
 [gif=1]
 
@@ -188,7 +190,7 @@ Cuma | Kollar (biceps + triceps)
 Hafta sonu | Dinlenme
 [/tablo]
 
-## [ikon=check] Avantajlar
+## [ikon=check] Sevilen yanları
 - Tek kas grubuna yoğun odak ve "pompa" hissi.
 - Bir kas grubu toparlanırken diğerleri çalışılır.
 - Sevilen bir yapı: motivasyonu yüksek tutabilir.
@@ -197,8 +199,8 @@ Hafta sonu | Dinlenme
 - Kas başına sıklık 1×; araştırmalar, haftada 2× çalışmanın büyüme açısından daha iyi olduğunu gösteriyor [kaynak=27102172|Schoenfeld 2016]. Haftalık hacim eşitlendiğinde fark küçülse de [kaynak=30558493|Schoenfeld 2019], tek seansa çok set sığdırmak kaliteyi düşürebilir.
 - Bir gün kaçırırsan o kas grubu bir hafta bekler.
 
-[kutu=ipucu]
-Kimler için? **İleri seviye**, haftada **5 gün** düzenli gelebilen ve bölgesel çalışmayı sevenler. Daha iyi bir alternatif: "Upper/Lower + PPL" melezi (Üst · Alt · Push · Pull · Legs) ile 5 günde 2× sıklık.
+[kutu=ozet]
+**Önerimiz:** Haftada 5 gün gelebiliyorsan bro split yerine **Upper/Lower + PPL melezi** yap: Pazartesi Üst · Salı Alt · Çarşamba dinlenme · Perşembe İtiş · Cuma Çekiş · Cumartesi Bacak. Aynı 5 gün, ama her kas haftada **2 kez** çalışır.
 [/kutu]
 
 [kutu=mizah]
@@ -206,9 +208,9 @@ Uluslararası Göğüs Günü: Pazartesi. Dünyanın her yerinde, aynı saatte, 
 [/kutu]`,
   },
   {
-    key: "gelisim-guc-sistemleri", rev: 1, category: "gelisim-gunlukleri", tags: ["program", "guc", "hipertrofi"],
+    key: "gelisim-guc-sistemleri", icon: "award", rev: 2, category: "antrenman", locked: true, tags: ["program", "guc", "hipertrofi"],
     gifs: ["deadlift heavy"],
-    title: "🏆 Güç Sistemleri — 5×5, PHUL ve PHAT (haftada 3–5 gün)",
+    title: "Güç Sistemleri — 5×5, PHUL ve PHAT (haftada 3–5 gün)",
     body: `## Güç ve kas birlikte
 Bu sistemler ağır, düşük tekrarlı çok eklemli hareketleri (squat, bench, deadlift, overhead press, row) merkeze alır; PHUL ve PHAT ayrıca hipertrofi günleri ekler.
 

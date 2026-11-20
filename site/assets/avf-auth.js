@@ -239,7 +239,7 @@
   // ---------- e-postadaki bağlantı: /#sifre-sifirla=<anahtar> ----------
   function checkResetLink() {
     var m = /^#sifre-sifirla=([A-Za-z0-9_-]{43})$/.exec(location.hash || ""); if (!m) return;
-    history.replaceState(null, "", location.pathname + location.search);   // anahtar adres çubuğundan ve geçmişten hemen silinir
+    history.replaceState(history.state, "", location.pathname + location.search);   // anahtar adres çubuğundan ve geçmişten hemen silinir
     AVF.api("POST", "/auth/reset-password/link", { token: m[1] }).then(function (r) { S.ticket = r.ticket; newPass(); }, function (e) { expired(e.data && e.data.message); });
   }
 
