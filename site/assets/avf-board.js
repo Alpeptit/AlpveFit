@@ -621,6 +621,11 @@
     r.posts.forEach(function (p, i) {
       if (r.firstUnread === p.id && !firstUnreadShown && i > 0) { posts.appendChild(h("div", { class: "fo-unl", role: "separator" }, h("span", { text: "Okunmamış mesajlar" }))); firstUnreadShown = true; }
       posts.appendChild(postCard(p, (r.page - 1) * 20 + i + 1, ctx));
+      // ekip rehberinin altında: kişiye özel program kartı (Farmakoloji bölümünde gösterilmez)
+      if (p.first && t.crown && !/^(farmakoloji|enjeksiyon-steroid|oral-steroid|sarms|peptit)$/.test(c.slug)) posts.appendChild(h("aside", { class: "card fo-cta" },
+        h("span", { class: "fo-ctai" }, AVF.icon("target")), h("div", null, h("b", { text: "Bu rehber genel bilgi verir. Ya senin için en doğrusu?" }),
+          h("p", { text: "Hedefine, geçmişine ve takvimine göre hazırlanan beslenme, antrenman ve takviye planı için koçlarımızla çalış. Planların panelinde, koçun bir mesaj uzağında." })),
+        h("a", { class: "btn", href: "/paketler", onclick: function (e) { e.preventDefault(); AVF.go("/paketler"); } }, h("span", { text: "Paketleri incele" }), AVF.icon("arrow", "bico"))));
     });
     // yanıt alanı
     var comp = null;

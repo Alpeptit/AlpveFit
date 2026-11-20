@@ -311,6 +311,43 @@ adminRouter.get("/audit", requireAdmin, async (req, res) => {
       ORDER BY a.created_at DESC, a.id DESC LIMIT 100`, [action, from, to, before, q]);
   res.json(rows);
 });
+// Forum ölçüm tablosu (yönetici): son 7 gün ile önceki 7 günün karşılaştırması + özellik kullanımı.
+// Etkin üye: o dönemde konu / yanıt yazan, tepki veren ya da meydan okuma işaretleyen üye. Geri dönen: önceki 7 günde etkin olup bu 7 günde de etkin olan.
+adminRouter.get("/forum/metrics", requireAdmin, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const q = async (sql, v = []) => (await pool.query(sql, v)).rows[0];
+  const active = (from, to) => `SELECT user_id FROM (
+      SELECT author_id AS user_id FROM forum_posts WHERE created_at >= now() - interval '${from} days' AND created_at < now() - interval '${to} days'
+      UNION SELECT user_id FROM forum_reactions WHERE created_at >= now() - interval '${from} days' AND created_at < now() - interval '${to} days'
+      UNION SELECT user_id FROM challenge_checkins WHERE created_at >= now() - interval '${from} days' AND created_at < now() - interval '${to} days') x`;
+  const period = async (from, to) => q(`SELECT
+      (SELECT count(*)::int FROM (${active(from, to)}) a) AS active,
+      (SELECT count(*)::int FROM forum_topics WHERE official_key IS NULL AND created_at >= now() - interval '${from} days' AND created_at < now() - interval '${to} days') AS topics,
+      (SELECT count(*)::int FROM forum_posts WHERE NOT is_first AND created_at >= now() - interval '${from} days' AND created_at < now() - interval '${to} days') AS replies,
+      (SELECT count(*)::int FROM forum_profiles WHERE rules_accepted_at >= now() - interval '${from} days' AND rules_accepted_at < now() - interval '${to} days') AS joined`);
+  const [cur, prev] = await Promise.all([period(7, 0), period(14, 7)]);
+  const ret = await q(`SELECT count(*)::int AS n FROM (${active(7, 0)}) a WHERE a.user_id IN (${active(14, 7)})`);
+  // ilk yanıt süresi: son 7 günde açılan (ekip dışı) konularda, konu sahibi dışındaki ilk yanıta kadar geçen süre (dakika, medyan)
+  const fr = await q(`SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY m)::float AS median, count(*)::int AS answered,
+      (SELECT count(*)::int FROM forum_topics t WHERE t.official_key IS NULL AND t.created_at >= now() - interval '7 days' AND t.hidden_at IS NULL) AS total
+    FROM (SELECT extract(epoch FROM (min(p.created_at) - t.created_at)) / 60 AS m FROM forum_topics t JOIN forum_posts p ON p.topic_id = t.id AND NOT p.is_first AND p.author_id <> t.author_id
+          WHERE t.official_key IS NULL AND t.created_at >= now() - interval '7 days' AND t.hidden_at IS NULL GROUP BY t.id, t.created_at) x`);
+  const use = await q(`SELECT (SELECT count(DISTINCT user_id)::int FROM push_subscriptions) AS push_users,
+      (SELECT count(*)::int FROM forum_profiles WHERE (notify->>'digest') = 'true') AS digest_users,
+      (SELECT count(*)::int FROM forum_profiles WHERE health_consent_at IS NOT NULL) AS consent_users,
+      (SELECT count(*)::int FROM forum_profiles WHERE rules_accepted_at IS NOT NULL) AS members,
+      (SELECT count(DISTINCT user_id)::int FROM body_logs WHERE created_at >= now() - interval '7 days') AS journal_users,
+      (SELECT count(DISTINCT user_id)::int FROM challenge_checkins WHERE created_at >= now() - interval '7 days') AS challenge_users,
+      (SELECT count(*)::int FROM forum_badges WHERE earned_at >= now() - interval '7 days') AS badges_week,
+      (SELECT count(*)::int FROM audit_log WHERE action IN ('forum_blocked_filter', 'dm_blocked_filter') AND created_at >= now() - interval '7 days') AS filtered_week,
+      (SELECT count(*)::int FROM forum_reports WHERE status = 'open') AS open_reports`);
+  const top = (await pool.query(`SELECT t.id, t.title, t.reply_count, t.view_count, fp.like_count FROM forum_topics t JOIN forum_posts fp ON fp.topic_id = t.id AND fp.is_first
+      WHERE t.hidden_at IS NULL AND t.last_post_at >= now() - interval '7 days' ORDER BY (fp.like_count * 2 + t.reply_count * 3 + t.view_count / 20) DESC LIMIT 5`)).rows;
+  res.json({ week: cur, prevWeek: prev, returning: ret.n, returningRate: prev.active ? Math.round(ret.n / prev.active * 100) : null,
+    firstReply: { medianMinutes: fr.median == null ? null : Math.round(fr.median), answered: fr.answered, total: fr.total },
+    repliesPerTopic: cur.topics ? Math.round(cur.replies / cur.topics * 10) / 10 : null, usage: use, top });
+});
+
 adminRouter.get("/audit/actions", requireAdmin, async (req, res) => {
   const { rows } = await pool.query(`SELECT action, count(*)::int AS n FROM audit_log GROUP BY action ORDER BY action`);
   res.json(rows);

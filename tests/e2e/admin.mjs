@@ -88,5 +88,10 @@ g = await fetch(BASE + "/api/attachments/" + u.body.id, { headers: { cookie: M2.
 r = await A.c.call("GET", "/admin/audit?action=member_ban"); chk("denetim: işlem filtresi", r.body.length >= 1 && r.body.every((x) => x.action === "member_ban") && r.body[0].details.hours === 24, r.body[0]);
 r = await A.c.call("GET", "/admin/audit?q=" + M2.username); chk("denetim: kişi araması (hedef kullanıcı adı)", r.body.length >= 2, r.body.length);
 r = await A.c.call("GET", "/admin/audit/actions"); chk("denetim: işlem listesi", r.body.some((x) => x.action === "member_perma_ban"), r.body);
+// ---- forum ölçüm tablosu ----
+r = await A.c.call("GET", "/admin/forum/metrics");
+chk("forum ölçümleri döner", r.status === 200 && Number.isInteger(r.body.week.active) && Number.isInteger(r.body.prevWeek.topics) && Number.isInteger(r.body.usage.members) && Array.isArray(r.body.top), r.body);
+chk("ölçümlerde kişisel veri yok", !JSON.stringify(r.body).match(/@|email|username/), Object.keys(r.body));
+r = await M2.c.call("GET", "/admin/forum/metrics"); chk("üye ölçümlere erişemez", r.status === 404 || r.status === 403, r.status);
 r = await A.c.call("GET", "/admin/blog"); chk("blog yönetimi kaldırıldı", r.status === 404, r.status);
 finish();

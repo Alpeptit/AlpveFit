@@ -498,6 +498,30 @@
     Promise.all([api("GET", "/forum/levels"), AVF.api("GET", "/board/home").catch(function (e) { return { err: e }; })]).then(function (x) {
       var L = x[0], H = x[1], st = H && H.stats, me = H && H.me;
       var open = function (path) { location.href = path; };
+      // ölçüm tablosu: son 7 gün / önceki 7 gün
+      var metricsBox = h("div", { class: "card", style: "padding:18px;margin-top:14px" }, h("h3", { style: "margin-bottom:6px" }, "Forum ölçümleri (son 7 gün)"), AVF.skeleton(1));
+      api("GET", "/forum/metrics").then(function (m) {
+        function delta(a, b) { if (b == null || a == null) return ""; var d = a - b; return d === 0 ? " (=)" : " (" + (d > 0 ? "+" : "") + d + ")"; }
+        function mt(icon, label, val, sub) { return h("div", { class: "card", style: "padding:12px;display:flex;gap:10px;align-items:flex-start" }, h("span", { class: "tile" }, AVF.icon(icon)), h("div", null, h("small", { style: "display:block;color:var(--muted);font-weight:600", text: label }), h("b", { style: "font-size:20px", text: val == null ? "—" : String(val) }), sub ? h("small", { style: "display:block;color:var(--muted)", text: sub }) : null)); }
+        var fr = m.firstReply.medianMinutes, frt = fr == null ? null : fr < 60 ? fr + " dk" : Math.round(fr / 6) / 10 + " sa", u = m.usage;
+        AVF.mount(metricsBox, h("h3", { style: "margin-bottom:10px" }, "Forum ölçümleri (son 7 gün)"),
+          h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px" },
+            mt("users", "Etkin üye", m.week.active, "önceki hafta " + m.prevWeek.active + delta(m.week.active, m.prevWeek.active)),
+            mt("refresh", "Geri dönen üye", m.returning, m.returningRate == null ? "önceki hafta etkin üye yok" : "önceki haftanın %" + m.returningRate + "'i"),
+            mt("file", "Yeni konu", m.week.topics, "önceki hafta " + m.prevWeek.topics + delta(m.week.topics, m.prevWeek.topics)),
+            mt("chat", "Yanıt", m.week.replies, m.repliesPerTopic == null ? "" : "konu başına " + String(m.repliesPerTopic).replace(".", ",")),
+            mt("clock", "İlk yanıt süresi (medyan)", frt, m.firstReply.answered + " / " + m.firstReply.total + " konu yanıt aldı"),
+            mt("plus", "Foruma katılan", m.week.joined, "önceki hafta " + m.prevWeek.joined),
+            mt("bell", "Cihaz bildirimi açık", u.push_users, u.members + " forum üyesinden"),
+            mt("mail", "Haftalık özet açık", u.digest_users, ""),
+            mt("shield", "KVKK açık rızası", u.consent_users, u.members + " forum üyesinden"),
+            mt("pulse", "Gelişim günlüğü (7 gün)", u.journal_users, "kayıt giren üye"),
+            mt("flame", "Meydan okuma (7 gün)", u.challenge_users, u.badges_week + " rozet kazanıldı"),
+            mt("flag", "Açık şikâyet / filtre", u.open_reports, u.filtered_week + " gönderi filtreye takıldı")),
+          m.top.length ? h("div", { style: "margin-top:14px" }, h("b", { text: "Haftanın öne çıkan konuları" }), h("ol", { style: "margin:8px 0 0;padding-left:20px" }, m.top.map(function (t) {
+            return h("li", { style: "margin:4px 0" }, h("a", { href: "/forum/konu/" + t.id, text: t.title }), h("small", { style: "color:var(--muted)", text: " · " + t.reply_count + " yanıt · " + t.like_count + " beğeni · " + t.view_count + " görüntülenme" }));
+          }))) : null);
+      }, function (e) { AVF.mount(metricsBox, h("p", { class: "note err", text: AVF.errText(e) })); });
       var tile = function (icon, label, val) { return h("div", { class: "card", style: "padding:14px;display:flex;gap:12px;align-items:center" }, h("span", { class: "tile" }, AVF.icon(icon)), h("div", null, h("small", { style: "color:var(--muted)", text: label }), h("b", { style: "display:block;font-size:20px", text: String(val) }))); };
       AVF.mount(c, h("h2", { class: "ptitle" }, AVF.icon("msg"), " Forum"),
         H && H.err ? h("div", { class: "note warn" }, AVF.icon("alert", "bico"), h("span", { text: "Moderasyon araçlarını kullanmak için forumu bir kez açıp forum kurallarını onaylayın." }), " ", h("a", { href: "/forum", text: "Foruma git" })) : null,
@@ -508,6 +532,7 @@
           h("button", { class: "btn ghost", type: "button", onclick: function () { open("/forum/moderasyon?t=bans"); } }, AVF.icon("lock", "bico"), "Forum yasakları"),
           h("button", { class: "btn ghost", type: "button", onclick: function () { open("/forum/moderasyon?t=cats"); } }, AVF.icon("cog", "bico"), "Kategoriler"),
           h("button", { class: "btn ghost", type: "button", onclick: function () { open("/forum"); } }, AVF.icon("msg", "bico"), "Foruma git")),
+        metricsBox,
         h("p", { class: "hint", text: "Konu sabitleme, kilitleme, taşıma, içerik kaldırma ve forumdan uzaklaştırma işlemleri forumun içinde, her konu ve mesajın moderasyon menüsünden yapılır. Üyelerin seviyesi ve moderatör ataması Üyeler › Yönet bölümündedir. Tüm işlemler denetim kaydına yazılır." }),
         h("div", { class: "card", style: "padding:18px;margin-top:14px" }, h("h3", { style: "margin-bottom:6px" }, "Seviye kuralları"),
           h("p", { class: "hint", text: "Kullanıcılar arası mesajlaşma Pump Avcısı seviyesinde açılır. Moderatör ve Admin yalnız atamayla verilir." }),
