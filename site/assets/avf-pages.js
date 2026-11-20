@@ -80,22 +80,12 @@
             h("div", { class: "row" }, h("a", { class: "btn", href: "mailto:destek@alpvefit.com" }, AVF.icon("mail", "bico"), "E-posta gönder"), link("/sss", "Sık sorulan sorular", { class: "btn ghost" }))))), "users");
   };
 
-  // ---------- Forum: üyelik + 18 yaş kapısı ----------
-  // Forum: yalnız oturum açmış üyeler girer; her oturumda 18 yaş onayı istenir. Aynı kapı adres çubuğundan da geçilemez
-  // (yönlendirici tek noktadır). Forum içeriği/API'si eklendiğinde sunucu tarafında da üyelik ve onay şartı aranmalıdır.
+  // ---------- Forum: 18 yaş kapısı ----------
+  // Ekip konuları misafire de açıktır; üye paylaşımları yalnız e-postası onaylı üyelere (sunucu denetler, avf-board.js misafir görünümünü kurar).
+  // Her oturumda 18 yaş onayı istenir; kapı adres çubuğundan da geçilemez (yönlendirici tek noktadır).
   var FKEY = "avf_forum_18";
   function forumOk() { try { return sessionStorage.getItem(FKEY) === "1"; } catch (e) { return false; } }
   AVF.pages.forum = function (view, sub) {
-    var u = AVF.session && AVF.session.user;
-    if (!u) {
-      page(view, "Forum", "Forum", "",
-        AVF.state("lock", "Forum yalnızca üyelere açık", "Aramıza katılmak için giriş yap; hesabın yoksa birkaç adımda üye olabilirsin. Seni bekliyoruz! 💪",
-          h("div", { class: "row", style: "justify-content:center;margin-top:8px" },
-            h("button", { class: "btn", type: "button", onclick: function () { AVF.auth.open("login"); } }, "Giriş yap"),
-            h("button", { class: "btn ghost", type: "button", onclick: function () { AVF.auth.open("register"); } }, "Kayıt ol"))));
-      AVF.afterLogin = { path: location.pathname + location.search, at: Date.now() };
-      return AVF.auth.open("login");
-    }
     if (!forumOk()) {
       page(view, "Forum", "Forum", "",
         AVF.state("shield", "Önce küçük bir kontrol", "Forumda yetişkinlere yönelik sağlık, antrenman ve farmakoloji sohbetleri var. Devam etmek için 18 yaşını doldurduğunu onayla.",

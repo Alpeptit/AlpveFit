@@ -279,7 +279,7 @@ export function planUpdatedMail(lang, o) {
 /** Forum seviyesi yükseldi. o: { name } */
 export function levelUpMail(lang, o) {
   const lg = L(lang), en = lg === "en", base = siteBase();
-  const EN = { "Yeni Başlayan": "Beginner", "Barın Çırağı": "Bar Apprentice", "Pump Avcısı": "Pump Hunter", "Demir Eri": "Iron Soldier", "Hacim Ustası": "Volume Master", "Sahne Savaşçısı": "Stage Warrior", "Demir Efsanesi": "Iron Legend", "Ayna Tanrısı": "Mirror God", "Moderatör": "Moderator", "Admin": "Admin" };
+  const EN = { "Yeni Başlayan": "Beginner", "Barın Çırağı": "Bar Apprentice", "Pump Avcısı": "Pump Hunter", "Demir Eri": "Iron Soldier", "Hacim Ustası": "Volume Master", "Sahne Savaşçısı": "Stage Warrior", "Demir Efsanesi": "Iron Legend", "Ayna Tanrısı": "Mirror God", "Moderatör": "Moderator", "Admin": "Admin", "AlpveFit": "AlpveFit", "AlpveFit Ekibi": "AlpveFit Team" };
   const name = en ? EN[o.name] || o.name : o.name;
   const t = en ? "Congratulations — you reached a new level!" : "Tebrikler — yeni bir seviyeye ulaştınız!";
   const blocks = [

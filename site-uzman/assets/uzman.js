@@ -349,6 +349,7 @@
         h("td", { "data-l": "Kayıt" }, h("span", { class: "nw", text: AVF.fmtDate(m.created_at) }), h("small", { class: "sub", text: new Date(m.created_at).toLocaleTimeString(AVF.lang === "en" ? "en-GB" : "tr-TR", { hour: "2-digit", minute: "2-digit" }) })),
         h("td", { "data-l": "Doğrulama · Google Auth" }, yesNo(m.verified, "Doğrulandı", "Doğrulanmadı"), h("br"), yesNo(m.totp_enabled, "Google Auth açık", "Google Auth kapalı")),
         h("td", { "data-l": "Forum" }, h("span", { class: "lvl" }, AVF.icon("award"), h("span", { text: m.forumLevel.name })), m.forumLevel.manual ? h("small", { class: "sub", text: "elle verildi" }) : null,
+          m.forum_joined ? null : h("small", { class: "sub", title: "Forum üye listesinde görünmesi için foruma girip kuralları onaylaması gerekir.", text: !m.verified ? "Foruma girmedi · e-posta onaysız" : "Foruma henüz girmedi" }),
           h("span", { class: "fstats" }, h("span", { title: "Şikâyet" }, AVF.icon("flag"), String(m.reports_received)), h("span", { title: "Beğeni" }, AVF.icon("like"), String(m.likes)), h("span", { title: "Beğenmeme" }, AVF.icon("dislike"), String(m.dislikes)))),
         h("td", { "data-l": "Durum" }, h("span", { class: st[1] }, AVF.icon(st[2]), st[0]), m.state === "banned" && m.locked_until ? h("small", { class: "sub", text: "Bitiş: " + AVF.fmtDateTime(m.locked_until) }) : null,
           m.state !== "active" ? h("button", { class: "btn ghost sm unban", type: "button", onclick: function (e) {
@@ -538,7 +539,7 @@
           h("p", { class: "hint", text: "Kullanıcılar arası mesajlaşma Pump Avcısı seviyesinde açılır. Moderatör ve Admin yalnız atamayla verilir." }),
           h("ol", { class: "lvl-list" }, L.map(function (l) { return h("li", null, h("span", { class: "tile" }, AVF.icon("award")), h("b", { text: l.name }), h("small", { text: l.min + "+ puan" })); }),
             h("li", null, h("span", { class: "tile" }, AVF.icon("shield")), h("b", { text: "Moderatör" }), h("small", { text: "atama ile" })),
-            h("li", null, h("span", { class: "tile" }, AVF.icon("key")), h("b", { text: "Admin" }), h("small", { text: "atama ile" })))));
+            h("li", null, h("span", { class: "tile" }, AVF.icon("key")), h("b", { text: "AlpveFit" }), h("small", { text: "yönetici · atama ile" })))));
     }, function (e) { err(c, e); });
   }
 

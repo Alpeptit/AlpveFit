@@ -6,7 +6,9 @@
   var AVF = window.AVF, h = AVF.h;
   var REASONS = [["spam", "Spam / istenmeyen mesaj"], ["abuse", "Hakaret / taciz"], ["obscene", "Müstehcen içerik"], ["political", "Siyasi / ideolojik içerik"], ["scam", "Dolandırıcılık / reklam"], ["other", "Diğer"]];
   function av(u, cls) { return AVF.framed(avEl(u, cls), u && u.frame, /lg|big/.test(cls || "") ? "lg" : "sm"); }
-  function avEl(u, cls) { return u.avatarId ? h("img", { class: "fr-av " + (cls || ""), src: "/api/forum/media/" + u.avatarId, alt: "" }) : h("span", { class: "fr-av ph " + (cls || "") }, AVF.icon("user")); }
+  function brand(u) { return !!(u && u.level && u.level.brand); }
+  function nm(u) { return brand(u) ? "AlpveFit" : "@" + u.username; }
+  function avEl(u, cls) { if (brand(u)) return h("img", { class: "fr-av brand " + (cls || ""), src: "/assets/brand/alpvefit.svg", alt: "AlpveFit" }); return u.avatarId ? h("img", { class: "fr-av " + (cls || ""), src: "/api/forum/media/" + u.avatarId, alt: "" }) : h("span", { class: "fr-av ph " + (cls || "") }, AVF.icon("user")); }
   function go(p) { if (AVF.go) AVF.go(p); else location.href = p; }
   function hm(t) { var d = new Date(t); return d.toLocaleTimeString(AVF.lang === "en" ? "en-GB" : "tr-TR", { hour: "2-digit", minute: "2-digit" }); }
   function dayKey(t) { var d = new Date(t); return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); }
@@ -46,29 +48,29 @@
                   AVF.api("POST", "/friends/request", { username: u.username }).then(function (r) { AVF.toast(AVF.t(r.status === "friend" ? "Artık arkadaşsınız." : "Arkadaşlık isteği gönderildi.")); q.value = ""; AVF.mount(res, null); loadList(); }, function (er) { AVF.busy(bt, false); AVF.toast(AVF.errText(er)); });
                 } }, AVF.icon("userplus", "bico"), "Ekle")
                 : h("span", { class: "chip", text: u.relation === "friend" ? "Arkadaş" : u.relation === "outgoing" ? "İstek gönderildi" : "Size istek gönderdi" });
-              return h("div", { class: "fr-row" }, av(u), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: "@" + u.username }), h("small", { text: u.level.name })), b);
+              return h("div", { class: "fr-row" }, av(u), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: nm(u) }), h("small", { text: u.level.name })), b);
             }) : h("p", { class: "hint", text: "Kullanıcı bulunamadı." }));
           }, function (er) { AVF.mount(res, h("p", { class: "note err", text: AVF.errText(er) })); });
         }, 300);
       });
       var sections = [];
       if (data.incoming.length) sections.push(h("div", { class: "fr-sec" }, h("h4", null, AVF.icon("userplus"), h("span", { text: "Gelen istekler" }), h("span", { class: "badge", text: String(data.incoming.length) })), data.incoming.map(function (u) {
-        return h("div", { class: "fr-row" }, av(u), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: "@" + u.username }), h("small", { text: u.level.name })),
+        return h("div", { class: "fr-row" }, av(u), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: nm(u) }), h("small", { text: u.level.name })),
           h("button", { class: "btn sm", type: "button", onclick: function () { act("POST", "/friends/" + u.id + "/accept", "Arkadaşlık isteği kabul edildi."); } }, AVF.icon("check", "bico"), "Kabul et"),
           h("button", { class: "ibtn sm", type: "button", "aria-label": AVF.t("Reddet"), title: AVF.t("Reddet"), onclick: function () { act("DELETE", "/friends/" + u.id, "İstek reddedildi."); } }, AVF.icon("x")));
       })));
       sections.push(h("div", { class: "fr-sec" }, h("h4", null, AVF.icon("users"), h("span", { text: "Arkadaşlarım" }), h("small", { "data-notr": "", text: String(data.friends.length) })),
         data.friends.length ? data.friends.map(function (u) {
           var a = h("a", { class: "fr-row link" + (u.id === peerId ? " on" : ""), href: "/panel/arkadaslar/" + u.id, onclick: function (e) { e.preventDefault(); go("/panel/arkadaslar/" + u.id); } },
-            av(u), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: "@" + u.username }), h("small", { text: u.lastAt ? AVF.fmtDateTime(u.lastAt) : u.level.name })), u.unread ? h("span", { class: "badge", text: String(u.unread) }) : null);
+            av(u), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: nm(u) }), h("small", { text: u.lastAt ? AVF.fmtDateTime(u.lastAt) : u.level.name })), u.unread ? h("span", { class: "badge", text: String(u.unread) }) : null);
           return a;
         }) : h("p", { class: "hint", text: "Henüz arkadaşınız yok. Kullanıcı adıyla arayıp istek gönderebilirsiniz." })));
       if (data.outgoing.length) sections.push(h("div", { class: "fr-sec" }, h("h4", null, AVF.icon("send"), h("span", { text: "Gönderilen istekler" })), data.outgoing.map(function (u) {
-        return h("div", { class: "fr-row" }, av(u), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: "@" + u.username }), h("small", { text: "Yanıt bekleniyor" })),
+        return h("div", { class: "fr-row" }, av(u), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: nm(u) }), h("small", { text: "Yanıt bekleniyor" })),
           h("button", { class: "btn ghost sm", type: "button", onclick: function () { act("DELETE", "/friends/" + u.id, "İstek geri çekildi."); } }, "Geri çek"));
       })));
       if (data.blocked.length) sections.push(h("div", { class: "fr-sec" }, h("h4", null, AVF.icon("lock"), h("span", { text: "Engellenenler" })), data.blocked.map(function (u) {
-        return h("div", { class: "fr-row" }, av(u), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: "@" + u.username })),
+        return h("div", { class: "fr-row" }, av(u), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: nm(u) })),
           h("button", { class: "btn ghost sm", type: "button", onclick: function () { act("DELETE", "/friends/" + u.id, "Engel kaldırıldı."); } }, "Engeli kaldır"));
       })));
       AVF.mount(listCol, h("div", { class: "card fr-search" }, h("label", { class: "fr-sl" }, AVF.icon("users"), h("span", { text: "Arkadaş ekle" })), q, res),
@@ -91,7 +93,7 @@
       AVF.mount(log, AVF.skeleton(2));
       function paint(r, keepScroll) {
         AVF.mount(head, h("a", { class: "ibtn fr-back", href: "/panel/arkadaslar", "aria-label": AVF.t("Listeye dön"), onclick: function (e) { e.preventDefault(); go("/panel/arkadaslar"); } }, AVF.icon("back")),
-          av(r.peer, "lg"), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: "@" + r.peer.username }), h("small", { text: r.peer.level.name })),
+          av(r.peer, "lg"), h("div", { class: "fr-t" }, h("b", { "data-notr": "", text: nm(r.peer) }), h("small", { text: r.peer.level.name })),
           h("details", { class: "fr-more" }, h("summary", { class: "ibtn", "aria-label": AVF.t("Diğer işlemler") }, AVF.icon("more")),
             h("div", { class: "fr-menu" },
               h("button", { type: "button", onclick: function () { AVF.confirmDialog({ icon: "users", title: "Arkadaşlıktan çıkarılsın mı?", text: "Sohbet geçmişi silinmez; yeniden arkadaş olursanız görünür.", confirm: "Çıkar", cancel: "Vazgeç" }).then(function (y) { if (y) AVF.api("DELETE", "/friends/" + id, {}).then(function () { go("/panel/arkadaslar"); }); }); } }, AVF.icon("x"), h("span", { text: "Arkadaşlıktan çıkar" })),

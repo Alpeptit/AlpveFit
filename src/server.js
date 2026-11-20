@@ -248,6 +248,8 @@ app.use("/api", supportRouter);       // /api/tickets/* — destek talepleri
 app.use("/api", blogRouter);          // /api/blog — herkese açık blog (yazma: /api/admin/blog)
 app.use("/api", profileRouter);       // /api/profile — üyenin koçluk bilgileri
 app.use("/api", forumRouter);         // /api/forum/me* — forum ayarları (kullanıcı adı, avatar, imza, bağlantılar, bildirimler)
+// Forumun misafire açık uçları (yalnız ekip konuları): oturumsuz erişime ayrı, dar bir hız sınırı.
+app.use("/api/board/public", rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false, message: { error: "Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin." } }));
 app.use("/api", boardRouter);         // /api/board/* — forum: konular, mesajlar, moderasyon (yalnız kuralları onaylamış üyeler)
 
 app.get("/api/health", (req, res) => res.json({ ok: true, ...(dbMigrations.state === "ok" ? {} : { db: dbMigrations.state }) }));

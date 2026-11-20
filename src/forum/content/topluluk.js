@@ -156,11 +156,11 @@ Serbest Kürsü'nün resmî olmayan bir kuralı daha var: "Bugün antrenman var 
 — **AlpveFit Ekibi**`,
   },
   {
-    key: "koca-sor", icon: "chat", rev: 1, category: "serbest-kursu", locked: false, tags: ["motivasyon", "baslangic", "program"],
+    key: "koca-sor", icon: "chat", rev: 2, category: "serbest-kursu", locked: true, tags: ["motivasyon", "baslangic", "program"],
     gifs: ["coach whistle", "raise hand question"],
-    title: "Koça Sor — Sorunu yaz, koçlarımız yanıtlasın",
-    body: `## Koçlarımız burada!
-Bu konu **yoruma açık.** Antrenman, beslenme, takviye ya da motivasyonla ilgili sorunu aşağıya yaz; AlpveFit koçları düzenli olarak yanıtlıyor. Koç yanıtları **"Uzman yanıtı"** rozetiyle görünür.
+    title: "Koça Sor — Sorunu kendi konunda sor, koçun yanıtlasın",
+    body: `## Koçun burada!
+Antrenman, beslenme, takviye ya da motivasyonla ilgili sorunu **kendi konunu açarak** sor: doğru kategoriyi seç, başlığın başına **"Koça Sor:"** yaz. AlpveFit koçu bu konuları düzenli olarak yanıtlıyor; koç yanıtları **"Uzman yanıtı"** rozetiyle görünür. Senin konun herkesin yorumuna ve tepkisine açık kalır, böylece diğer üyeler de deneyimini ekleyebilir.
 
 [gif=1]
 
@@ -176,15 +176,15 @@ Bu konu **yoruma açık.** Antrenman, beslenme, takviye ya da motivasyonla ilgil
 - **Sağlık şikâyetleri:** göğüs ağrısı, bayılma gibi durumlarda forum yerine **112**, diğer şikâyetlerde **hekimin.**
 
 [kutu=ipucu]
-Sorunun yanıtı sabitlenmiş rehberlerde olabilir: önce yukarıdaki **arama** kutusunu dene. Bulamazsan burada sor, koçlar sana doğru rehberi de gösterir.
+Sorunun yanıtı sabitlenmiş rehberlerde olabilir: önce **arama** kutusunu dene. Bulamazsan yeni konu aç, koçun sana doğru rehberi de gösterir.
 [/kutu]
 
 [gif=2]
 
 [kutu=mizah]
-Koçlar her soruyu yanıtlar; "Göğüs günü mü, bacak günü mü?" hariç. Yanıt belli: bacak. 🦵😄
+Koç her soruyu yanıtlar; "Göğüs günü mü, bacak günü mü?" hariç. Yanıt belli: bacak. 🦵😄
 [/kutu]
 
-— **AlpveFit Koçluk Ekibi**`,
+— **AlpveFit**`,
   },
 ];

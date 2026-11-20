@@ -81,14 +81,26 @@ chk("moderasyon kuyruğunda şikâyet", await card.count() === 1, "");
 await card.locator("text=Reddet").click(); await m.waitForTimeout(1000);
 chk("şikâyet reddedilir", await m.locator(".fo-mi", { hasText: "Güncelledim" }).count() === 0, "");
 await m.goto(tUrl); await m.waitForTimeout(1000);
-await m.click(".fo-tha >> text=Moderasyon"); await m.click(".fo-menu >> text=Kilitle"); await m.waitForTimeout(1200);
-chk("konu kilitlenir", await m.locator(".fo-th .fo-chip.lock").count() === 1, "");
-await r.reload(); await r.waitForTimeout(1000); chk("kilitli konuda yanıt alanı yok", await r.locator(".fo-reply .fo-ta").count() === 0 && await r.locator("text=Bu konu kilitlendi").count() === 1, "");
+await m.click(".fo-tha >> text=Moderasyon"); chk("üye konusunda kilit seçeneği yok (her zaman yoruma açık)", await m.locator(".fo-menu >> text=Kilitle").count() === 0 && await m.locator(".fo-menu >> text=Sabitle").count() === 1, ""); await m.keyboard.press("Escape");
+await r.reload(); await r.waitForTimeout(1000); chk("üye konusunda yanıt alanı var", await r.locator(".fo-reply .fo-ta").count() === 1, "");
 // mobil: yatay taşma yok
 const mob = await ctxOf(U, { ...devices["iPhone 13"] }); await mob.addInitScript(() => sessionStorage.setItem("avf_forum_18", "1"));
 for (const path of ["/forum", "/forum/k/antrenman", new URL(tUrl).pathname, "/forum/yeni", "/forum/uye/" + V.username, "/forum/ara?q=deadlift"]) {
   await mob.goto(BASE + path); await mob.waitForTimeout(1000);
   chk("mobilde yatay taşma yok: " + path, await mob.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), await mob.evaluate(() => document.documentElement.scrollWidth));
 }
+// meydan okuma: telefonda görünen kart tıklamayla anında güncellenir (sayfa yenilemeden)
+await mob.goto(BASE + "/forum"); await mob.waitForTimeout(1200);
+const vis = () => mob.evaluate(() => { const x = [...document.querySelectorAll(".fo-ch")].find((e) => e.offsetParent); return x ? x.querySelector(".fo-chp").textContent : "yok"; });
+const before = await vis(); await mob.locator(".fo-ch .fo-chday.today").filter({ visible: true }).first().click(); await mob.waitForTimeout(900);
+chk("meydan okuma kartı anında güncellenir (mobil)", /\d \/ 5 gün/.test(before) && before !== await vis(), [before, await vis()]);
+// misafir: ekip rehberleri açık, üye konusu kapalı, yazma ve arama yok
+const gc = await b.newContext({ viewport: { width: 1360, height: 900 } }); await gc.addInitScript(() => { try { localStorage.setItem("avf_lang", "tr"); localStorage.setItem("avf_cookie", "1"); sessionStorage.setItem("avf_forum_18", "1"); } catch (e) {} });
+const g = await gc.newPage(); g.on("pageerror", (e) => errs.push("misafir: " + e.message));
+await g.goto(BASE + "/forum"); await g.waitForTimeout(1500);
+chk("misafir forum ana sayfasını görür (ekip rehberleri + katıl kartı)", await g.locator(".fo-join").count() >= 1 && await g.locator(".fo-tlist .fo-t").count() > 0 && await g.locator(".fo-search").count() === 0 && await g.locator(".fo-new").count() === 0, "");
+await g.goto(tUrl); await g.waitForTimeout(1200);
+chk("misafir üye konusunu göremez", await g.locator("text=Bu bölüm üyelere özel").count() === 1, "");
+await gc.close();
 chk("tarayıcı hatası yok", !errs.length, errs);
 await b.close(); finish();

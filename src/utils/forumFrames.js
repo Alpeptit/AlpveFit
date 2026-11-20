@@ -18,7 +18,7 @@ export const FRAMES = [
   { key: "aura",     name: "Gökkuşağı Aura",    min: 8 },
   { key: "tanri",    name: "Ayna Tanrısı",      min: 8 },
   { key: "mod",      name: "Moderatör Kalkanı", role: "moderator" },
-  { key: "admin",    name: "Yönetici",          role: "admin" },
+  { key: "admin",    name: "AlpveFit",          role: "admin" },
   { key: "ekip",     name: "AlpveFit Ekibi",    role: "official" },
 ];
 const BY = Object.fromEntries(FRAMES.map((f) => [f.key, f]));

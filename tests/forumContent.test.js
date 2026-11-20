@@ -27,9 +27,9 @@ test("her konunun anahtarı tekil, alanları geçerli", () => {
 
 test("ekip konularının tümü yoruma kapalı ve sabit; kimse yoruma davet edilmez", () => {
   for (const c of CONTENT) {
-    assert.equal(c.locked, c.key !== "koca-sor", c.key);   // tek istisna: Koça Sor yoruma açıktır
+    assert.equal(c.locked, true, c.key);   // istisnasız: ekip konuları yoruma kapalı
     assert.notEqual(c.pinned, false, c.key);
-    assert.ok(c.key === "koca-sor" || !/aşağıya yaz|yorumlara yaz|Soru – Cevap/i.test(c.body), c.key + " yorum daveti / kaldırılan kategori");
+    assert.ok(!/aşağıya yaz|yorumlara yaz|Soru – Cevap|yoruma açık/i.test(c.body), c.key + " yorum daveti / kaldırılan kategori");
   }
 });
 

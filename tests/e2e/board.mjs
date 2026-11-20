@@ -115,8 +115,9 @@ chk("içerik kaldırılır, yazarın ceza sayacı artar, beğeni sayacından dü
 r = await W.c.call("GET", "/notifications"); chk("şikâyet edene sonuç bildirimi", r.body.some((n) => n.data && n.data.kind === "report_result"), r.body.map((n) => n.text));
 r = await U.c.call("GET", "/board/t/" + tid); chk("kaldırılan en iyi yanıt seçimi düşer, içerik üyeye görünmez", r.body.topic.acceptedPostId === null && r.body.posts.find((p) => p.id === p1).body === "", r.body.topic);
 r = await A.c.call("GET", "/board/t/" + tid); chk("yönetici kaldırılan içeriği ve gerekçeyi görür", r.body.posts.find((p) => p.id === p1).body.length > 0 && r.body.posts.find((p) => p.id === p1).hiddenReason === "Kural 4", r.body.posts);
-r = await A.c.call("POST", "/board/t/" + tid + "/mod", { action: "lock" }); r = await V.c.call("POST", "/board/t/" + tid + "/posts", { body: "kilitli konuya yazıyorum" });
-chk("kilitli konuya yanıt yazılamaz", r.status === 403, r.body);
+r = await A.c.call("POST", "/board/t/" + tid + "/mod", { action: "lock" }); chk("üye konusu kilitlenemez (her zaman yoruma açık)", r.status === 400, r.body);
+sql(`UPDATE forum_topics SET is_locked = true WHERE id = '${tid}'`);   // eski veride kilitli kalmış olsa bile
+r = await V.c.call("POST", "/board/t/" + tid + "/posts", { body: "üye konusuna yazıyorum" }); chk("üye konusu her zaman yanıtlanabilir", r.status === 201, r.body);
 r = await A.c.call("POST", "/board/t/" + tid + "/mod", { action: "move", category: "antrenman" }); r = await U.c.call("GET", "/board/t/" + tid); chk("konu taşınır", r.body.category.slug === "antrenman", r.body.category);
 r = await A.c.call("POST", "/board/t/" + tid + "/mod", { action: "pin" }); r = await U.c.call("GET", "/board/topics?c=antrenman"); chk("sabitlenen konu üstte", r.body.topics[0].id === tid && r.body.topics[0].pinned, r.body.topics);
 r = await U.c.call("POST", "/board/t/" + tid + "/mod", { action: "unlock" }); chk("üye moderasyon yapamaz", r.status === 404, r.body);
@@ -169,12 +170,23 @@ const cp = r.body.posts[0].id;
 r = await U.c.call("POST", "/board/posts/" + cp + "/react", { value: -1 }); chk("ekip konusunda beğenmeme reddedilir", r.status === 400, r.body);
 r = await U.c.call("POST", "/board/posts/" + cp + "/react", { value: 1 }); chk("ekip konusu beğenilebilir", r.status === 200, r.body);
 r = await U.c.call("GET", "/board/topics?c=antrenman"); chk("listede ∞ işareti", r.body.topics.find((t) => t.id === ct).infinite === true, "");
-// Koça Sor: yönetici yoruma açık ekip konusu açabilir; yönetici yanıtı "uzman"
-r = await A.c.call("POST", "/board/topics", { category: "antrenman", title: "Koça sor deneme konusu açık", body: "Sorularını yaz.", openComments: true }); const ks = r.body.id;
-r = await U.c.call("GET", "/board/t/" + ks); chk("yoruma açık ekip konusu: sabit ama kilitsiz, üye yanıtlayabilir", r.body.topic.pinned === true && r.body.topic.locked === false && r.body.canReply === true, r.body.topic);
-r = await U.c.call("POST", "/board/t/" + ks + "/posts", { body: "Kesimde kardiyo ne kadar olmalı?" }); chk("üye Koça Sor'a yazar", r.status === 201, r.body);
-r = await A.c.call("POST", "/board/t/" + ks + "/posts", { body: "Önce adım sayını artır." });
-r = await U.c.call("GET", "/board/t/" + ks); chk("yönetici yanıtı uzman rozetli, üyeninki değil", r.body.posts.some((p) => !p.first && p.author.expert === true) && r.body.posts.some((p) => !p.first && p.author.expert === false), r.body.posts.map((p) => p.author));
+// ekip konusu her zaman kapalı: "yoruma açık" isteği yok sayılır, kilit açılamaz, mod dahil üye yazamaz
+r = await A.c.call("POST", "/board/topics", { category: "antrenman", title: "Yoruma açma denemesi ekip konusu", body: "Deneme.", openComments: true });
+r = await U.c.call("GET", "/board/t/" + r.body.id); chk("ekip konusu yoruma açılamaz", r.body.topic.locked === true && r.body.canReply === false, r.body.topic);
+r = await A.c.call("POST", "/board/t/" + ct + "/mod", { action: "unlock" }); chk("ekip konusunun kilidi açılamaz", r.status === 400, r.body);
+sql(`UPDATE forum_topics SET is_locked = false WHERE id = '${ct}'`);
+r = await U.c.call("POST", "/board/t/" + ct + "/posts", { body: "Kilidi elle açılmış ekip konusuna yazıyorum" }); chk("ekip konusuna üye yazamaz (kilit bayrağından bağımsız)", r.status === 403, r.body);
+r = await U.c.call("POST", "/board/posts/" + cp + "/report", { reason: "sales" }); chk("ekip paylaşımı şikâyet edilemez", r.status === 400, r.body);
+r = await U.c.call("GET", "/board/t/" + ct); chk("ekip paylaşımı işaretli", r.body.posts[0].staff === true, r.body.posts[0]);
+// yönetici yanıtı (üye konusunda): uzman rozetli; beğenmeme ve şikâyet kapalı
+r = await U.c.call("POST", "/board/topics", { category: "antrenman", title: "Koça Sor: kesimde kardiyo ne kadar?", body: "Kesimde kardiyo ne kadar olmalı?" }); const ks = r.body.id;
+r = await A.c.call("POST", "/board/t/" + ks + "/posts", { body: "Önce adım sayını artır." }); const ap = r.body.id || r.body.post?.id;
+r = await V.c.call("POST", "/board/t/" + ks + "/posts", { body: "Ben de aynısını merak ediyordum." });
+r = await U.c.call("GET", "/board/t/" + ks); const apost = r.body.posts.find((p) => !p.first && p.author.expert);
+const vpost = r.body.posts.find((p) => !p.first && !p.author.expert);
+chk("üye konusunda üye yanıtı beğenilmeyebilir, ekip yanıtı beğenilmeyemez", (await U.c.call("POST", "/board/posts/" + vpost.id + "/react", { value: -1 })).status === 200 && (await U.c.call("POST", "/board/posts/" + apost.id + "/react", { value: -1 })).status === 400 && apost.staff === true, apost);
+chk("ekip yanıtı şikâyet edilemez", (await U.c.call("POST", "/board/posts/" + apost.id + "/report", { reason: "sales" })).status === 400, "");
+chk("yönetici yanıtı uzman rozetli, üyeninki değil", r.body.posts.some((p) => !p.first && p.author.expert === true) && r.body.posts.some((p) => !p.first && p.author.expert === false), r.body.posts.map((p) => p.author));
 r = await V.c.call("POST", "/board/topics", { category: "antrenman", title: "Üye yoruma kapatmayı deneyemez", body: "Üye olarak openComments göndermek bir şey değiştirmez.", openComments: false }); chk("üye konusu açılır", r.status === 201, r.body); r = await V.c.call("GET", "/board/t/" + r.body.id); chk("üyenin konusu sabit/kilitli olmaz", r.body.topic.pinned === false && r.body.topic.locked === false, r.body.topic);
 // beğenilenler
 const vp = (await V.c.call("GET", "/board/t/" + vt)).body.posts[0].id;
@@ -183,6 +195,7 @@ r = await V.c.call("GET", "/board/me/likes"); chk("beğenilenler listesi", r.sta
 // üyeler: yalnız ad, avatar, seviye
 r = await U.c.call("GET", "/board/members"); const keys = Object.keys(r.body.members[0] || {}).sort().join();
 chk("üye listesi seviyeye göre ve kişisel bilgi içermez", r.status === 200 && r.body.total >= 4 && keys === "avatarId,frame,level,online,username" && r.body.members[0].level.n >= r.body.members[r.body.members.length - 1].level.n, keys);
+chk("yönetici üye listesinde AlpveFit markasıyla, sistem hesabı listede yok", r.body.members.some((m) => m.username === A.username && m.level.name === "AlpveFit" && m.level.brand === true) && !r.body.members.some((m) => m.level.official), r.body.members.filter((m) => m.level.brand));
 r = await U.c.call("GET", "/board/members?q=" + U.username.slice(0, 5)); chk("üye araması", r.body.members.some((m) => m.username === U.username), r.body.total);
 r = await new Client().call("GET", "/board/members"); chk("üye listesi misafire kapalı", r.status === 401, r.status);
 // çevrimiçi gizleme: Pump Avcısı seviyesinde açılır
@@ -207,4 +220,24 @@ const fN = r.body.filter((n) => n.group === "forum").length;
 r = await U.c.call("POST", "/notifications/read-all?group=forum", {}); r = await U.c.call("GET", "/notifications"); chk("grup bazında okundu", r.body.filter((n) => n.group === "forum").every((n) => n.read_at), "");
 r = await U.c.call("DELETE", "/notifications?group=forum"); chk("grup bazında silme", r.status === 200 && fN > 0, r.body);
 r = await U.c.call("GET", "/notifications"); chk("yalnız o grup silinir, diğeri korunur", r.body.length > 0 && r.body.every((n) => n.group === "coach"), r.body.map((n) => n.type));
+// ---- misafir görünümü: ekip konuları herkese açık, üye paylaşımları gizli ----
+const G = new Client();
+r = await G.call("GET", "/board/public/home"); chk("misafir ana sayfası açılır", r.status === 200 && r.body.me.guest === true && r.body.stats.newest === null && Array.isArray(r.body.categories), r.status);
+const gHome = JSON.stringify(r.body);
+chk("misafir ana sayfasında üye kullanıcı adı yok", ![U, V, W].some((p) => gHome.includes(p.username)), "");
+r = await G.call("GET", "/board/public/topics"); const gTopics = r.body.topics;
+chk("misafir yalnız ekip konularını görür", r.status === 200 && gTopics.length > 0 && gTopics.every((t) => t.author && ![U, V, W].some((p) => p.username === t.author.username)) && gTopics.some((t) => t.author.username === A.username) && gTopics.every((t) => t.lastUser === null), gTopics.map((t) => t.author && t.author.username));
+chk("üye konusu misafir listesinde yok", !gTopics.some((t) => t.id === tid || t.id === vt || t.id === ks), "");
+r = await G.call("GET", "/board/public/topics?c=antrenman"); chk("misafir kategori listesi (yalnız ekip)", r.status === 200 && r.body.topics.some((t) => t.id === ct) && !r.body.topics.some((t) => t.id === ks), r.body.total);
+r = await G.call("GET", "/board/public/t/" + ks); chk("üye konusu misafire kapalı (üyelere özel)", r.status === 403 && r.body.code === "members_only", r.body);
+// ekip konusuna eski veride kalmış üye yanıtı: misafir göremez
+sql(`INSERT INTO forum_posts (topic_id, author_id, body, is_first) VALUES ('${ct}', '${U.id}', 'Eski üye yanıtı gizli kalmalı', false)`);
+r = await G.call("GET", "/board/public/t/" + ct); chk("ekip konusu misafire açık; yalnız ekip mesajları", r.status === 200 && r.body.posts.length >= 1 && r.body.posts.every((p) => p.author.username === A.username) && !JSON.stringify(r.body).includes("Eski üye yanıtı") && r.body.canReply === false, r.body.posts && r.body.posts.map((p) => p.author.username));
+r = await U.c.call("GET", "/board/t/" + ct); chk("üye aynı konuda eski üye yanıtını görür", r.body.posts.some((p) => p.body === "Eski üye yanıtı gizli kalmalı"), "");
+r = await G.call("GET", "/board/topics"); chk("misafir üye uçlarına erişemez", r.status === 401, r.status);
+r = await G.call("GET", "/board/public/t/not-an-id"); chk("geçersiz konu kimliği", r.status === 404, r.status);
+// e-postası onaysız üye: üye uçları kapalı, misafir görünümü açık
+const NV = await signup("Onaysiz Uye", "nv"); sql(`UPDATE users SET email_verified_at = NULL WHERE id = '${NV.id}'`);
+r = await NV.c.call("GET", "/board/topics"); chk("e-postası onaysız üye konuları göremez", r.status === 403 && r.body.code === "verify", r.body);
+r = await NV.c.call("GET", "/board/public/t/" + ct); chk("e-postası onaysız üye ekip konusunu görür", r.status === 200, r.status);
 finish();

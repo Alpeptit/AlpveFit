@@ -348,10 +348,13 @@
   /** Yatay kaydırmalı sekme şeridi: seçili sekme şeridin tam ortasına yumuşakça gelir. Şerit her geçişte yeniden çizildiği için
    *  önceki kaydırma konumu anahtarla hatırlanır (sıfırdan zıplamaz). */
   /** Profil fotoğrafı çerçevesi: avatar öğesini seçilen çerçeveyle sarar (çerçeve yoksa öğeyi olduğu gibi döndürür). size: xs | sm | md | lg | xl */
-AVF.FRAME_NAMES = { kum: "Kum", gumus: "Gümüş Halka", komur: "Kömür", pump: "Turuncu Pump", okyanus: "Okyanus", orman: "Orman", demir: "Demir", bronz: "Bronz", ates: "Ateş", neon: "Neon", sahne: "Sahne Işığı", altin: "Altın", efsane: "Efsane", aura: "Gökkuşağı Aura", tanri: "Ayna Tanrısı", mod: "Moderatör Kalkanı", admin: "Yönetici", ekip: "AlpveFit Ekibi" };
+AVF.FRAME_NAMES = { kum: "Kum", gumus: "Gümüş Halka", komur: "Kömür", pump: "Turuncu Pump", okyanus: "Okyanus", orman: "Orman", demir: "Demir", bronz: "Bronz", ates: "Ateş", neon: "Neon", sahne: "Sahne Işığı", altin: "Altın", efsane: "Efsane", aura: "Gökkuşağı Aura", tanri: "Ayna Tanrısı", mod: "Moderatör Kalkanı", admin: "AlpveFit", ekip: "AlpveFit Ekibi" };
+// Hareket yoğunluğu (1–9): seviye arttıkça dönüş hızlanır, parıltı büyür; 7 ve üstünde ışık kıvılcımı dolaşır.
+AVF.FRAME_TIER = { kum: 1, gumus: 2, komur: 2, pump: 3, okyanus: 3, orman: 4, demir: 4, bronz: 5, ates: 5, neon: 6, sahne: 6, altin: 7, efsane: 7, aura: 8, tanri: 8, mod: 7, admin: 9, ekip: 9 };
 AVF.framed = function (el, frame, size) {
   if (!frame || !AVF.FRAME_NAMES[frame]) return el;
-  return AVF.h("span", { class: "avf-fr fr-" + frame + (size ? " fz-" + size : ""), title: AVF.FRAME_NAMES[frame] + " çerçevesi" }, el);
+  var t = AVF.FRAME_TIER[frame] || 1;
+  return AVF.h("span", { class: "avf-fr fr-" + frame + " ft-" + t + (size ? " fz-" + size : ""), title: AVF.FRAME_NAMES[frame] + " çerçevesi" }, el, t >= 7 ? AVF.h("i", { class: "fr-sp", "aria-hidden": "true" }) : null);
 };
 AVF.stripCenter = function (nav, key, sel) {
     var mem = AVF._strip || (AVF._strip = {});

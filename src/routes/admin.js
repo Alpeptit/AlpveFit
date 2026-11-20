@@ -357,7 +357,8 @@ adminRouter.get("/audit/actions", requireAdmin, async (req, res) => {
 const MEMBER_ROW = `u.id, u.full_name, u.username, u.email, u.role, u.user_code, u.created_at, u.email_verified_at IS NOT NULL AS verified, u.totp_enabled,
   u.locked_at, u.locked_until, u.locked_reason, u.plan_kinds,
   coalesce(f.level_override, NULL) AS level_override, coalesce(f.forum_role, 'member') AS forum_role, coalesce(f.topics, 0) AS topics, coalesce(f.posts, 0) AS posts,
-  coalesce(f.likes, 0) AS likes, coalesce(f.dislikes, 0) AS dislikes, coalesce(f.reports_received, 0) AS reports_received, coalesce(f.reports_upheld, 0) AS reports_upheld`;
+  coalesce(f.likes, 0) AS likes, coalesce(f.dislikes, 0) AS dislikes, coalesce(f.reports_received, 0) AS reports_received, coalesce(f.reports_upheld, 0) AS reports_upheld,
+  f.rules_accepted_at IS NOT NULL AS forum_joined`;   // forum üye listesinde yalnız foruma girip kuralları onaylayanlar görünür
 function memberOut(r) {
   const now = Date.now(), active = r.locked_at && (!r.locked_until || new Date(r.locked_until).getTime() > now);
   const admin = String(r.locked_reason || "").startsWith("admin_");

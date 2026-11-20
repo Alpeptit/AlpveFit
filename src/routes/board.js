@@ -58,7 +58,7 @@ async function gate(req, res, next) {
   const lv = forumLevel(me, me.role);
   req.fm = { id: me.id, username: me.username, role: me.role, level: lv, mod: me.role === "admin" || me.forum_role === "moderator", admin: me.role === "admin", hideOnline: !!me.hide_online,
     banned, banUntil: me.ban_permanent ? null : me.banned_until, banReason: me.ban_reason || "", since: me.rules_accepted_at, notify: notifyIn(me.notify),
-    consent: !!me.health_consent_at || me.role === "admin" || me.forum_role === "moderator" || !!me.is_official };
+    consent: !!me.health_consent_at || me.role === "admin" || me.forum_role === "moderator" || !!me.is_official, official: !!me.is_official };
   if (!me.last_seen_at || Date.now() - new Date(me.last_seen_at).getTime() > 120000)
     pool.query(`UPDATE forum_profiles SET last_seen_at = now() WHERE user_id = $1`, [me.id]).catch(() => {});
   next();
@@ -137,7 +137,9 @@ async function tagsIn(v) {
 }
 async function topicRow(id, req) {
   if (!ID.test(id)) return null;
-  const { rows } = await pool.query(`SELECT t.*, c.slug AS cat_slug, c.is_locked AS cat_locked, c.kind AS cat_kind FROM forum_topics t JOIN forum_categories c ON c.id = t.category_id WHERE t.id = $1`, [id]);
+  const { rows } = await pool.query(`SELECT t.*, c.slug AS cat_slug, c.is_locked AS cat_locked, c.kind AS cat_kind,
+      (au.role = 'admin' OR coalesce(af.is_official, false)) AS crown
+      FROM forum_topics t JOIN forum_categories c ON c.id = t.category_id LEFT JOIN users au ON au.id = t.author_id LEFT JOIN forum_profiles af ON af.user_id = t.author_id WHERE t.id = $1`, [id]);
   const t = rows[0];
   if (!t || (t.hidden_at && !req.fm.mod)) return null;
   return t;
@@ -154,10 +156,11 @@ async function isCrown(uid) {
   const r = (await pool.query(`SELECT u.role = 'admin' OR coalesce(f.is_official, false) AS s FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1`, [uid])).rows[0];
   return !!(r && r.s);
 }
+// Kural (bugün ve gelecekte): ekip konuları yoruma kapalıdır, yalnız ekip ekleme yapabilir; üye konuları her zaman yoruma açıktır.
 function canPostIn(req, t, c) {
+  if (t && t.crown) return req.fm.admin || req.fm.official ? { ok: true } : { ok: false, why: "Bu ekip konusu yorumlara kapalıdır." };
   if (req.fm.mod) return { ok: true };
   if (c.is_locked) return { ok: false, why: "Bu kategori yeni mesajlara kapalı." };
-  if (t && t.is_locked) return { ok: false, why: t.official_key || t.crown ? "Bu ekip konusu yorumlara kapalıdır." : "Bu konu kilitlendi; yeni yanıt yazılamaz." };
   return { ok: true };
 }
 /** Bekleyen görselleri mesaja bağlar (yalnız sahibinin, forum türündeki ve henüz bağlanmamış görselleri). */
@@ -175,6 +178,106 @@ function imagesIn(v) {
 }
 
 // ------------------------------------------------------------------ kurallar / ana sayfa
+// ------------------------------------------------------------------ misafir görünümü (oturum gerekmez)
+// Ekip konuları (yöneticinin ya da resmî hesabın açtığı, sabit ve yoruma kapalı konular) herkese açıktır.
+// Üye paylaşımları (üye konuları, üye yanıtları, üye görselleri) yalnız e-postası onaylı ve forum kurallarını kabul etmiş üyelere gösterilir:
+// misafir uçları yalnız ekip konusunu ve o konudaki ekip mesajlarını döner; üye kullanıcı adı, son yazan üye ya da üye içeriği sızmaz.
+const STAFF_T = `(au.role = 'admin' OR coalesce(af.is_official, false))`;
+const STAFF_JOIN = `LEFT JOIN users au ON au.id = t.author_id LEFT JOIN forum_profiles af ON af.user_id = t.author_id`;
+const GUEST = { guest: true, username: null, mod: false, admin: false, banned: false, consent: false };
+boardRouter.get("/board/public/home", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const cats = await pool.query(
+    `SELECT c.*, coalesce(s.topics, 0)::int AS topic_count, coalesce(s.posts, 0)::int AS post_count, lt.id AS last_id, lt.title AS last_title, lt.last_post_at AS last_at
+       FROM forum_categories c
+       LEFT JOIN LATERAL (SELECT count(*) AS topics, sum(t.reply_count + 1) AS posts FROM forum_topics t ${STAFF_JOIN}
+                           WHERE t.category_id = c.id AND t.hidden_at IS NULL AND ${STAFF_T}) s ON true
+       LEFT JOIN LATERAL (SELECT t.id, t.title, t.last_post_at FROM forum_topics t ${STAFF_JOIN}
+                           WHERE t.category_id = c.id AND t.hidden_at IS NULL AND ${STAFF_T} ORDER BY t.last_post_at DESC LIMIT 1) lt ON true
+      ORDER BY c.sort, c.id`);
+  const all = cats.rows.map((c) => ({ ...catOut(c), topics: c.topic_count, posts: c.post_count, unread: 0, last: c.last_id ? { id: c.last_id, title: c.last_title, at: c.last_at, user: null } : null }));
+  const top = all.filter((c) => !c.parentId);
+  for (const c of top) {
+    c.children = all.filter((k) => k.parentId === c.id);
+    for (const k of c.children) { c.topics += k.topics; c.posts += k.posts; if (k.last && (!c.last || new Date(k.last.at) > new Date(c.last.at))) c.last = k.last; }
+  }
+  const stats = (await pool.query(
+    `SELECT (SELECT count(*) FROM forum_topics WHERE hidden_at IS NULL)::int AS topics,
+            (SELECT count(*) FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id WHERE p.hidden_at IS NULL AND t.hidden_at IS NULL)::int AS posts,
+            (SELECT count(*) FROM forum_profiles WHERE rules_accepted_at IS NOT NULL)::int AS members,
+            (SELECT count(*) FROM forum_profiles WHERE last_seen_at > now() - interval '15 minutes' AND NOT hide_online)::int AS online`)).rows[0];
+  const tags = (await pool.query(`SELECT g.slug, g.name, g.icon, count(t.id)::int AS n FROM forum_tags g LEFT JOIN forum_topic_tags tt ON tt.tag_id = g.id
+      LEFT JOIN forum_topics t ON t.id = tt.topic_id AND t.hidden_at IS NULL AND t.author_id IN (SELECT u.id FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.role = 'admin' OR coalesce(f.is_official, false))
+      GROUP BY g.id ORDER BY g.name`)).rows;
+  res.json({ categories: top, tags, stats: { ...stats, newest: null }, me: GUEST, rules: RULES, icons: RULE_ICONS });
+});
+boardRouter.get("/board/public/topics", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const page = int(req.query.page, 1, 1, 1000), sort = SORTS[req.query.sort] ? req.query.sort : "activity";
+  const where = ["t.hidden_at IS NULL", STAFF_T], vals = [];
+  let cat = null, fam = null, tag = null;
+  if (req.query.c) {
+    cat = await category(String(req.query.c)); if (!cat) return res.status(404).json({ error: "Kategori bulunamadı." });
+    fam = await familyOf(cat); vals.push(fam.ids); where.push(`t.category_id = ANY($${vals.length}::int[])`);
+  }
+  if (req.query.tag) {
+    tag = (await pool.query(`SELECT slug, name, icon FROM forum_tags WHERE slug = $1`, [String(req.query.tag)])).rows[0];
+    if (!tag) return res.status(404).json({ error: "Etiket bulunamadı." });
+    vals.push(tag.slug); where.push(`EXISTS (SELECT 1 FROM forum_topic_tags tt JOIN forum_tags g ON g.id = tt.tag_id WHERE tt.topic_id = t.id AND g.slug = $${vals.length})`);
+  }
+  const base = `FROM forum_topics t JOIN forum_categories c ON c.id = t.category_id JOIN forum_posts fp ON fp.topic_id = t.id AND fp.is_first ${STAFF_JOIN} WHERE ${where.join(" AND ")}`;
+  const total = (await pool.query(`SELECT count(*)::int AS n ${base}`, vals)).rows[0].n;
+  const pages = Math.max(1, Math.ceil(total / PAGE_TOPICS));
+  const { rows } = await pool.query(
+    `SELECT t.id, t.title, t.icon, t.kind, t.is_pinned, t.is_locked, t.reply_count, t.view_count, t.last_post_at, t.created_at,
+            c.slug AS cat_slug, c.name AS cat_name, c.icon AS cat_icon, c.color AS cat_color, fp.like_count, left(${plainSql("fp.body")}, 180) AS excerpt,
+            EXISTS (SELECT 1 FROM attachments a WHERE a.forum_post_id = fp.id) AS has_images,
+            au.username AS author, au.role AS author_role, (SELECT id FROM attachments WHERE user_id = au.id AND scope = 'avatar') AS author_avatar,
+            af.level_override, af.forum_role, af.topics, af.posts, af.likes, af.dislikes, af.reports_upheld, af.is_official, af.frame AS author_frame
+       ${base} ORDER BY ${!cat && sort === "activity" ? "t.last_post_at DESC" : SORTS[sort]} LIMIT ${PAGE_TOPICS} OFFSET ${(page - 1) * PAGE_TOPICS}`, vals);
+  const TG = await tagsOf(rows.map((t) => t.id));
+  res.json({
+    category: cat ? { ...catOut(cat), children: fam.kids.map(catOut), parent: fam.parent ? catOut(fam.parent) : null } : null, tag: tag || null, page, pages, total, canTopic: false, guest: true,
+    topics: rows.map((t) => ({ tags: TG[t.id] || [], official: true, icon: t.icon || null, id: t.id, title: t.title, kind: t.kind, pinned: t.is_pinned, locked: true, hidden: false, solved: false,
+      replies: t.reply_count, views: t.view_count, likes: t.like_count, infinite: true, lastAt: t.last_post_at, createdAt: t.created_at, unread: false, seen: false,
+      hasPoll: false, hasImages: t.has_images, excerpt: t.excerpt, category: { slug: t.cat_slug, name: t.cat_name, icon: t.cat_icon, color: t.cat_color || "slate" },
+      author: { username: t.author, avatarId: t.author_avatar, frame: effectiveFrame(t.author_frame, forumLevel(t, t.author_role)), level: publicLevel(forumLevel(t, t.author_role)) }, lastUser: null })),
+  });
+});
+boardRouter.get("/board/public/t/:id", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  if (!ID.test(req.params.id)) return res.status(404).json({ error: "Konu bulunamadı." });
+  const t = (await pool.query(`SELECT t.*, ${STAFF_T} AS crown FROM forum_topics t ${STAFF_JOIN} WHERE t.id = $1 AND t.hidden_at IS NULL`, [req.params.id])).rows[0];
+  if (!t) return res.status(404).json({ error: "Konu bulunamadı." });
+  if (!t.crown) return res.status(403).json({ error: "Bu konu üyelere özel. Okumak için üye ol ve e-posta adresini onayla.", code: "members_only" });
+  const cat = await category(t.category_id), parent = cat.parent_id ? await category(cat.parent_id) : null, TG = await tagsOf([t.id]);
+  // yalnız ekip mesajları (konunun ilk mesajı ve ekibin eklemeleri); üye yanıtları misafire gösterilmez
+  const { rows } = await pool.query(
+    `SELECT p.*, ${AUTHOR} FROM forum_posts p JOIN users u ON u.id = p.author_id LEFT JOIN forum_profiles f ON f.user_id = u.id
+      WHERE p.topic_id = $1 AND p.hidden_at IS NULL AND (u.role = 'admin' OR coalesce(f.is_official, false)) ORDER BY p.created_at, p.id LIMIT 100`, [t.id]);
+  const imgs = rows.length ? (await pool.query(`SELECT id, forum_post_id FROM attachments WHERE forum_post_id = ANY($1::uuid[]) ORDER BY created_at`, [rows.map((p) => p.id)])).rows : [];
+  res.json({ tags: TG[t.id] || [], parent: parent ? catOut(parent) : null, guest: true,
+    topic: { id: t.id, title: t.title, icon: t.icon || null, kind: t.kind, pinned: t.is_pinned, locked: true, hidden: false, acceptedPostId: null, replies: t.reply_count, views: t.view_count,
+      createdAt: t.created_at, lastAt: t.last_post_at, own: false, crown: true },
+    category: catOut(cat), poll: null, page: 1, pages: 1, total: rows.length, firstUnread: null, watching: false,
+    canReply: false, replyBlocked: "Ekip konuları yorumlara kapalıdır. Üye konularını okumak ve yazmak için üye ol ve e-posta adresini onayla.", canAccept: false,
+    posts: rows.map((p) => ({ id: p.id, first: p.is_first, createdAt: p.created_at, editedAt: p.edited_at, editedByMod: false, hidden: false, hiddenBy: null, hiddenReason: null,
+      body: p.body, images: imgs.filter((i) => i.forum_post_id === p.id).map((i) => i.id), likes: p.like_count, dislikes: 0, myReaction: 0, infinite: !!p.is_first, bookmarked: false, own: false,
+      staff: true, canEdit: false, author: authorOut(p) })),
+    me: GUEST,
+  });
+});
+// misafir görseli: yalnız ekip konusundaki ekip mesajına bağlı görsel
+boardRouter.get("/board/public/img/:id", async (req, res) => {
+  if (!ID.test(req.params.id)) return res.status(404).json({ error: "Bulunamadı." });
+  const a = (await pool.query(
+    `SELECT a.filename, a.mime, a.data FROM attachments a JOIN forum_posts p ON p.id = a.forum_post_id JOIN forum_topics t ON t.id = p.topic_id
+       JOIN users pu ON pu.id = p.author_id LEFT JOIN forum_profiles pf ON pf.user_id = pu.id ${STAFF_JOIN}
+      WHERE a.id = $1 AND a.scope = 'forum' AND p.hidden_at IS NULL AND t.hidden_at IS NULL AND (pu.role = 'admin' OR coalesce(pf.is_official, false)) AND ${STAFF_T}`, [req.params.id])).rows[0];
+  if (!a) return res.status(404).json({ error: "Bulunamadı." });
+  sendAttachment(res, a, "immutable");
+});
+
 boardRouter.get("/board/rules", requireAuth, (req, res) => res.json({ rules: RULES, icons: RULE_ICONS, reasons: REPORT_REASONS }));
 
 boardRouter.get("/board/home", member, async (req, res) => {
@@ -299,7 +402,7 @@ boardRouter.post("/board/topics", member, async (req, res) => {
   const dup = await pool.query(`SELECT id FROM forum_topics WHERE author_id = $1 AND lower(title) = lower($2) AND created_at > now() - interval '1 day' AND hidden_at IS NULL`, [req.fm.id, title]);
   if (dup.rows.length) return res.status(409).json({ error: "Aynı başlıkla kısa süre önce bir konu açtınız.", topicId: dup.rows[0].id });
   const out = await tx(async (c) => {
-    const t = (await c.query(`INSERT INTO forum_topics (category_id, author_id, title, kind, last_poster_id, created_at, last_post_at, is_pinned, is_locked) VALUES ($1, $2, $3, $4, $2, clock_timestamp(), clock_timestamp(), $5, $6) RETURNING id, created_at`, [cat.id, req.fm.id, title, kind, !!req.fm.admin, !!req.fm.admin && req.body.openComments !== true])).rows[0];
+    const t = (await c.query(`INSERT INTO forum_topics (category_id, author_id, title, kind, last_poster_id, created_at, last_post_at, is_pinned, is_locked) VALUES ($1, $2, $3, $4, $2, clock_timestamp(), clock_timestamp(), $5, $6) RETURNING id, created_at`, [cat.id, req.fm.id, title, kind, !!req.fm.admin, !!req.fm.admin])).rows[0];
     const p = (await c.query(`INSERT INTO forum_posts (topic_id, author_id, body, is_first, created_at) VALUES ($1, $2, $3, true, $4) RETURNING id`, [t.id, req.fm.id, body, t.created_at])).rows[0];
     await c.query(`UPDATE forum_topics SET last_post_id = $2, last_post_at = $3 WHERE id = $1`, [t.id, p.id, t.created_at]);
     if (poll.v) await c.query(`INSERT INTO forum_polls (topic_id, question, options, multi, closes_at) VALUES ($1, $2, $3, $4, CASE WHEN $5::int > 0 THEN now() + make_interval(days => $5::int) END)`,
@@ -331,6 +434,7 @@ async function postsOut(req, rows, crown = false) {
       hidden, hiddenBy: hidden ? (p.deleted_by_author ? "author" : "mod") : null, hiddenReason: hidden && req.fm.mod ? p.hidden_reason : null,
       body: show ? p.body : "", images: show ? imgs.filter((i) => i.forum_post_id === p.id).map((i) => i.id) : [],
       likes: p.like_count, dislikes: p.dislike_count, myReaction: R[p.id] || 0, infinite: !!(crown && p.is_first), bookmarked: B.has(p.id), own,
+      staff: p.role === "admin" || !!p.is_official,   // ekip paylaşımı: beğenmeme ve şikâyet kapalı
       canEdit: !hidden && (req.fm.mod || (own && !req.fm.banned && Date.now() - new Date(p.created_at).getTime() < 24 * 3600e3)),
       author: authorOut(p.username ? p : null),
     };
@@ -381,7 +485,7 @@ boardRouter.get("/board/t/:id", member, async (req, res) => {
     if ((r.rows[0] && r.rows[0].fresh) || !lastRead || Date.now() - new Date(lastRead).getTime() > 30 * 60000) await pool.query(`UPDATE forum_topics SET view_count = view_count + 1 WHERE id = $1`, [t.id]);
   }
   const watching = (await pool.query(`SELECT 1 FROM forum_watches WHERE topic_id = $1 AND user_id = $2`, [t.id, req.fm.id])).rows.length > 0;
-  t.crown = await isCrown(t.author_id);
+  t.crown = !!t.crown;
   const can = canPostIn(req, t, cat);
   const parent = cat.parent_id ? await category(cat.parent_id) : null;
   const TG = await tagsOf([t.id]);
@@ -465,8 +569,9 @@ boardRouter.post("/board/t/:id/posts", member, async (req, res) => {
 // ------------------------------------------------------------------ düzenle / sil
 async function postRow(id) {
   if (!ID.test(id)) return null;
-  const { rows } = await pool.query(`SELECT p.*, t.title, t.is_locked, t.hidden_at AS topic_hidden, t.author_id AS topic_author, t.category_id, t.reply_count, t.accepted_post_id
-     FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id WHERE p.id = $1`, [id]);
+  const { rows } = await pool.query(`SELECT p.*, t.title, t.is_locked, t.hidden_at AS topic_hidden, t.author_id AS topic_author, t.category_id, t.reply_count, t.accepted_post_id,
+       (pu.role = 'admin' OR coalesce(pf.is_official, false)) AS staff_author
+     FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id LEFT JOIN users pu ON pu.id = p.author_id LEFT JOIN forum_profiles pf ON pf.user_id = p.author_id WHERE p.id = $1`, [id]);
   return rows[0] || null;
 }
 boardRouter.patch("/board/posts/:id", member, async (req, res) => {
@@ -547,7 +652,7 @@ boardRouter.post("/board/posts/:id/react", member, async (req, res) => {
   if (![1, -1, 0].includes(v)) return res.status(400).json({ error: "Geçersiz tepki." });
   const p = await postRow(req.params.id); if (!p || p.hidden_at || p.topic_hidden) return res.status(404).json({ error: "Mesaj bulunamadı." });
   if (p.author_id === req.fm.id) return res.status(400).json({ error: "Kendi mesajınıza tepki veremezsiniz." });
-  if (v === -1 && p.is_first && await isCrown(p.topic_author)) return res.status(400).json({ error: "Ekip konularında beğenmeme kapalıdır." });
+  if (v === -1 && (p.staff_author || (p.is_first && await isCrown(p.topic_author)))) return res.status(400).json({ error: "Ekip paylaşımlarında beğenmeme kapalıdır." });
   if (await limited(req, res, "react")) return;
   const r = await tx(async (c) => {
     const old = (await c.query(`SELECT value FROM forum_reactions WHERE post_id = $1 AND user_id = $2 FOR UPDATE`, [p.id, req.fm.id])).rows[0];
@@ -603,6 +708,7 @@ boardRouter.get("/board/me/likes", member, async (req, res) => {
   res.json(rows.map((r) => ({ postId: r.id, topicId: r.topic_id, title: r.title, excerpt: r.excerpt, author: r.username, at: r.created_at, likedAt: r.liked_at })));
 });
 // Üye listesi: yalnız kullanıcı adı, avatar ve seviye (kişisel bilgi yok); seviyeye göre sıralı. Ekip en üstte.
+// Üye listesi: foruma girip kuralları onaylamış üyeler. Sistem (resmî içerik) hesabı listelenmez; marka yalnız yönetici hesabıyla "AlpveFit" olarak görünür.
 boardRouter.get("/board/members", member, async (req, res) => {
   res.setHeader("Cache-Control", "private, max-age=30");
   const q = String(req.query.q || "").toLowerCase().replace(/^@/, "").slice(0, 20);
@@ -611,7 +717,7 @@ boardRouter.get("/board/members", member, async (req, res) => {
     `SELECT u.username, u.role, f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld, f.is_official, f.hide_online, f.last_seen_at, f.frame,
             (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'avatar') AS avatar_id
        FROM forum_profiles f JOIN users u ON u.id = f.user_id
-      WHERE f.rules_accepted_at IS NOT NULL AND NOT f.ban_permanent AND ($1 = '' OR u.username LIKE $1 || '%') LIMIT 5000`, [q.replace(/[%_\\]/g, (c) => "\\" + c)]);
+      WHERE f.rules_accepted_at IS NOT NULL AND NOT f.ban_permanent AND NOT coalesce(f.is_official, false) AND ($1 = '' OR u.username LIKE $1 || '%') LIMIT 5000`, [q.replace(/[%_\\]/g, (c) => "\\" + c)]);
   const list = rows.map((r) => { const l = forumLevel(r, r.role); return { username: r.username, avatarId: r.avatar_id, frame: effectiveFrame(r.frame, l), level: publicLevel(l), score: l.assigned ? 1e9 + l.n : forumScore(r),
     online: !r.hide_online && !!(r.last_seen_at && Date.now() - new Date(r.last_seen_at).getTime() < 15 * 60000) }; });
   list.sort((a, b) => b.level.n - a.level.n || b.score - a.score || a.username.localeCompare(b.username));
@@ -666,6 +772,7 @@ boardRouter.post("/board/t/:id/vote", member, async (req, res) => {
 boardRouter.post("/board/posts/:id/report", member, async (req, res) => {
   const p = await postRow(req.params.id); if (!p || p.hidden_at || p.topic_hidden) return res.status(404).json({ error: "Mesaj bulunamadı." });
   if (p.author_id === req.fm.id) return res.status(400).json({ error: "Kendi mesajınızı şikâyet edemezsiniz." });
+  if (p.staff_author) return res.status(400).json({ error: "Ekip paylaşımları şikâyet edilemez." });
   const reason = String((req.body || {}).reason || ""), noteText = clean((req.body || {}).note).slice(0, 300);
   if (!REPORT_REASONS.some((r) => r[0] === reason)) return res.status(400).json({ error: "Şikâyet nedeni seçin." });
   if (!(await checkHourlyActionLimit(`freport:${req.fm.id}`, "forum_report", 20))) return res.status(429).json({ error: "Çok fazla şikâyet gönderildi. Lütfen daha sonra tekrar deneyin." });
@@ -816,8 +923,8 @@ boardRouter.post("/board/t/:id/mod", member, async (req, res) => {
   const t = await topicRow(req.params.id, req); if (!t) return res.status(404).json({ error: "Konu bulunamadı." });
   const b = req.body || {}, a = String(b.action || ""), reason = clean(b.reason).slice(0, 200);
   const notifyAuthor = async (text) => { if (t.author_id && t.author_id !== req.fm.id) await note(t.author_id, text, { topicId: t.id, kind: "moderation", reason: reason || null }); };
+  if (a === "lock" || a === "unlock") return res.status(400).json({ error: t.crown ? "Ekip konuları her zaman yoruma kapalıdır." : "Üye konuları her zaman yoruma açıktır; sorunlu mesajı kaldırabilir ya da üyeyi uzaklaştırabilirsiniz." });
   if (a === "pin" || a === "unpin") await pool.query(`UPDATE forum_topics SET is_pinned = $2 WHERE id = $1`, [t.id, a === "pin"]);
-  else if (a === "lock" || a === "unlock") { await pool.query(`UPDATE forum_topics SET is_locked = $2 WHERE id = $1`, [t.id, a === "lock"]); await notifyAuthor(a === "lock" ? `Konunuz kilitlendi: “${short(t.title)}”` : `Konunuz yeniden yanıtlara açıldı: “${short(t.title)}”`); }
   else if (a === "move") {
     const c = await category(String(b.category || "")); if (!c) return res.status(400).json({ error: "Hedef kategori seçin." });
     if (c.id === t.category_id) return res.json({ ok: true });

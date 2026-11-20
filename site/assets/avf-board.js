@@ -1,4 +1,4 @@
-/* AlpveFit — Forum (yalnız üyeler, yalnız Türkçe).
+/* AlpveFit — Forum (yalnız Türkçe). Ekip konuları herkese açıktır (misafir görünümü); üye paylaşımları yalnız e-postası onaylı üyelere.
    Adresler: /forum · /forum/k/<kategori> · /forum/konu/<id> · /forum/yeni · /forum/ara · /forum/uye/<ad> · /forum/kaydedilenler ·
    /forum/takip · /forum/konularim · /forum/moderasyon
    Güvenlik: kullanıcı içeriği HİÇBİR ZAMAN innerHTML ile yazılmaz; biçim dili (kalın, italik, alıntı, liste, bağlantı, @anma)
@@ -13,7 +13,16 @@
   var VIEW = null, poll = null;
 
   // ------------------------------------------------------------------ küçük yardımcılar
-  function api(m, p, b) { return AVF.api(m, "/board" + p, b); }
+  // Misafir görünümünde yalnız ekip konularını döndüren uçlar kullanılır (sunucu ayrıca denetler).
+  function api(m, p, b) {
+    if (S.guest && m === "GET") {
+      if (p === "/home") p = "/public/home";
+      else if (/^\/topics(\?|$)/.test(p)) p = "/public" + p;
+      else if (/^\/t\/[0-9a-f-]{36}(\?|$)/i.test(p)) p = "/public" + p;
+    }
+    return AVF.api(m, "/board" + p, b);
+  }
+  function imgSrc(id) { return (S.guest ? "/api/board/public/img/" : "/api/board/img/") + id; }
   function go(p) { AVF.go(p); }
   function lk(href, kids, attrs) {
     var a = h("a", Object.assign({ href: href }, attrs || {}), kids);
@@ -36,12 +45,13 @@
   function avatarEl(a, size) {
     var cls = "fo-av" + (size ? " " + size : "");
     if (!a || !a.username) return h("span", { class: cls + " none", "aria-hidden": "true" }, AVF.icon("user"));
+    if (isBrand(a)) return h("img", { class: cls + " brand", src: "/assets/brand/alpvefit.svg", alt: "AlpveFit", decoding: "async" });   // vektör: her boyutta keskin
     if (a.avatarId) return h("img", { class: cls, src: "/api/forum/media/" + a.avatarId, alt: "", loading: "lazy", decoding: "async" });
     return h("span", { class: cls + " ini", "aria-hidden": "true", style: "--h:" + hue(a.username), text: a.username.charAt(0).toUpperCase() });
   }
   function lvl(l, big) {
     if (!l) return null;
-    return h("span", { class: "fo-lv" + (l.official ? " off" : l.assigned ? " as" : " l" + l.n) + (big ? " big" : ""), title: l.name }, AVF.icon(l.official ? "star" : l.assigned ? "shield" : LV_ICON[Math.max(0, Math.min(7, l.n - 1))]), h("span", { text: l.name }));
+    return h("span", { class: "fo-lv" + (l.official || l.brand ? " off" : l.assigned ? " as" : " l" + l.n) + (big ? " big" : ""), title: l.name }, AVF.icon(l.official || l.brand ? "star" : l.assigned ? "shield" : LV_ICON[Math.max(0, Math.min(7, l.n - 1))]), h("span", { text: l.name }));
   }
   // Kategori simgesi: her kategorinin kendi rengiyle canlı, degrade bir rozet
   function catTile(c, size) { return h("span", { class: "fo-ct " + (c && c.color || "slate") + (size ? " " + size : ""), "aria-hidden": "true" }, AVF.icon(c && c.icon || "msg")); }
@@ -61,7 +71,10 @@
     }));
   }
   function greet() { var hr = new Date().getHours(); return hr < 6 ? "İyi geceler" : hr < 12 ? "Günaydın" : hr < 18 ? "İyi günler" : "İyi akşamlar"; }
-  function uname(a, cls) { return a && a.username ? lk("/forum/uye/" + a.username, "@" + a.username, { class: cls || "fo-un", "data-notr": "" }) : h("span", { class: "fo-un del", text: "silinmiş üye" }); }
+  // marka hesapları (yönetici, resmî hesap) forumda doğrudan "AlpveFit" adıyla ve logoyla görünür
+  function isBrand(a) { return !!(a && a.level && a.level.brand); }
+  function dispName(a) { return isBrand(a) ? "AlpveFit" : "@" + a.username; }
+  function uname(a, cls) { return a && a.username ? lk("/forum/uye/" + a.username, isBrand(a) ? [h("span", { text: "AlpveFit" }), AVF.icon("check", "fo-vf")] : "@" + a.username, { class: (cls || "fo-un") + (isBrand(a) ? " brand" : ""), "data-notr": "", title: isBrand(a) ? "AlpveFit resmî hesabı" : null }) : h("span", { class: "fo-un del", text: "silinmiş üye" }); }
   function chip(icon, text, cls) { return h("span", { class: "fo-chip" + (cls ? " " + cls : "") }, icon ? AVF.icon(icon) : null, h("span", { text: text })); }
   function errBox(e, retry) { return AVF.state("alert", "Yüklenemedi", AVF.errText(e), retry ? h("button", { class: "btn", type: "button", onclick: retry }, AVF.icon("refresh", "bico"), "Tekrar dene") : null); }
   function qs() { var o = {}; (location.search || "").replace(/^\?/, "").split("&").forEach(function (kv) { if (!kv) return; var i = kv.indexOf("="); o[decodeURIComponent(i < 0 ? kv : kv.slice(0, i))] = decodeURIComponent(i < 0 ? "" : kv.slice(i + 1).replace(/\+/g, " ")); }); return o; }
@@ -139,7 +152,7 @@
       }
       if ((mm = /^\[gif=(\d{1,2})\]$/.exec(t))) {
         var gid = ctx.images && ctx.images[Number(mm[1]) - 1];
-        if (gid) { if (ctx.used) ctx.used[gid] = true; el.appendChild(h("figure", { class: "fo-fig gif" }, h("img", { src: "/api/board/img/" + gid, alt: "", loading: "lazy", "data-img": gid }))); }
+        if (gid) { if (ctx.used) ctx.used[gid] = true; el.appendChild(h("figure", { class: "fo-fig gif" }, h("img", { src: imgSrc(gid), alt: "", loading: "lazy", "data-img": gid }))); }
         i++; continue;
       }
       if ((mm = /^\[arac=([a-z0-9-]+)\]$/.exec(t))) {
@@ -214,7 +227,7 @@
     var prevB = h("button", { type: "button", class: "fo-lbb p", "aria-label": "Önceki görsel" }, AVF.icon("back")), nextB = h("button", { type: "button", class: "fo-lbb n", "aria-label": "Sonraki görsel" }, AVF.icon("arrow"));
     var x = h("button", { type: "button", class: "fo-lbx", "aria-label": "Kapat" }, AVF.icon("x"));
     var ov = h("div", { class: "fo-lb", role: "dialog", "aria-modal": "true", "aria-label": "Görsel" }, img, x, ids.length > 1 ? prevB : null, ids.length > 1 ? nextB : null, ids.length > 1 ? cnt : null);
-    function show() { img.src = "/api/board/img/" + ids[i]; cnt.textContent = (i + 1) + " / " + ids.length; }
+    function show() { img.src = imgSrc(ids[i]); cnt.textContent = (i + 1) + " / " + ids.length; }
     function close() { document.removeEventListener("keydown", key); ov.remove(); AVF.lockScroll(false); }
     function key(e) { if (e.key === "Escape") close(); else if (e.key === "ArrowRight") { i = (i + 1) % ids.length; show(); } else if (e.key === "ArrowLeft") { i = (i - 1 + ids.length) % ids.length; show(); } }
     x.onclick = close; prevB.onclick = function () { i = (i - 1 + ids.length) % ids.length; show(); }; nextB.onclick = function () { i = (i + 1) % ids.length; show(); };
@@ -405,8 +418,10 @@
   var CH_BOXES = [];   // aynı anda iki kart olabilir (masaüstü yan sütun + telefonda ana sütun): hepsi birlikte güncellenir
   function challengeCard(extra) {
     var box = h("section", { class: "card fo-ch" + (extra ? " " + extra : "") });
-    CH_BOXES = CH_BOXES.filter(function (b) { return document.body.contains(b); }); CH_BOXES.push(box);
-    function paint(c) { S.challenge = c; CH_BOXES.forEach(function (b) { if (b === box || document.body.contains(b)) draw(b, c); }); }
+    // Henüz sayfaya eklenmemiş yeni kartlar listede kalır; yalnız bir kez sayfada görülüp sonra kaldırılanlar atılır.
+    function prune() { CH_BOXES = CH_BOXES.filter(function (b) { if (b.isConnected) { b._seen = true; return true; } return !b._seen; }); }
+    prune(); CH_BOXES.push(box);
+    function paint(c) { S.challenge = c; prune(); CH_BOXES.forEach(function (b) { draw(b, c); }); }
     function draw(box, c) {
       var pct = Math.min(100, Math.round(c.doneCount / c.goal * 100));
       AVF.mount(box, h("div", { class: "fo-chh" }, h("span", { class: "fo-chi" }, AVF.icon(c.icon)), h("div", null, h("small", { text: "Haftanın meydan okuması" }), h("b", { text: c.title }))),
@@ -457,29 +472,48 @@
         var last = i === arr.length - 1, href = c[1] || (last ? location.pathname + location.search : null);
         return [h("span", { class: "sep", "aria-hidden": "true", text: "›" }), href ? lk(href, c[0], { "data-notr": "", "aria-current": last ? "page" : null }) : h("span", { "data-notr": "", text: c[0] })];
       }));
-    var newBtn = opts.noNew ? null : lk("/forum/yeni" + (opts.cat ? "?k=" + opts.cat : ""), [AVF.icon("plus", "bico"), h("span", { text: "Yeni konu aç" })], { class: "btn fo-new" + (me && me.banned ? " off" : "") });
+    var newBtn = opts.noNew || S.guest ? null : lk("/forum/yeni" + (opts.cat ? "?k=" + opts.cat : ""), [AVF.icon("plus", "bico"), h("span", { text: "Yeni konu aç" })], { class: "btn fo-new" + (me && me.banned ? " off" : "") });
     var band = h("section", { class: "fo-band" + (opts.color ? " c-" + opts.color : ""), "data-norv": "" }, h("div", { class: "wrap" }, h("div", { class: "fo-bt" }, crumbs, h("div", { class: "fo-bact" }, newBtn)),
-      h("div", { class: "fo-bh" }, opts.icon ? catTile({ icon: opts.icon, color: opts.color }, "lg") : null, h("div", null, h("h1", { "data-notr": "", text: opts.h1 || "Forum" }), opts.sub ? h("p", { text: opts.sub }) : null)), sf));
+      h("div", { class: "fo-bh" }, opts.icon ? catTile({ icon: opts.icon, color: opts.color }, "lg") : null, h("div", null, h("h1", { "data-notr": "", text: opts.h1 || "Forum" }), opts.sub ? h("p", { text: opts.sub }) : null)), S.guest ? null : sf));
     var nav = [["/forum/konularim", "file", "Konularım"], ["/forum/takip", "bell", "Takip ettiklerim"], ["/forum/kaydedilenler", "bookmark", "Kaydedilenler ve Beğenilenler"], ["/forum/uyeler", "users", "Üyeler"], ["/panel/forum-ayarlari", "cog", "Forum ayarları"]];
     var side = h("aside", { class: "fo-side" },
-      me ? h("section", { class: "card fo-me" }, h("div", { class: "fo-meh" }, avatar({ username: me.username, avatarId: AVF.session.user && AVF.session.user.avatar_id }, "md"),
-          h("div", null, h("small", { class: "fo-hi", text: greet() + " 👋" }), lk("/forum/uye/" + me.username, "@" + me.username, { class: "fo-un b", "data-notr": "" }), lvl(me.level))),
+      me ? h("section", { class: "card fo-me" }, h("div", { class: "fo-meh" }, avatar({ username: me.username, avatarId: AVF.session.user && AVF.session.user.avatar_id, level: me.level }, "md"),
+          h("div", null, h("small", { class: "fo-hi", text: greet() + " 👋" }), lk("/forum/uye/" + me.username, dispName(me), { class: "fo-un b", "data-notr": "" }), lvl(me.level))),
         me.banned ? h("p", { class: "note err fo-ban" }, AVF.icon("lock", "bico"), h("span", { text: me.banUntil ? "Forumdan " + AVF.fmtDateTime(me.banUntil) + " tarihine kadar uzaklaştırıldın." : "Forumdan uzaklaştırıldın." }), me.banReason ? h("small", { text: "Gerekçe: " + me.banReason }) : null) : null,
         h("nav", { class: "fo-mel" }, nav.map(function (x) {
           return lk(x[0], [AVF.icon(x[1]), h("span", { text: x[2] })], { "aria-current": location.pathname === x[0] ? "page" : null });
         }), me.mod ? lk("/forum/moderasyon", [AVF.icon("shield"), h("span", { text: "Moderasyon" }), me.openReports ? h("span", { class: "fo-cnt-b", text: String(me.openReports) }) : null], { class: "mod", "aria-current": location.pathname === "/forum/moderasyon" ? "page" : null }) : null)) : null,
       me ? challengeCard() : null,
+      S.guest ? joinCard() : null,
       st ? h("section", { class: "card fo-stats" }, h("h3", null, AVF.icon("chart"), h("span", { text: "Forum nabzı" })),
         h("dl", null, [["Konu", st.topics, "file"], ["Mesaj", st.posts, "chat"], ["Üye", st.members, "users"]].map(function (x) { return h("div", null, AVF.icon(x[2]), h("dd", { text: num(x[1]) }), h("dt", { text: x[0] })); })),
         h("p", { class: "fo-on" }, h("i", { "aria-hidden": "true" }), h("span", { text: num(st.online) + " üye şu an burada" })), st.newest ? h("p", { class: "hint" }, h("span", { text: "Aramıza son katılan: " }), lk("/forum/uye/" + st.newest, "@" + st.newest, { class: "fo-men" }), h("span", { text: " — hoş geldin! 🎉" })) : null,
-        lk("/forum/uyeler", [h("span", { text: "Tüm üyeleri gör" }), AVF.icon("arrow")], { class: "fo-lnk" })) : null,
+        S.guest ? null : lk("/forum/uyeler", [h("span", { text: "Tüm üyeleri gör" }), AVF.icon("arrow")], { class: "fo-lnk" })) : null,
       (S.tags || []).some(function (g) { return g.n > 0; }) ? h("section", { class: "card fo-tagc" }, h("h3", null, AVF.icon("hash"), h("span", { text: "Popüler etiketler" })),
         h("div", { class: "fo-tags" }, S.tags.filter(function (g) { return g.n > 0; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 14).map(tagChip))) : null,
       h("section", { class: "card fo-rul" }, h("h3", null, AVF.icon("shield"), h("span", { text: "Kısaca kurallar" })), S.rules ? ruleList(S.rules.slice(1, 5), (S.ruleIcons || []).slice(1, 5), "mini") : h("ul", { class: "fo-rlist mini" }),
         h("button", { class: "fo-lnk", type: "button", onclick: showRules }, "Tüm kurallar")));
+    var guestBar = S.guest ? h("div", { class: "fo-cbar fo-gbar", role: "note" }, AVF.icon("eye"), h("span", { text: S.guestWhy === "verify" ? "Şu an yalnız ekip rehberlerini görüyorsun. Üye konularını görmek için e-posta adresini onayla." : "Şu an yalnız ekip rehberlerini görüyorsun. Üye konularını görmek, soru sormak ve yazmak için üye ol." }),
+      S.guestWhy === "verify" ? null : h("button", { class: "btn sm", type: "button", onclick: function () { joinNow("register"); } }, "Üye ol")) : null;
     var consentBar = me && !me.consent ? h("div", { class: "fo-cbar", role: "note" }, AVF.icon("shield"), h("span", { text: "Forumu okuyabilirsin. Konu açmak ve yazmak için sağlık verisi açık rızası gerekir." }), h("button", { class: "btn sm", type: "button", onclick: function () { consentDialog(function () { consentBar.remove(); }); } }, "İncele ve onayla")) : null;
-    AVF.mount(VIEW, band, h("div", { class: "wrap fo-wrap", "data-norv": "" }, consentBar, h("div", { class: "fo-grid" }, h("div", { class: "fo-main" }, mainKids), side)));
+    AVF.mount(VIEW, band, h("div", { class: "wrap fo-wrap", "data-norv": "" }, guestBar, consentBar, h("div", { class: "fo-grid" }, h("div", { class: "fo-main" }, mainKids), side)));
     return VIEW.querySelector(".fo-main");
+  }
+  // misafir: üye ol / giriş yap (giriş sonrası aynı sayfaya dönülür)
+  function joinNow(view) { AVF.afterLogin = { path: location.pathname + location.search, at: Date.now() }; AVF.auth.open(view || "register"); }
+  function joinCard() {
+    var verify = S.guestWhy === "verify";
+    return h("section", { class: "card fo-join" }, h("span", { class: "tile" }, AVF.icon(verify ? "mail" : "users")),
+      h("h3", { text: verify ? "E-posta adresini onayla" : "Topluluğa katıl" }),
+      h("p", { text: verify ? "Üye konularını okumak ve yazmak için e-posta adresinin onaylanması gerekiyor. Onay kodunu Hesabım sayfasından yeniden isteyebilirsin."
+        : "Ekip rehberlerini herkes okuyabilir. Üyelerin konularını görmek, soru sormak, beğenmek ve yazmak için ücretsiz üye ol ve e-posta adresini onayla." }),
+      verify ? lk("/panel", [AVF.icon("user", "bico"), h("span", { text: "Hesabıma git" })], { class: "btn" })
+        : h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: function () { joinNow("register"); } }, "Üye ol"), h("button", { class: "btn ghost", type: "button", onclick: function () { joinNow("login"); } }, "Giriş yap")));
+  }
+  function membersOnly() {
+    title("Üyelere özel");
+    shell({ h1: "Üyelere özel", crumbs: [["Üyelere özel"]], noNew: true }, AVF.state("lock", "Bu bölüm üyelere özel", S.guestWhy === "verify" ? "E-posta adresini onayladıktan sonra burayı görebilirsin." : "Üye konularını görmek ve yazmak için üye ol ve e-posta adresini onayla. Ekip rehberleri herkese açık.",
+      h("div", { class: "row", style: "justify-content:center;margin-top:8px" }, S.guestWhy === "verify" ? lk("/panel", "Hesabıma git", { class: "btn" }) : h("button", { class: "btn", type: "button", onclick: function () { joinNow("register"); } }, "Üye ol"), lk("/forum", "Ekip rehberlerine dön", { class: "btn ghost" }))));
   }
   function showRules() {
     dialog({ icon: "shield", title: "Forum kuralları", body: ruleList(S.rules || [], S.ruleIcons), confirm: "Anladım", cancel: "Kapat" });
@@ -532,14 +566,15 @@
           h("div", { class: "fo-cl" }, c.last ? [lk("/forum/konu/" + c.last.id + "?page=last", c.last.title, { class: "fo-cll", "data-notr": "" }), h("small", null, c.last.user ? h("span", { "data-notr": "", text: "@" + c.last.user + " · " }) : null, timeEl(c.last.at))]
             : h("small", { class: "hint", text: "Henüz konu yok" })));
       })),
+      S.guest ? h("section", { class: "fo-sec" }, h("div", { class: "fo-sh" }, h("h2", { class: "fo-gh" }, AVF.icon("star"), h("span", { text: "Ekip rehberleri" }))), listBox) :
       h("section", { class: "fo-sec" }, h("div", { class: "fo-sh" }, h("div", { class: "fo-tabs2", role: "tablist" }, tabs.map(function (x) {
         return h("button", { type: "button", role: "tab", class: x[0] === cur ? "on" : "", "aria-selected": String(x[0] === cur), onclick: function () { history.replaceState(history.state, "", "/forum" + (x[0] ? "?l=" + x[0] : "")); home(); } }, x[1]);
       })), h("button", { class: "fo-lnk", type: "button", onclick: function () { api("POST", "/read-all", {}).then(function () { AVF.toast("Tüm konular okundu olarak işaretlendi."); load(); }); } }, AVF.icon("checks"), h("span", { text: "Tümünü okundu say" }))), listBox)]);
     void main;
     AVF.mount(listBox, AVF.skeleton(3));
-    var q = cur === "new" ? "?sort=new" : cur === "unread" ? "?filter=unread" : cur === "unanswered" ? "?filter=unanswered" : "";
+    var q = S.guest ? "" : cur === "new" ? "?sort=new" : cur === "unread" ? "?filter=unread" : cur === "unanswered" ? "?filter=unanswered" : "";
     api("GET", "/topics" + q).then(function (r) {
-      AVF.mount(listBox, topicList(r.topics.slice(0, 15), true, cur === "unread" ? ["checks", "Okunmamış konu yok", "Her şeye yetiştin, helal olsun! 🙌"] : null));
+      AVF.mount(listBox, topicList(r.topics.slice(0, S.guest ? 20 : 15), true, cur === "unread" ? ["checks", "Okunmamış konu yok", "Her şeye yetiştin, helal olsun! 🙌"] : null));
     }, function (e) { AVF.mount(listBox, errBox(e, home)); });
   }
 
@@ -558,7 +593,7 @@
       var c = r.category;
       var srt = h("select", { class: "inp sm", "aria-label": "Sıralama" }, [["activity", "Son hareket"], ["new", "En yeni"], ["replies", "En çok yanıt"], ["likes", "En çok beğeni"], ["views", "En çok görüntülenen"]].map(function (x) { var op = h("option", { value: x[0], text: x[1] }); if (x[0] === sort) op.selected = true; return op; }));
       srt.addEventListener("change", function () { go(qsOf(1, srt.value, filter)); });
-      var flt = o.filter ? null : h("div", { class: "fo-fl", role: "group", "aria-label": "Süzgeç" }, [["", "Tümü"], ["unread", "Okunmamış"], ["unanswered", "Yanıtsız"], ["questions", "Sorular"], ["unsolved", "Çözülmemiş"]].map(function (x) {
+      var flt = o.filter || S.guest ? null : h("div", { class: "fo-fl", role: "group", "aria-label": "Süzgeç" }, [["", "Tümü"], ["unread", "Okunmamış"], ["unanswered", "Yanıtsız"], ["questions", "Sorular"], ["unsolved", "Çözülmemiş"]].map(function (x) {
         return lk(qsOf(1, sort, x[0]), x[1], { class: x[0] === filter ? "on" : "", "aria-current": x[0] === filter ? "true" : null });
       }));
       // alt kategoriler: üst kategori sayfasında sekme (Tümü + alt başlıklar); alt kategorideyken de aynı sekmeler görünür
@@ -591,6 +626,7 @@
     var Q = qs(), page = Q.page || (Q.s === "unread" ? "unread" : 1), target = Q.m || null;
     shell({ h1: "…", crumbs: [], noNew: true }, AVF.skeleton(4));
     api("GET", "/t/" + id + "?page=" + encodeURIComponent(page) + (target ? "&post=" + target : "")).then(function (r) { renderTopic(r, target); }, function (e) {
+      if (e && e.data && e.data.code === "members_only") return membersOnly();
       shell({ h1: "Konu", crumbs: [] }, e && e.status === 404 ? AVF.state("msg", "Konu bulunamadı", "Bu konu kaldırılmış ya da hiç var olmamış olabilir.", lk("/forum", "Foruma dön", { class: "btn" })) : errBox(e, function () { topicPage(id); }));
     });
   }
@@ -609,7 +645,7 @@
       h("div", { class: "fo-thm" }, lk("/forum/k/" + c.slug, [catTile(c, "xs"), h("span", { text: c.name })], { class: "fo-cat" }), h("span", null, AVF.icon("clock"), timeEl(t.createdAt)),
         h("span", null, AVF.icon("chat"), h("b", { text: num(t.replies) }), h("span", { text: " yanıt" })), h("span", null, AVF.icon("eye"), h("b", { text: num(t.views) }), h("span", { text: " görüntülenme" }))),
       r.tags && r.tags.length ? h("div", { class: "fo-tags" }, r.tags.map(tagChip)) : null,
-      h("div", { class: "fo-tha" }, watchBtn, share, modBtn));
+      h("div", { class: "fo-tha" }, S.guest ? null : watchBtn, share, modBtn));
     var crumbs = (r.parent ? [[r.parent.name, "/forum/k/" + r.parent.slug]] : []).concat([[c.name, "/forum/k/" + c.slug], [t.title]]);
     var main = shell({ h1: c.name, crumbs: crumbs, cat: c.slug, noNew: true, icon: c.icon, color: c.color }, []);
     var posts = h("div", { class: "fo-posts" }), compBox = h("div", { id: "yanit", class: "fo-reply" }), live = h("div", { class: "fo-live", hidden: "" });
@@ -624,7 +660,7 @@
       // ekip rehberinin altında: kişiye özel program kartı (Farmakoloji bölümünde gösterilmez)
       if (p.first && t.crown && !/^(farmakoloji|enjeksiyon-steroid|oral-steroid|sarms|peptit)$/.test(c.slug)) posts.appendChild(h("aside", { class: "card fo-cta" },
         h("span", { class: "fo-ctai" }, AVF.icon("target")), h("div", null, h("b", { text: "Bu rehber genel bilgi verir. Ya senin için en doğrusu?" }),
-          h("p", { text: "Hedefine, geçmişine ve takvimine göre hazırlanan beslenme, antrenman ve takviye planı için koçlarımızla çalış. Planların panelinde, koçun bir mesaj uzağında." })),
+          h("p", { text: "Hedefine, geçmişine ve takvimine göre sıfırdan hazırlanan beslenme, antrenman ve takviye planı için birebir koçlukla çalış. Planların panelinde, koçun bir mesaj uzağında." })),
         h("a", { class: "btn", href: "/paketler", onclick: function (e) { e.preventDefault(); AVF.go("/paketler"); } }, h("span", { text: "Paketleri incele" }), AVF.icon("arrow", "bico"))));
     });
     // yanıt alanı
@@ -633,7 +669,7 @@
       comp = composer({ draftKey: "t_" + t.id, placeholder: "Sen ne düşünüyorsun? Yaz bakalım… (@kullanıcıadı ile birini anabilirsin)", submitText: "Yanıtı gönder", compact: true,
         onSubmit: function (body, images) { return api("POST", "/t/" + t.id + "/posts", { body: body, images: images }).then(function (x) { AVF.toast("Yanıtın gönderildi. Eline sağlık! 💪"); history.replaceState(history.state, "", "/forum/konu/" + t.id + "?page=" + x.page + "&m=" + x.id); topicPage(t.id); }); } });
       AVF.mount(compBox, h("section", { class: "card fo-rc" }, h("h2", null, AVF.icon("reply"), h("span", { text: "Sohbete katıl" })), comp));
-    } else AVF.mount(compBox, h("p", { class: "note fo-notice" }, AVF.icon("lock", "bico"), h("span", { text: r.replyBlocked || "Bu konu yorumlara kapalı." })));
+    } else AVF.mount(compBox, h("p", { class: "note fo-notice" }, AVF.icon("lock", "bico"), h("span", { text: r.replyBlocked || "Bu konu yorumlara kapalı." })), S.guest ? joinCard() : null);
     ctx.composer = comp;
     // kaydırma: hedef mesaj > ilk okunmamış
     setTimeout(function () {
@@ -642,6 +678,7 @@
     }, 60);
     // canlı: açık konuda yeni yanıt uyarısı (sekme görünürken 25 sn'de bir)
     clearInterval(poll);
+    if (S.guest) return;
     var since = t.lastAt;
     poll = setInterval(function () {
       if (document.hidden || !document.body.contains(live)) { if (!document.body.contains(live)) clearInterval(poll); return; }
@@ -679,6 +716,14 @@
     paint(pl);
     return box;
   }
+  // Marka imzası (yönetici ve resmî hesap): hareketli AlpveFit logosu, koçluk bağlantısı ve sponsor
+  function brandSig() {
+    return h("div", { class: "fo-sig fo-bsig" },
+      h("img", { class: "fo-bsg", src: "/assets/brand/imza.gif", alt: "AlpveFit — Uzaktan eğitim, birebir koçluk", width: "360", height: "110", loading: "lazy", decoding: "async" }),
+      h("div", { class: "fo-bsl" },
+        lk("/paketler", [h("img", { src: "/assets/brand/alpvefit.svg", alt: "", width: "22", height: "22" }), h("span", { text: "Koçluk için:" }), h("b", { text: "alpvefit.com" })], { class: "fo-bsa" }),
+        h("a", { class: "fo-bsa", href: "https://alpeptit.com", target: "_blank", rel: "sponsored noopener noreferrer" }, h("img", { src: "/assets/brand/alpeptit.svg", alt: "", width: "22", height: "22" }), h("span", { text: "Sponsor:" }), h("b", { text: "alpeptit.com" }))));
+  }
   function postCard(p, n, ctx) {
     var r = ctx.r, t = r.topic, a = p.author || {}, accepted = t.acceptedPostId === p.id;
     var el = h("article", { class: "fo-p card" + (p.hidden ? " hid" : "") + (accepted ? " best" : "") + (p.own ? " own" : ""), id: "m-" + p.id });
@@ -700,15 +745,19 @@
         f.addEventListener("click", function (e) { var im = e.target.closest && e.target.closest("img[data-img]"); if (im) lightbox(p.images, p.images.indexOf(im.getAttribute("data-img"))); });
         return f;
       })(),
-      p.galleryImages.length ? h("div", { class: "fo-gal n" + Math.min(p.galleryImages.length, 4) }, p.galleryImages.map(function (id, i) { return h("button", { type: "button", class: "fo-gi", "aria-label": "Görseli büyüt", onclick: function () { lightbox(p.galleryImages, i); } }, h("img", { src: "/api/board/img/" + id, alt: "", loading: "lazy", decoding: "async" })); })) : null,
+      p.galleryImages.length ? h("div", { class: "fo-gal n" + Math.min(p.galleryImages.length, 4) }, p.galleryImages.map(function (id, i) { return h("button", { type: "button", class: "fo-gi", "aria-label": "Görseli büyüt", onclick: function () { lightbox(p.galleryImages, i); } }, h("img", { src: imgSrc(id), alt: "", loading: "lazy", decoding: "async" })); })) : null,
+      !p.hidden && isBrand(a) ? brandSig() :
       !p.hidden && (a.signature || a.sigImageId) ? h("div", { class: "fo-sig" }, a.signature ? h("p", { "data-notr": "", text: a.signature }) : null, a.sigImageId ? h("img", { src: "/api/forum/media/" + a.sigImageId, alt: "", loading: "lazy" }) : null) : null);
     // eylemler
     var acts = h("div", { class: "fo-acts" });
     function paintActs() {
       if (p.hidden && !r.me.mod) return AVF.mount(acts, null);
+      if (S.guest) return AVF.mount(acts, h("div", { class: "fo-rx" }, h("button", { type: "button", class: "fo-ab rx" + (p.infinite ? " inf" : ""), title: "Beğenmek için üye ol", onclick: function () { joinNow("register"); } }, AVF.icon("like"), h("b", { text: p.infinite ? "∞" : num(p.likes) }))),
+        h("div", { class: "fo-ax" }, h("button", { type: "button", class: "fo-ab ic", title: "Bağlantıyı kopyala", "aria-label": "Bağlantıyı kopyala", onclick: function () { copy(location.origin + "/forum/konu/" + t.id + "?m=" + p.id); } }, AVF.icon("link"))));
       var like = h("button", { type: "button", class: "fo-ab rx" + (p.myReaction === 1 ? " on" : ""), "aria-pressed": String(p.myReaction === 1), title: p.infinite ? "Ekip konusu: sınırsız beğeni" : p.own ? "Kendi mesajın" : "Beğen", disabled: p.own || p.hidden ? "" : null }, AVF.icon("like"), h("b", { text: p.infinite ? "∞" : num(p.likes) }));
       if (p.infinite) like.classList.add("inf");
-      var dis = h("button", { type: "button", class: "fo-ab rx neg" + (p.myReaction === -1 ? " on" : ""), "aria-pressed": String(p.myReaction === -1), title: p.infinite ? "Ekip konularında beğenmeme kapalı" : p.own ? "Kendi mesajın" : "Beğenme", disabled: p.own || p.hidden || p.infinite ? "" : null }, AVF.icon("dislike"), p.infinite ? null : h("b", { text: num(p.dislikes) }));
+      var noDis = p.infinite || p.staff;   // ekip paylaşımlarında beğenmeme kapalı
+      var dis = h("button", { type: "button", class: "fo-ab rx neg" + (p.myReaction === -1 ? " on" : ""), "aria-pressed": String(p.myReaction === -1), title: noDis ? "Ekip paylaşımlarında beğenmeme kapalı" : p.own ? "Kendi mesajın" : "Beğenme", disabled: p.own || p.hidden || noDis ? "" : null }, AVF.icon("dislike"), noDis ? null : h("b", { text: num(p.dislikes) }));
       function react(v) { var nv = p.myReaction === v ? 0 : v; api("POST", "/posts/" + p.id + "/react", { value: nv }).then(function (x) { p.likes = x.likes; p.dislikes = x.dislikes; p.myReaction = x.myReaction; paintActs(); }, function (e) { AVF.toast(AVF.errText(e), "err"); }); }
       like.onclick = function () { react(1); }; dis.onclick = function () { react(-1); };
       var quote = r.canReply && !p.hidden ? h("button", { type: "button", class: "fo-ab", onclick: function () {
@@ -757,7 +806,7 @@
           if (!y) return; api("DELETE", "/posts/" + p.id).then(function (x) { AVF.toast("Silindi."); if (x.topicDeleted) go("/forum/k/" + r.category.slug); else ctx.reload(); }, function (e) { AVF.toast(AVF.errText(e), "err"); });
         });
       }, "danger"] : null,
-      !p.own && !p.hidden ? ["flag", "Şikâyet et", function () { report(p); }] : null,
+      !p.own && !p.hidden && !p.staff ? ["flag", "Şikâyet et", function () { report(p); }] : null,   // ekip paylaşımları şikâyet edilemez
       ["link", "Bağlantıyı kopyala", function () { copy(location.origin + "/forum/konu/" + t.id + "?m=" + p.id); }],
       me.mod ? (p.hidden ? ["eye", "Geri getir", function () { modPost(p, "restore", ctx); }] : ["eyeoff", "Kaldır (moderasyon)", function () { modPost(p, "hide", ctx); }, "danger"]) : null,
       me.mod && a.username && !p.own ? ["lock", "Forumdan uzaklaştır", function () { banDialog(a.username); }, "danger"] : null,
@@ -797,7 +846,6 @@
     var anchor = document.querySelector(".fo-tha .btn:last-child");
     menu(anchor, [
       [t.pinned ? "x" : "pushpin", t.pinned ? "Sabitlemeyi kaldır" : "Sabitle", function () { act(t.pinned ? "unpin" : "pin", null, t.pinned ? "Sabitleme kaldırıldı." : "Konu sabitlendi."); }],
-      [t.locked ? "unlock" : "lock", t.locked ? "Kilidi aç" : "Kilitle", function () { act(t.locked ? "unlock" : "lock", null, t.locked ? "Konu yanıtlara açıldı." : "Konu kilitlendi."); }],
       ["compass", "Başka kategoriye taşı", function () {
         var s = h("select", { class: "inp", "aria-label": "Kategori" }, S.cats.map(function (c) { var o = h("option", { value: c.slug, text: c.name }); if (c.slug === r.category.slug) o.selected = true; return o; }));
         dialog({ icon: "compass", title: "Konuyu taşı", body: s, confirm: "Taşı", onConfirm: function () { return api("POST", "/t/" + t.id + "/mod", { action: "move", category: s.value }).then(function () { AVF.toast("Konu taşındı."); topicPage(t.id); }); } });
@@ -870,15 +918,14 @@
       onSubmit: function (body, images) {
         if (!catSel.get()) { catSel.querySelector("button").focus(); return Promise.reject({ status: 400, data: { error: "Önce bir kategori seç." } }); }
         var poll = pollOn ? { question: pq.value.trim(), options: [].slice.call(opts.querySelectorAll("input")).map(function (i) { return i.value.trim(); }).filter(Boolean), multi: multi.checked, days: Number(days.value) } : undefined;
-        return api("POST", "/topics", { category: catSel.get(), title: tIn.value.trim(), body: body, poll: poll, images: images, tags: picked, openComments: S.me.admin ? openC.checked : undefined }).then(function (x) {
+        return api("POST", "/topics", { category: catSel.get(), title: tIn.value.trim(), body: body, poll: poll, images: images, tags: picked }).then(function (x) {
           try { localStorage.removeItem(DKEY); } catch (e) { /* yok */ }
           AVF.toast("Konun yayında! Şimdi yanıtları bekle. 🚀"); go("/forum/konu/" + x.id);
         });
       } });
-    // yönetici: ekip konuları sabit ve yoruma kapalı açılır; "Koça Sor" gibi konular için yoruma açık bırakılabilir. Farmakoloji için boş şablon.
-    var openC = h("input", { type: "checkbox" });
+    // yönetici: ekip konuları her zaman sabit ve yoruma kapalı açılır. Farmakoloji için boş şablon.
     var adminBox = !S.me.admin ? null : h("div", { class: "fo-adm" },
-      h("label", { class: "fo-chk" }, openC, h("span", null, h("b", { text: "Yoruma açık bırak" }), h("small", { text: "Ekip konuları sabit ve yoruma kapalı açılır. Koça Sor gibi soru-cevap konuları için işaretle." }))),
+      h("p", { class: "hint" }, AVF.icon("lock", "bico"), h("span", { text: "Ekip konuları sabitlenir; yorum, beğenmeme ve şikâyet kapalıdır." })),
       h("button", { type: "button", class: "btn ghost sm", onclick: function () { insertTemplate(); } }, AVF.icon("table", "bico"), "Farmakoloji şablonu ekle"));
     function insertTemplate() {
       var ta = comp.querySelector("textarea"); if (!ta) return;
@@ -946,7 +993,7 @@
         AVF.mount(box, h("p", { class: "hint", text: num(r.total) + " üye" }), groups.map(function (g) {
           return h("section", { class: "fo-mg" }, h("h3", { class: "fo-mgh" }, lvl(g.l, true), h("small", { text: g.list.length + " üye" })),
             h("ul", { class: "fo-ml" }, g.list.map(function (m) {
-              return h("li", null, lk("/forum/uye/" + m.username, [h("span", { class: "fo-mav" }, avatar(m, "md"), m.online ? h("i", { class: "fo-mon", title: "Çevrimiçi" }) : null), h("b", { "data-notr": "", text: "@" + m.username })], { class: "fo-mc card" }));
+              return h("li", null, lk("/forum/uye/" + m.username, [h("span", { class: "fo-mav" }, avatar(m, "md"), m.online ? h("i", { class: "fo-mon", title: "Çevrimiçi" }) : null), h("b", { "data-notr": "", text: dispName(m) })], { class: "fo-mc card" + (isBrand(m) ? " brand" : "") }));
             })));
         }), pager(r.page, r.pages, function (p) { return "/forum/uyeler?" + (q ? "q=" + encodeURIComponent(q) + "&" : "") + "page=" + p; }));
       }, function (e) { if (my === seq) AVF.mount(box, errBox(e, function () { load(q, pg); })); });
@@ -984,7 +1031,7 @@
       paintRel();
       var socs = Object.keys(u.socials || {}).filter(function (k) { return SOC[k]; });
       AVF.mount(main,
-        h("section", { class: "card fo-prof" }, avatar(u, "xl"), h("div", { class: "fo-pi" }, h("h2", { "data-notr": "", text: "@" + u.username }), lvl(u.level, true),
+        h("section", { class: "card fo-prof" }, avatar(u, "xl"), h("div", { class: "fo-pi" }, h("h2", { "data-notr": "", text: dispName(u) }), lvl(u.level, true),
           h("p", { class: "hint" }, u.online ? h("span", { class: "fo-onl" }, h("i"), h("span", { text: "Çevrimiçi" })) : null, u.forumSince ? h("span", { text: "Forumda " + AVF.fmtDate(u.forumSince) + " tarihinden beri" }) : null),
           u.signature || u.sigImageId ? h("div", { class: "fo-sig" }, u.signature ? h("p", { "data-notr": "", text: u.signature }) : null, u.sigImageId ? h("img", { src: "/api/forum/media/" + u.sigImageId, alt: "" }) : null) : null,
           socs.length ? h("div", { class: "fo-socs" }, socs.map(function (k) { return h("a", { href: SOC[k][1] + u.socials[k], target: "_blank", rel: "noopener noreferrer nofollow", class: "fo-soc", title: k, "aria-label": k }, AVF.icon(SOC[k][0])); })) : null, actions),
@@ -1123,6 +1170,13 @@
       })()));
   }
   function boot(view, sub, done) {
+    function asGuest(why) {
+      S.guest = true; S.guestWhy = why || null;
+      api("GET", "/home").then(function (r) { S.me = null; S.cats = r.categories; S.stats = r.stats; S.tags = r.tags || []; S.rules = r.rules; S.ruleIcons = r.icons || []; done(r); },
+        function (e) { AVF.mount(view, h("div", { class: "wrap section" }, errBox(e, function () { AVF.pages.forum(view, sub); }))); });
+    }
+    if (!(AVF.session && AVF.session.user)) return asGuest();
+    S.guest = false;
     (AVF.take ? AVF.take("/board/home") : api("GET", "/home")).then(function (r) {
       S.me = r.me; S.cats = r.categories; S.stats = r.stats;
       S.tags = r.tags || [];
@@ -1130,7 +1184,7 @@
       done(r);
     }, function (e) {
       if (e && e.data && e.data.code === "rules") { S.ruleIcons = e.data.icons || []; return gateRules(view, e.data.rules || [], function () { AVF.pages.forum(view, sub); }); }
-      if (e && e.data && e.data.code === "verify") return AVF.mount(view, h("div", { class: "wrap section" }, AVF.state("mail", "E-posta doğrulaması gerekli", AVF.errText(e))));
+      if (e && e.data && e.data.code === "verify") return asGuest("verify");
       AVF.mount(view, h("div", { class: "wrap section" }, errBox(e, function () { AVF.pages.forum(view, sub); })));
     });
   }
@@ -1138,6 +1192,7 @@
     VIEW = view; clearInterval(poll);
     var parts = (sub || "").split("/").filter(Boolean), first = parts[0] || "";
     var run = function (r) {
+      if (S.guest && ["", "k", "konu", "etiket"].indexOf(first) < 0) return membersOnly();
       if (r && r.categories && first === "") return home();
       if (first === "k" && parts[1]) return catPage(parts[1]);
       if (first === "konu" && parts[1]) return topicPage(parts[1]);
@@ -1154,6 +1209,9 @@
       notFound();
     };
     // ana sayfa dışındaki sayfalarda da yan panel ve kategoriler için özet bir kez alınır (sonra bellekte)
+    // oturum durumu değiştiyse (misafir → üye ya da tersi) önbellekteki özet kullanılmaz
+    var guestNow = !(AVF.session && AVF.session.user);
+    if (S.cats && (guestNow ? !S.guest : S.guest && S.guestWhy !== "verify")) { S.cats = null; S.me = null; }
     if (S.cats && first !== "") { run({}); boot(view, sub, function () { /* özet tazelendi */ }); return; }
     VIEW.innerHTML = ""; AVF.mount(VIEW, h("div", { class: "wrap section" }, AVF.skeleton(4)));
     boot(view, sub, run);

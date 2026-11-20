@@ -1,7 +1,7 @@
 // Duyurular: sabit ve yoruma kapalı ekip yazıları (sıra: üstten alta).
 export const DUYURULAR = [
   {
-    key: "duyuru-forum-kurallari", icon: "shield", rev: 2, category: "duyurular", locked: true, tags: ["duyuru", "baslangic"],
+    key: "duyuru-forum-kurallari", icon: "shield", rev: 3, category: "duyurular", locked: true, tags: ["duyuru", "baslangic"],
     gifs: ["welcome team high five"],
     title: "Forum Kuralları — önce bunu oku, sonra sahne senin",
     body: `## Hoş geldin, demir kardeşi! 👋
@@ -10,7 +10,8 @@ Burası AlpveFit'in üye forumu: antrenman, beslenme, takviye ve gelişim üzeri
 [gif=1]
 
 ## [ikon=shield] Temel kurallar
-- [ikon=shield] Forum yalnız **18 yaşından büyük** üyelere açıktır.
+- [ikon=shield] Forum **18 yaşından büyükler** içindir. Ekip rehberlerini herkes okuyabilir; üye konularını görmek ve yazmak için **üye olup e-posta adresini onaylaman** gerekir.
+- [ikon=lock] Ekip paylaşımları yoruma kapalıdır; üyelerin açtığı her konu ise herkesin yorumuna ve beğenisine açıktır.
 - [ikon=smile] **Saygılı ol.** Hakaret, taciz, nefret söylemi, kışkırtma yok. Tartış, ama insanı değil fikri eleştir.
 - [ikon=flag] **Siyaset, ideoloji ve din** tartışmaları ile **müstehcen içerik** yasaktır. Burada konu demir ve tabak.
 - [ikon=coin] **Satış, kaynak / tedarik, iletişim bilgisi** (telefon, e-posta, mesajlaşma uygulaması) ve **reklam kesinlikle yasaktır.** "Nereden bulurum?" sorusunun yanıtı bu forumda yok, olmayacak.

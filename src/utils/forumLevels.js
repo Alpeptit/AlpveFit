@@ -20,11 +20,12 @@ export function forumScore(p) {
   const s = (p.topics || 0) * 5 + (p.posts || 0) * 2 + (p.likes || 0) * 3 - (p.dislikes || 0) * 2 - (p.reports_upheld || 0) * 25;
   return Math.max(0, s);
 }
-/** Kullanıcının forum unvanı: admin → "Admin", moderatör → "Moderatör", aksi hâlde elle verilen ya da puana göre seviye. */
+/** Kullanıcının forum unvanı: admin → "AlpveFit" (marka hesabı), moderatör → "Moderatör", aksi hâlde elle verilen ya da puana göre seviye. */
 export const HIDE_ONLINE_LEVEL = 3;   // çevrimiçi durumunu gizleme: Pump Avcısı ve üstü
 export function forumLevel(p, role) {
-  if (p && p.is_official) return { n: 11, name: "AlpveFit Ekibi", assigned: true, official: true };
-  if (role === "admin") return { n: 10, name: "Admin", assigned: true };
+  // marka hesapları (yönetici ve resmî hesap): forumda AlpveFit logosu ve marka imzasıyla görünür
+  if (p && p.is_official) return { n: 11, name: "AlpveFit Ekibi", assigned: true, official: true, brand: true };
+  if (role === "admin") return { n: 10, name: "AlpveFit", assigned: true, brand: true };
   if (p && p.forum_role === "moderator") return { n: 9, name: "Moderatör", assigned: true };
   const score = forumScore(p);
   if (p && p.level_override) { const l = LEVELS[p.level_override - 1]; return { n: l.n, name: l.name, manual: true, score }; }
@@ -35,4 +36,4 @@ export function forumLevel(p, role) {
 
 /** Üyeye gösterilecek seviye bilgisi: yalnız ad ve sıra. Puan, eşik ve seviyenin elle mi verildiği DIŞARI verilmez
  *  (seviye atlama mantığı görünmez; elle verilen seviye yalnız denetim kaydında görülür). */
-export function publicLevel(l) { return { n: l.n, name: l.name, assigned: !!l.assigned, official: !!l.official }; }
+export function publicLevel(l) { return { n: l.n, name: l.name, assigned: !!l.assigned, official: !!l.official, brand: !!l.brand }; }

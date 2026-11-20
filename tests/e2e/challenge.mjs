@@ -23,6 +23,7 @@ r = await V.c.call("GET", "/board/u/" + U.username); chk("profilde rozet", r.bod
 
 // haftalık özet: konu olsun; yalnız tercihi açan üyeye gider
 r = await V.c.call("POST", "/board/topics", { category: "serbest-kursu", title: "Bu haftanın öne çıkan deneme konusu", body: "Haftalık özet için deneme." });
+sql(`UPDATE forum_posts SET like_count = 9999 WHERE topic_id = '${r.body.id}' AND is_first`);   // diğer testlerin konularından bağımsız olarak öne çıksın
 r = await V.c.call("GET", "/forum/me"); chk("haftalık özet varsayılan kapalı", r.body.notify.digest === false, r.body.notify);
 const nv = { ...r.body.notify, digest: true }; delete nv.moderation;
 r = await V.c.call("PUT", "/forum/me", { notify: nv }); chk("haftalık özet açılır", r.body.notify.digest === true, r.body.notify);
