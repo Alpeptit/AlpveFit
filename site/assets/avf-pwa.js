@@ -46,23 +46,43 @@
 
   // ---- rehber: alttan açılan küçük, yumuşak kart (telefonda ok, düğmenin bulunduğu yeri gösterir)
   var sheet = null;
-  function closeSheet() { if (!sheet) return; var s = sheet; sheet = null; s.classList.add("out"); setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 220); document.removeEventListener("keydown", esc, true); }
-  function esc(e) { if (e.key === "Escape") closeSheet(); }
+  // Rehber açıkken arka plan kilitlidir: karartılmış zemin tıklamayı yakalar (tıklayınca kapanır), sayfa kaymaz, Tab kartın dışına çıkmaz.
+  var shade = null, prevFocus = null;
+  function closeSheet() {
+    if (!sheet) return; var s = sheet, sh = shade; sheet = null; shade = null;
+    s.classList.add("out"); if (sh) sh.classList.add("out");
+    setTimeout(function () { [s, sh].forEach(function (x) { if (x && x.parentNode) x.parentNode.removeChild(x); }); }, 220);
+    document.removeEventListener("keydown", esc, true); if (AVF.lockScroll) AVF.lockScroll(false);
+    try { if (prevFocus && prevFocus.focus) prevFocus.focus({ preventScroll: true }); } catch (e) { /* yok */ }
+  }
+  function esc(e) {
+    if (e.key === "Escape") { e.preventDefault(); closeSheet(); return; }
+    if (e.key === "Tab" && sheet) {
+      var f = [].slice.call(sheet.querySelectorAll("button,a[href]")); if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      else if (!sheet.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    }
+  }
   function rich(t) { var out = [], re = /\*\*([^*]+)\*\*/g, last = 0, m; while ((m = re.exec(t))) { if (m.index > last) out.push(document.createTextNode(t.slice(last, m.index))); out.push(AVF.h("b", { text: m[1] })); last = re.lastIndex; } if (last < t.length) out.push(document.createTextNode(t.slice(last))); return out; }
   function openSheet() {
-    closeSheet();
+    closeSheet(); prevFocus = document.activeElement;
     var h = AVF.h, b = browser(), st = steps();
     var ico = function (n) { return n === "share" ? h("span", { class: "pw-share" }, AVF.icon("up")) : n === "more" ? AVF.icon("more") : AVF.icon(n); };
-    sheet = h("div", { class: "pw-sheet" + (st.dir ? " d-" + st.dir : "") + " " + b.dev, role: "dialog", "aria-modal": "false", "aria-labelledby": "pw-t" },
+    var T = AVF.t || function (x) { return x; }, en = AVF.lang === "en";
+    shade = h("div", { class: "pw-shade", "aria-hidden": "true", onclick: closeSheet });
+    sheet = h("div", { class: "pw-sheet" + (st.dir ? " d-" + st.dir : "") + " " + b.dev, role: "dialog", "aria-modal": "true", "aria-labelledby": "pw-t" },
       h("div", { class: "pw-card" },
-        h("button", { class: "pw-x", type: "button", "aria-label": "Kapat", onclick: closeSheet }, AVF.icon("x")),
+        h("button", { class: "pw-x", type: "button", "aria-label": T("Kapat"), onclick: closeSheet }, AVF.icon("x")),
         h("div", { class: "pw-head" }, h("img", { class: "pw-app", src: "/assets/icons/icon-192.png", alt: "", width: "44", height: "44" }),
-          h("div", null, h("b", { id: "pw-t", text: "AlpveFit'i yükle" }), h("small", null, h("span", { class: "pw-br", text: NAMES[b.name] + (b.dev === "ios" ? " · iPhone/iPad" : b.dev === "android" ? " · Android" : " · Bilgisayar") }), h("span", { text: " için 3 kısa adım" })))),
-        h("ol", { class: "pw-steps" }, st.list.map(function (x, i) { return h("li", { style: "animation-delay:" + (80 + i * 90) + "ms" }, h("span", { class: "pw-n", text: String(i + 1) }), h("span", { class: "pw-i" }, ico(x[0])), h("span", { class: "pw-tx" }, rich(x[1]))); })),
-        h("p", { class: "pw-why" }, AVF.icon("bolt"), h("span", { text: "Tam ekran açılır, daha hızlı yüklenir; planların ve mesajların bir dokunuş uzağında." })),
-        h("button", { class: "btn block", type: "button", onclick: closeSheet }, "Anladım")),
+          h("div", null, h("b", { id: "pw-t", "data-notr": "", text: en ? "Install AlpveFit" : "AlpveFit'i yükle" }), h("small", { "data-notr": "" }, h("span", { class: "pw-br", text: T(NAMES[b.name]) + (b.dev === "ios" ? " · iPhone/iPad" : b.dev === "android" ? " · Android" : " · " + T("Bilgisayar")) }), h("span", { text: en ? " — 3 quick steps" : " için 3 kısa adım" })))),
+        h("ol", { class: "pw-steps", "data-notr": "" }, st.list.map(function (x, i) { return h("li", { style: "animation-delay:" + (80 + i * 90) + "ms" }, h("span", { class: "pw-n", text: String(i + 1) }), h("span", { class: "pw-i" }, ico(x[0])), h("span", { class: "pw-tx" }, rich(T(x[1])))); })),
+        h("p", { class: "pw-why" }, AVF.icon("bolt"), h("span", { text: T("Tam ekran açılır, daha hızlı yüklenir; planların ve mesajların bir dokunuş uzağında.") })),
+        h("button", { class: "btn block", type: "button", onclick: closeSheet }, T("Anladım"))),
       st.dir && b.dev !== "desktop" ? h("span", { class: "pw-arrow", "aria-hidden": "true" }, AVF.icon(st.dir === "down" ? "chev" : "up")) : null);
-    document.body.appendChild(sheet);
+    document.body.appendChild(shade); document.body.appendChild(sheet);
+    if (AVF.lockScroll) AVF.lockScroll(true);
     document.addEventListener("keydown", esc, true);
     setTimeout(function () { var f = sheet && sheet.querySelector(".btn"); if (f) f.focus({ preventScroll: true }); }, 60);
   }

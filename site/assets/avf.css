@@ -2528,3 +2528,9 @@ footer.foot{padding-bottom:env(safe-area-inset-bottom)}
 .fo-bsa:hover{border-color:var(--ink);transform:translateY(-1px)}
 .fo-bsa img{width:22px;height:22px;border-radius:7px;max-height:none;flex:none}
 .fo-bsa span{color:var(--muted)}.fo-bsa b{font-weight:700}
+/* Uygulama rehberi açıkken arka plan: karartılır, tıklamayı yakalar (tıklayınca rehber kapanır) */
+.pw-shade{position:fixed;inset:0;z-index:299;background:rgba(10,10,12,.48);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:pwShIn .2s ease both;touch-action:none}
+.pw-shade.out{animation:pwShOut .2s ease both}
+@keyframes pwShIn{from{opacity:0}to{opacity:1}}@keyframes pwShOut{to{opacity:0}}
+@media (prefers-reduced-motion:reduce){.pw-shade{animation:none}}
+.pw-sheet .pw-arrow{background:#fff;color:#111113}
