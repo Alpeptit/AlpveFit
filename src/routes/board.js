@@ -21,6 +21,8 @@ import {
   clean, contentError, quotedPostIds, mentions, pollIn, REPORT_REASONS, RULES, RULE_ICONS,
   IMAGES_PER_POST, IMAGE_MAX, IMAGE_PX, PENDING_MAX, PAGE_POSTS, PAGE_TOPICS, TAGS_PER_TOPIC,
 } from "../utils/forumContent.js";
+// Özet metni: alıntı blokları, biçim etiketleri ([kutu=…], [gif=1] …) ve başlık işaretleri olmadan düz metin (kaynak rozeti → etiketi).
+const plainSql = (col) => `regexp_replace(regexp_replace(regexp_replace(regexp_replace(${col}, '\\[alinti=[^\\]]*\\][\\s\\S]*?\\[/alinti\\]', '', 'g'), '\\[kaynak=\\d+\\|([^\\]]*)\\]', '\\1', 'g'), '\\[/?[a-z]+(=[^\\]]*)?\\]', '', 'g'), '(^|\\n)\\s*(#{2,3}|>)\\s*', '\\1', 'g')`;
 
 export const boardRouter = withAsyncErrors(express.Router());
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -235,7 +237,7 @@ boardRouter.get("/board/topics", member, async (req, res) => {
   const pages = Math.max(1, Math.ceil(total / PAGE_TOPICS));
   const { rows } = await pool.query(
     `SELECT t.id, t.title, t.kind, t.is_pinned, t.is_locked, t.hidden_at, t.accepted_post_id, t.reply_count, t.view_count, t.last_post_at, t.created_at,
-            c.slug AS cat_slug, c.name AS cat_name, c.icon AS cat_icon, c.color AS cat_color, fp.like_count, left(regexp_replace(fp.body, '\\[alinti=[^\\]]*\\][\\s\\S]*?\\[/alinti\\]', '', 'g'), 180) AS excerpt,
+            c.slug AS cat_slug, c.name AS cat_name, c.icon AS cat_icon, c.color AS cat_color, fp.like_count, left(${plainSql("fp.body")}, 180) AS excerpt,
             (t.last_post_at > greatest($2::timestamptz, coalesce(r.last_read_at, '-infinity'))) AS unread, r.last_read_at IS NOT NULL AS seen,
             EXISTS (SELECT 1 FROM forum_polls pl WHERE pl.topic_id = t.id) AS has_poll,
             EXISTS (SELECT 1 FROM attachments a WHERE a.forum_post_id = fp.id) AS has_images,
@@ -565,7 +567,7 @@ boardRouter.post("/board/posts/:id/bookmark", member, async (req, res) => {
 boardRouter.get("/board/me/bookmarks", member, async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const { rows } = await pool.query(
-    `SELECT b.created_at AS saved_at, p.id, p.topic_id, left(p.body, 220) AS excerpt, p.created_at, t.title, u.username
+    `SELECT b.created_at AS saved_at, p.id, p.topic_id, left(${plainSql("p.body")}, 220) AS excerpt, p.created_at, t.title, u.username
        FROM forum_bookmarks b JOIN forum_posts p ON p.id = b.post_id JOIN forum_topics t ON t.id = p.topic_id LEFT JOIN users u ON u.id = p.author_id
       WHERE b.user_id = $1 AND p.hidden_at IS NULL AND t.hidden_at IS NULL ORDER BY b.created_at DESC LIMIT 200`, [req.fm.id]);
   res.json(rows.map((r) => ({ postId: r.id, topicId: r.topic_id, title: r.title, excerpt: r.excerpt, author: r.username, at: r.created_at, savedAt: r.saved_at })));
@@ -574,7 +576,7 @@ boardRouter.get("/board/me/bookmarks", member, async (req, res) => {
 boardRouter.get("/board/me/likes", member, async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const { rows } = await pool.query(
-    `SELECT r.created_at AS liked_at, p.id, p.topic_id, left(regexp_replace(p.body, '\\[alinti=[^\\]]*\\][\\s\\S]*?\\[/alinti\\]', '', 'g'), 220) AS excerpt, p.created_at, t.title, u.username
+    `SELECT r.created_at AS liked_at, p.id, p.topic_id, left(${plainSql("p.body")}, 220) AS excerpt, p.created_at, t.title, u.username
        FROM forum_reactions r JOIN forum_posts p ON p.id = r.post_id JOIN forum_topics t ON t.id = p.topic_id LEFT JOIN users u ON u.id = p.author_id
       WHERE r.user_id = $1 AND r.value = 1 AND p.hidden_at IS NULL AND t.hidden_at IS NULL ORDER BY r.created_at DESC LIMIT 200`, [req.fm.id]);
   res.json(rows.map((r) => ({ postId: r.id, topicId: r.topic_id, title: r.title, excerpt: r.excerpt, author: r.username, at: r.created_at, likedAt: r.liked_at })));
@@ -694,7 +696,7 @@ boardRouter.get("/board/u/:username", member, async (req, res) => {
   u.id = u.uid;
   const topics = await pool.query(`SELECT t.id, t.title, t.reply_count, t.last_post_at, t.kind, t.accepted_post_id, c.name AS cat_name, c.icon FROM forum_topics t JOIN forum_categories c ON c.id = t.category_id
       WHERE t.author_id = $1 AND t.hidden_at IS NULL ORDER BY t.created_at DESC LIMIT 8`, [u.id]);
-  const posts = await pool.query(`SELECT p.id, p.topic_id, left(regexp_replace(p.body, '\\[alinti=[^\\]]*\\][\\s\\S]*?\\[/alinti\\]', '', 'g'), 160) AS excerpt, p.created_at, t.title
+  const posts = await pool.query(`SELECT p.id, p.topic_id, left(${plainSql("p.body")}, 160) AS excerpt, p.created_at, t.title
       FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id WHERE p.author_id = $1 AND NOT p.is_first AND p.hidden_at IS NULL AND t.hidden_at IS NULL ORDER BY p.created_at DESC LIMIT 8`, [u.id]);
   const best = (await pool.query(`SELECT count(*)::int AS n FROM forum_topics t JOIN forum_posts p ON p.id = t.accepted_post_id WHERE p.author_id = $1 AND t.hidden_at IS NULL`, [u.id])).rows[0].n;
   const rel = u.id === req.fm.id ? "self" : ((await pool.query(`SELECT status, requester FROM friendships WHERE user_a = least($1::uuid, $2::uuid) AND user_b = greatest($1::uuid, $2::uuid)`, [req.fm.id, u.id])).rows[0] || {});

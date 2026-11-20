@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 380" role="img" aria-labelledby="t d">
+<title id="t">Makroların gram başına enerjisi</title>
+<desc id="d">Protein 4 kcal, karbonhidrat 4 kcal, yağ 9 kcal verir.</desc>
+<style>text{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}.h{font-size:24px;font-weight:800;fill:#09090b}.s{font-size:14px;fill:#52525b}.n{font-size:40px;font-weight:800}.u{font-size:15px;font-weight:700;fill:#52525b}.l{font-size:17px;font-weight:800;fill:#09090b}.e{font-size:13px;fill:#71717a}</style>
+<rect width="800" height="380" rx="22" fill="#ffffff"/>
+<text x="40" y="54" class="h">1 gram ne kadar enerji verir?</text>
+<text x="40" y="80" class="s">Makro hesabının anahtarı: gramı kaloriye, kaloriyi grama çevirmek.</text>
+<line x1="40" y1="318" x2="760" y2="318" stroke="#e4e4e7" stroke-width="2"/>
+<g>
+<rect x="88" y="214" width="150" height="104" rx="14" fill="#fee2e2"/><rect x="88" y="214" width="150" height="8" rx="4" fill="#ef4444"/>
+<text x="163" y="276" text-anchor="middle" class="n" fill="#b91c1c">4</text><text x="163" y="300" text-anchor="middle" class="u">kcal / g</text>
+<text x="163" y="346" text-anchor="middle" class="l">Protein</text><text x="163" y="366" text-anchor="middle" class="e">tavuk · yumurta · yoğurt</text>
+</g>
+<g>
+<rect x="325" y="214" width="150" height="104" rx="14" fill="#fef3c7"/><rect x="325" y="214" width="150" height="8" rx="4" fill="#f59e0b"/>
+<text x="400" y="276" text-anchor="middle" class="n" fill="#b45309">4</text><text x="400" y="300" text-anchor="middle" class="u">kcal / g</text>
+<text x="400" y="346" text-anchor="middle" class="l">Karbonhidrat</text><text x="400" y="366" text-anchor="middle" class="e">yulaf · pirinç · meyve</text>
+</g>
+<g>
+<rect x="562" y="104" width="150" height="214" rx="14" fill="#dcfce7"/><rect x="562" y="104" width="150" height="8" rx="4" fill="#16a34a"/>
+<text x="637" y="222" text-anchor="middle" class="n" fill="#15803d">9</text><text x="637" y="246" text-anchor="middle" class="u">kcal / g</text>
+<text x="637" y="346" text-anchor="middle" class="l">Yağ</text><text x="637" y="366" text-anchor="middle" class="e">zeytinyağı · fındık · avokado</text>
+</g>
+<text x="637" y="140" text-anchor="middle" class="e">≈ 2,25 kat</text>
+</svg>

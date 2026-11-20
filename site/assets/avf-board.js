@@ -131,7 +131,7 @@
           var tbl = h("table", { class: "fo-tbl" }), th = h("tr");
           rows[0].forEach(function (c) { th.appendChild(inl(c, h("th"))); });
           tbl.appendChild(h("thead", null, th));
-          var tb2 = h("tbody"); rows.slice(1).forEach(function (r) { var tr = h("tr"); r.forEach(function (c, ci) { tr.appendChild(inl(c, h("td", { "data-l": rows[0][ci] || "" }))); }); tb2.appendChild(tr); });
+          var tb2 = h("tbody"); rows.slice(1).forEach(function (r) { var tr = h("tr"); r.forEach(function (c, ci) { tr.appendChild(h("td", { "data-l": rows[0][ci] || "" }, inl(c, h("span", { class: "fo-td" })))); /* tek kapsayıcı: telefonda etiket | değer iki sütun kalır */ }); tb2.appendChild(tr); });
           tbl.appendChild(tb2); el.appendChild(h("div", { class: "fo-tblw" }, tbl));
         }
         continue;
@@ -477,7 +477,7 @@
       avatar(t.author, "sm"),
       h("div", { class: "fo-tm" },
         h("div", { class: "fo-tt" }, t.unread ? h("i", { class: "fo-dot", title: "Okunmamış" }) : null, lk(href, t.title, { class: "fo-tl", "data-notr": "" }), t.official ? chip("star", "Ekip içeriği", "off") : null, badges),
-        t.excerpt ? h("p", { class: "fo-ex", "data-notr": "", text: t.excerpt.replace(/\s+/g, " ").replace(/\*\*|~~|`/g, "") }) : null,
+        t.excerpt ? h("p", { class: "fo-ex", "data-notr": "", text: t.excerpt.replace(/\s+/g, " ").replace(/\*\*|~~|`|==/g, "") }) : null,
         h("div", { class: "fo-meta" }, showCat ? lk("/forum/k/" + t.category.slug, [catTile(t.category, "xs"), h("span", { text: t.category.name })], { class: "fo-cat" }) : null,
           t.author ? uname(t.author) : h("span", { class: "fo-un del", text: "silinmiş üye" }), t.author ? lvl(t.author.level) : null, timeEl(t.createdAt)),
         t.tags && t.tags.length ? h("div", { class: "fo-tags sm" }, t.tags.slice(0, 4).map(tagChip)) : null),
