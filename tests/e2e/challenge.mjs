@@ -4,7 +4,7 @@ process.env.SIM_DB ||= "avfsim"; process.env.DATABASE_URL ||= "postgres://local/
 import { signup, sql, chk, finish, BASE } from "./lib.mjs";
 
 const U = await signup("Meydan Uye", "chu"), V = await signup("Ozet Uye", "chv"), W = await signup("Ozetsiz Uye", "chw");
-for (const p of [U, V, W]) await p.c.call("PUT", "/forum/me", { acceptRules: true });
+for (const p of [U, V, W]) await p.c.call("PUT", "/forum/me", { acceptRules: true, healthConsent: true });
 let r = await U.c.call("GET", "/board/challenge");
 chk("meydan okuma: 7 gün, hedef 5, başlık ve açıklama", r.status === 200 && r.body.days.length === 7 && r.body.goal === 5 && r.body.title && r.body.text, r.body);
 const c = r.body, today = c.days.find((d) => d.today), fut = c.days.find((d) => d.future);

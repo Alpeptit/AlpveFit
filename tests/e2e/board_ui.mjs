@@ -9,7 +9,7 @@ const { chromium, devices } = require(process.env.PWPATH ? process.env.PWPATH + 
 
 const U = await signup("Arayuz Uye", "ui"), V = await signup("Arayuz Iki", "uv"), A = await signup("Arayuz Yonetici", "ua");
 sql(`UPDATE users SET role='admin' WHERE id='${A.id}'`); await enableTotp(A);
-for (const p of [V, A]) await p.c.call("PUT", "/forum/me", { acceptRules: true });
+for (const p of [V, A]) await p.c.call("PUT", "/forum/me", { acceptRules: true, healthConsent: true });
 const png = Buffer.from("89504e470d0a1a0a0000000d4948445200000040000000300806000000" + "0".repeat(10) + "0000000049454e44ae426082", "hex");
 const b = await chromium.launch(); const errs = [];
 async function ctxOf(p, o) {
@@ -23,7 +23,7 @@ await q.goto(BASE + "/forum"); await q.waitForTimeout(800);
 chk("18 yaş onayı istenir", await q.locator("text=18 yaşından büyüğüm, devam et").count() === 1, "");
 await q.click("text=18 yaşından büyüğüm, devam et"); await q.waitForTimeout(900);
 chk("kurallar ekranı (ilk giriş)", await q.locator(".fo-gate").count() === 1 && await q.locator(".fo-gate button.btn").isDisabled(), "");
-await q.check(".fo-gate input[type=checkbox]"); await q.click(".fo-gate button.btn"); await q.waitForTimeout(1200);
+chk("kapıda isteğe bağlı KVKK açık rızası", await q.locator(".fo-gate input[type=checkbox]").count() === 2 && /açık rıza/.test(await q.locator(".fo-gate").innerText()), ""); for (const c of await q.locator(".fo-gate input[type=checkbox]").all()) await c.check(); await q.click(".fo-gate button.btn"); await q.waitForTimeout(1200);
 chk("forum ana sayfası açılır", await q.locator(".fo-c").count() === 7 && await q.locator(".fo-band h1").textContent() === "Forum", "");
 chk("dil seçici forumda yok", await q.evaluate(() => [...document.querySelectorAll(".lang")].every((e) => getComputedStyle(e).display === "none")), "");
 // yeni konu

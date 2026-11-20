@@ -102,6 +102,7 @@ journalRouter.delete("/journal/entries/:id", requireAuth, async (req, res) => {
 journalRouter.post("/journal/photos", requireAuth, raw, async (req, res) => {
   const q = req.query || {}, day = dayOk(q.date), pose = POSES.includes(q.pose) ? q.pose : "on", vis = VIS.includes(q.visibility) ? q.visibility : "private";
   if (!day) return res.status(400).json({ error: "Geçerli bir tarih seç.", field: "date" });
+  if (vis !== "private" && !(await hasConsent(req.user.sub))) return res.status(403).json(CONSENT_ERR);
   if (!(await checkHourlyActionLimit(`jphoto:${req.user.sub}`, "journal_photo", 30))) return res.status(429).json({ error: "Kısa sürede çok fazla fotoğraf yüklendi. Biraz sonra tekrar dene." });
   const n = (await pool.query(`SELECT count(*)::int AS n FROM progress_photos WHERE user_id = $1`, [req.user.sub])).rows[0].n;
   if (n >= PHOTO_MAX) return res.status(400).json({ error: `En fazla ${PHOTO_MAX} gelişim fotoğrafı saklanabilir. Yenisini eklemek için eskilerden birini sil.` });
@@ -118,7 +119,7 @@ journalRouter.post("/journal/photos", requireAuth, raw, async (req, res) => {
 journalRouter.patch("/journal/photos/:id", requireAuth, async (req, res) => {
   if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: "Fotoğraf bulunamadı." });
   const b = req.body || {}, sets = [], vals = [req.params.id, req.user.sub];
-  if (b.visibility !== undefined) { if (!VIS.includes(b.visibility)) return res.status(400).json({ error: "Geçersiz görünürlük." }); vals.push(b.visibility); sets.push(`visibility = $${vals.length}`); }
+  if (b.visibility !== undefined) { if (!VIS.includes(b.visibility)) return res.status(400).json({ error: "Geçersiz görünürlük." }); if (b.visibility !== "private" && !(await hasConsent(req.user.sub))) return res.status(403).json(CONSENT_ERR); vals.push(b.visibility); sets.push(`visibility = $${vals.length}`); }
   if (b.pose !== undefined) { if (!POSES.includes(b.pose)) return res.status(400).json({ error: "Geçersiz poz." }); vals.push(b.pose); sets.push(`pose = $${vals.length}`); }
   if (b.date !== undefined) { const d = dayOk(b.date); if (!d) return res.status(400).json({ error: "Geçerli bir tarih seç." }); vals.push(d); sets.push(`taken_on = $${vals.length}`); }
   if (!sets.length) return res.status(400).json({ error: "Değişiklik yok." });
@@ -134,10 +135,15 @@ journalRouter.delete("/journal/photos/:id", requireAuth, async (req, res) => {
   res.json(await loadAll(req.user.sub));
 });
 
+/** Fotoğrafı başkalarına açmak (arkadaşlarım / forum üyeleri) KVKK açık rızası gerektirir. */
+async function hasConsent(userId) { return !!(await pool.query(`SELECT 1 FROM forum_profiles WHERE user_id = $1 AND health_consent_at IS NOT NULL`, [userId])).rows.length; }
+const CONSENT_ERR = { error: "Fotoğrafı başkalarıyla paylaşmak için sağlık verilerinin işlenmesine açık rıza vermen gerekiyor (Forum Ayarları → Bildirim ve Gizlilik).", code: "consent" };
+
 /** Bakan kişi bu fotoğrafı görebilir mi? Sahibi her zaman; "members": forum üyesi (kuralları onaylamış, uzaklaştırılmamış); "friends": kabul edilmiş arkadaş. */
 async function canSee(viewerId, ownerId, visibility) {
   if (viewerId === ownerId) return true;
   if (visibility === "private") return false;
+  if (!(await hasConsent(ownerId))) return false;   // sahibi rızasını geri çektiyse fotoğraf yalnız kendisine görünür
   const me = (await pool.query(`SELECT rules_accepted_at, banned_until, ban_permanent FROM forum_profiles WHERE user_id = $1`, [viewerId])).rows[0];
   if (!me || !me.rules_accepted_at || me.ban_permanent || (me.banned_until && new Date(me.banned_until) > new Date())) return false;
   if (visibility === "members") return true;

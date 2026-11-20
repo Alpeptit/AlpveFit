@@ -10,6 +10,8 @@ import { checkHourlyActionLimit } from "../utils/rateLimit.js";
 import { forumLevel, publicLevel, MESSAGING_LEVEL, LEVELS } from "../utils/forumLevels.js";
 import { effectiveFrame } from "../utils/forumFrames.js";
 import { imageInfo } from "../utils/forumRules.js";
+import { salesError } from "../utils/forumContent.js";
+import { logAudit } from "../utils/auditLog.js";
 import { raw, sendAttachment } from "./uploads.js";
 import { openStream, emit } from "../utils/live.js";
 
@@ -171,6 +173,8 @@ friendsRouter.post("/messages/:id", requireAuth, async (req, res) => {
   const body = clean((req.body || {}).body, DM_MAX + 1);
   if (!body) return res.status(400).json({ error: "Mesaj boş olamaz." });
   if (body.length > DM_MAX) return res.status(400).json({ error: `Mesaj en fazla ${DM_MAX} karakter olabilir.` });
+  // özel mesajda da satış, kaynak ve iletişim bilgisi paylaşılamaz (forum dışına çekme ve dolandırıcılığa karşı); ekip hariç
+  if (req.user.role !== "admin" && req.user.role !== "coach") { const se = salesError(body); if (se) { await logAudit(req.user.sub, "dm_blocked_filter", "user", req.params.id, { reason: se }, req.ip || null).catch(() => {}); return res.status(400).json({ error: se, code: "filter" }); } }
   const g = await sendGuard(req, res); if (!g) return;
   const { rows } = await pool.query(`INSERT INTO dm_messages (sender_id, recipient_id, body) VALUES ($1, $2, $3) RETURNING id, created_at`, [req.user.sub, req.params.id, body]);
   emit(req.params.id, "dm", { from: req.user.sub, id: rows[0].id, at: rows[0].created_at });

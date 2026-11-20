@@ -49,7 +49,7 @@ function authorOut(r) {
 async function gate(req, res, next) {
   const { rows } = await pool.query(
     `SELECT u.id, u.username, u.role, u.email_verified_at, f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld,
-            f.rules_accepted_at, f.banned_until, f.ban_permanent, f.ban_reason, f.last_seen_at, coalesce(f.notify, '{}'::jsonb) AS notify, f.is_official, f.hide_online
+            f.rules_accepted_at, f.banned_until, f.ban_permanent, f.ban_reason, f.last_seen_at, coalesce(f.notify, '{}'::jsonb) AS notify, f.is_official, f.hide_online, f.health_consent_at
        FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1`, [req.user.sub]);
   const me = rows[0];
   if (!me || !me.email_verified_at) return res.status(403).json({ error: "Foruma katılmak için e-posta adresinizi doğrulayın.", code: "verify" });
@@ -57,7 +57,8 @@ async function gate(req, res, next) {
   const banned = me.ban_permanent || (me.banned_until && new Date(me.banned_until) > new Date());
   const lv = forumLevel(me, me.role);
   req.fm = { id: me.id, username: me.username, role: me.role, level: lv, mod: me.role === "admin" || me.forum_role === "moderator", admin: me.role === "admin", hideOnline: !!me.hide_online,
-    banned, banUntil: me.ban_permanent ? null : me.banned_until, banReason: me.ban_reason || "", since: me.rules_accepted_at, notify: notifyIn(me.notify) };
+    banned, banUntil: me.ban_permanent ? null : me.banned_until, banReason: me.ban_reason || "", since: me.rules_accepted_at, notify: notifyIn(me.notify),
+    consent: !!me.health_consent_at || me.role === "admin" || me.forum_role === "moderator" || !!me.is_official };
   if (!me.last_seen_at || Date.now() - new Date(me.last_seen_at).getTime() > 120000)
     pool.query(`UPDATE forum_profiles SET last_seen_at = now() WHERE user_id = $1`, [me.id]).catch(() => {});
   next();
@@ -142,6 +143,12 @@ async function topicRow(id, req) {
   return t;
 }
 // Ekip konusu: resmî hesabın ya da yöneticinin açtığı konu. Her zaman sabit ve yoruma kapalıdır; ilk mesajın beğenisi "∞" görünür, beğenmeme kapalıdır.
+// KVKK: sağlık verisi içerebilen paylaşım (konu, yanıt, görsel) için açık rıza gerekir; rıza yoksa forum yalnız okunur.
+function needConsent(req, res) {
+  if (req.fm.consent) return false;
+  res.status(403).json({ error: "Forumda yazmak için sağlık verilerinin işlenmesine açık rıza vermen gerekiyor. Rıza vermeden forumu okumaya devam edebilirsin.", code: "consent" });
+  return true;
+}
 async function isCrown(uid) {
   if (!uid) return false;
   const r = (await pool.query(`SELECT u.role = 'admin' OR coalesce(f.is_official, false) AS s FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1`, [uid])).rows[0];
@@ -206,7 +213,7 @@ boardRouter.get("/board/home", member, async (req, res) => {
       LEFT JOIN forum_topics t ON t.id = tt.topic_id AND t.hidden_at IS NULL GROUP BY g.id ORDER BY g.name`)).rows;
   res.json({
     categories: top, tags, stats: stats.rows[0],
-    me: { username: req.fm.username, level: publicLevel(req.fm.level), mod: req.fm.mod, admin: req.fm.admin, banned: req.fm.banned, banUntil: req.fm.banUntil, banReason: req.fm.banReason, openReports: reports, hideOnline: req.fm.hideOnline },
+    me: { username: req.fm.username, level: publicLevel(req.fm.level), mod: req.fm.mod, admin: req.fm.admin, banned: req.fm.banned, banUntil: req.fm.banUntil, banReason: req.fm.banReason, openReports: reports, hideOnline: req.fm.hideOnline, consent: req.fm.consent },
   });
 });
 
@@ -271,7 +278,7 @@ boardRouter.get("/board/topics", member, async (req, res) => {
 
 // ------------------------------------------------------------------ konu aç
 boardRouter.post("/board/topics", member, async (req, res) => {
-  if (!canWrite(req, res)) return;
+  if (!canWrite(req, res) || needConsent(req, res)) return;
   const b = req.body || {};
   const cat = await category(String(b.category || ""));
   if (!cat) return res.status(400).json({ error: "Kategori seçin.", field: "category" });
@@ -284,6 +291,7 @@ boardRouter.post("/board/topics", member, async (req, res) => {
   const title = clean(b.title).replace(/\s+/g, " ").slice(0, 200), body = clean(b.body), kind = cat.slug === "soru-cevap" || (req.fm.mod && b.kind === "question") ? "question" : "discussion";
   const tg = await tagsIn(b.tags); if (tg.err) return res.status(400).json({ error: tg.err, field: "tags" });
   const e = contentError({ title, body, level: req.fm.level.n, mod: req.fm.mod });
+  if (e && FILTER_RE.test(e)) logAudit(req.fm.id, "forum_blocked_filter", "user", req.fm.id, { reason: e, where: "topic" }, ip(req)).catch(() => {});
   if (e) return res.status(400).json({ error: e, field: /Başlık/.test(e) ? "title" : "body" });
   const poll = pollIn(b.poll); if (poll.err) return res.status(400).json({ error: poll.err, field: "poll" });
   const imgs = imagesIn(b.images); if (imgs.err) return res.status(400).json({ error: imgs.err });
@@ -405,12 +413,14 @@ async function notifyMentions(req, body, topicId, postId, title, skip = new Set(
   return skip;
 }
 boardRouter.post("/board/t/:id/posts", member, async (req, res) => {
-  if (!canWrite(req, res)) return;
+  if (!canWrite(req, res) || needConsent(req, res)) return;
   const t = await topicRow(req.params.id, req); if (!t || t.hidden_at) return res.status(404).json({ error: "Konu bulunamadı." });
   const cat = await category(t.category_id), can = canPostIn(req, t, cat);
   if (!can.ok) return res.status(403).json({ error: can.why });
   const body = clean((req.body || {}).body);
-  const e = contentError({ body, level: req.fm.level.n, mod: req.fm.mod }); if (e) return res.status(400).json({ error: e, field: "body" });
+  const e = contentError({ body, level: req.fm.level.n, mod: req.fm.mod });
+  if (e && FILTER_RE.test(e)) logAudit(req.fm.id, "forum_blocked_filter", "user", req.fm.id, { reason: e, where: "reply" }, ip(req)).catch(() => {});
+  if (e) return res.status(400).json({ error: e, field: "body" });
   const imgs = imagesIn((req.body || {}).images); if (imgs.err) return res.status(400).json({ error: imgs.err });
   if (await limited(req, res, "post", "Kısa sürede çok fazla mesaj gönderdiniz. Lütfen biraz bekleyin.")) return;
   const dup = await pool.query(`SELECT 1 FROM forum_posts WHERE topic_id = $1 AND author_id = $2 AND body = $3 AND created_at > now() - interval '10 minutes'`, [t.id, req.fm.id, body]);
@@ -460,7 +470,7 @@ async function postRow(id) {
   return rows[0] || null;
 }
 boardRouter.patch("/board/posts/:id", member, async (req, res) => {
-  if (!canWrite(req, res)) return;
+  if (!canWrite(req, res) || needConsent(req, res)) return;
   const p = await postRow(req.params.id); if (!p || ((p.hidden_at || p.topic_hidden) && !req.fm.mod)) return res.status(404).json({ error: "Mesaj bulunamadı." });
   const own = p.author_id === req.fm.id;
   if (!req.fm.mod) {
@@ -754,7 +764,7 @@ boardRouter.get("/board/u/:username", member, async (req, res) => {
 
 // ------------------------------------------------------------------ görseller
 boardRouter.post("/board/images", member, async (req, res, next) => {
-  if (!canWrite(req, res)) return;
+  if (!canWrite(req, res) || needConsent(req, res)) return;
   if (Number(req.headers["content-length"] || 0) > IMAGE_MAX) return res.status(400).json({ error: "Görsel en fazla 4 MB olabilir." });
   if (!(await checkHourlyActionLimit(`fimg:${req.fm.id}`, "forum_image_upload", req.fm.mod ? 200 : 40))) return res.status(429).json({ error: "Kısa sürede çok fazla görsel yüklendi. Lütfen biraz sonra tekrar deneyin." });
   next();
@@ -899,6 +909,18 @@ boardRouter.delete("/board/mod/ban/:username", member, async (req, res) => {
   await note(u.id, "Forum yasağınız kaldırıldı.", { kind: "moderation" });
   await logAudit(req.fm.id, "forum_unban", "user", u.id, {}, ip(req));
   res.json({ ok: true });
+});
+// Moderasyon işlem kaydı: moderatör ve yönetici işlemleri + otomatik filtrenin engelledikleri (son 150).
+const FILTER_RE = /^(Satış, kaynak|E-posta adresi paylaşılamaz|Telefon numarası paylaşılamaz)/;
+const MOD_ACTIONS = `^(forum_topic_(?!create)|forum_post_|forum_report_|forum_ban|forum_unban|forum_category_update|forum_blocked_filter|dm_blocked_filter|member_forum_)`;
+boardRouter.get("/board/mod/log", member, async (req, res) => {
+  if (!modOnly(req, res)) return;
+  res.setHeader("Cache-Control", "no-store");
+  const { rows } = await pool.query(
+    `SELECT a.action, a.target_type, a.target_id, a.details, a.created_at, u.username AS actor
+       FROM audit_log a LEFT JOIN users u ON u.id = a.actor_id WHERE a.action ~ $1 ORDER BY a.created_at DESC LIMIT 150`, [MOD_ACTIONS]);
+  res.json(rows.map((r) => ({ action: r.action, targetType: r.target_type, targetId: r.target_id, at: r.created_at, actor: r.actor,
+    reason: r.details && (r.details.reason || null), topic: r.details && r.details.topic ? String(r.details.topic) : null, where: r.details && r.details.where || null })));
 });
 boardRouter.get("/board/mod/bans", member, async (req, res) => {
   if (!modOnly(req, res)) return;

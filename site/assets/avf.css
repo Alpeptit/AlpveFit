@@ -2467,3 +2467,12 @@ footer.foot{padding-bottom:env(safe-area-inset-bottom)}
 .fo-bd{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:12px 8px;border-radius:14px;background:var(--paper)}
 .fo-bdi{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:conic-gradient(#F59E0B,#EA580C,#F59E0B);box-shadow:0 0 0 3px var(--card),0 0 0 5px #F59E0B}
 .fo-bd b{font-size:12.5px;line-height:1.25}.fo-bd small{font-size:11px;color:var(--muted)}
+.fo-mlog li{display:flex;flex-direction:column;gap:4px}.fo-mlh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fo-mlh time{margin-left:auto;font-size:12px;color:var(--muted)}
+.fo-mli{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:var(--paper)}.fo-mli .ico{width:15px;height:15px}.fo-mli.f{background:#FEF2F2;color:#B91C1C}
+.fo-mlog small{color:var(--muted);font-size:12.5px}
+/* KVKK açık rızası */
+.fo-cbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px;padding:12px 14px;border:1px solid #FDE68A;background:#FFFBEB;color:#78350F;border-radius:14px;font-size:14px;font-weight:600}
+.fo-cbar .ico{flex:none;color:#B45309}.fo-cbar span{flex:1;min-width:200px}
+:root[data-theme="dark"] .fo-cbar{background:#2A220D;border-color:#5C4612;color:#FDE68A}
+.fo-cdlg{position:fixed;inset:0;z-index:200;background:rgba(9,9,11,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.fo-cdc{max-width:560px;width:100%;padding:24px;display:flex;flex-direction:column;gap:10px;max-height:90vh;overflow:auto}.fo-cdc h2{margin:4px 0 0;font-size:20px}.fo-cdc p{margin:0;color:var(--muted);line-height:1.55}

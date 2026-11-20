@@ -202,7 +202,16 @@
       c.addEventListener("change", function () {
         AVF.api("PUT", "/forum/me", { hideOnline: c.checked }).then(function (ns) { ST = ns; msg(box, AVF.t(c.checked ? "Çevrimiçi durumun artık gizli." : "Çevrimiçi durumun yeniden görünür.")); }, function (er) { c.checked = !c.checked; msg(box, AVF.errText(er), true); });
       });
-      return sec("eyeoff", "Gizlilik", "Forumda ne kadar göründüğünü sen belirle.", [h("div", { class: "fs-tgs" },
+      // KVKK açık rızası: forumda yazmak ve gelişim fotoğrafını paylaşmak için; her an geri çekilebilir
+      var hc = h("input", { type: "checkbox", checked: !!ST.healthConsentAt });
+      hc.addEventListener("change", function () {
+        AVF.api("PUT", "/forum/me", { healthConsent: hc.checked }).then(function (ns) { ST = ns; msg(box, hc.checked ? "Açık rıza verildi; forumda yazabilirsin." : "Rızan geri çekildi. Forumu okuyabilirsin; yazmak ve fotoğraf paylaşmak kapalı. Önceki paylaşımların silinmez."); },
+          function (er) { hc.checked = !hc.checked; msg(box, AVF.errText(er), true); });
+      });
+      var consentRow = h("label", { class: "fs-tg" }, h("span", null, h("span", { text: "Sağlık verisi için açık rıza (KVKK)" }),
+        h("small", { class: "hint" }, h("span", { text: ST.healthConsentAt ? "Verildi: " + AVF.fmtDateTime(ST.healthConsentAt) + ". Forumda paylaştığın kilo, ölçü, tahlil ve sağlık bilgileri yalnız forum üyelerine gösterilir. " : "Verilmedi: forumu okuyabilirsin; konu açmak, yazmak ve gelişim fotoğrafı paylaşmak için gerekir. " }), h("a", { href: "/yasal/kvkk", text: "Aydınlatma metni" }))),
+        h("span", { class: "sw" }, hc, h("i")));
+      return sec("eyeoff", "Gizlilik", "Forumda ne kadar göründüğünü sen belirle.", [h("div", { class: "fs-tgs" }, consentRow,
         h("label", { class: "fs-tg" + (open ? "" : " off") }, h("span", null, h("span", { text: "Çevrimiçi durumumu gizle" }), h("small", { class: "hint", text: "Açıkken profilinde, mesajlarında ve üye listesinde “çevrimiçi” işaretin görünmez." })),
           h("span", { class: "sw" }, c, h("i")), open ? null : h("small", { class: "hint fs-lock" }, AVF.icon("lock", "bico"), h("span", { text: lvName + " seviyesinde açılır." })))), box]);
     }

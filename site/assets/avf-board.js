@@ -386,7 +386,7 @@
         AVF.busy(send, false);
         if (KEY) try { localStorage.removeItem(KEY); } catch (e) { /* yok */ }
         if (o.reset !== false) { ta.value = ""; images = []; paintImages(); setTab(false); paintCount(); }
-      }, function (e) { AVF.busy(send, false); msg.textContent = AVF.errText(e); });
+      }, function (e) { AVF.busy(send, false); msg.textContent = AVF.errText(e); if (e && e.data && e.data.code === "consent" && AVF.forumConsent) AVF.forumConsent(); });
     });
     paintImages(); paintCount();
     var el = h("div", { class: "fo-comp" + (o.compact ? " compact" : "") }, tools, h("div", { class: "fo-taw" }, ta, sugg), prev, imgBox, gifBox, pick,
@@ -477,7 +477,8 @@
         h("div", { class: "fo-tags" }, S.tags.filter(function (g) { return g.n > 0; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 14).map(tagChip))) : null,
       h("section", { class: "card fo-rul" }, h("h3", null, AVF.icon("shield"), h("span", { text: "Kısaca kurallar" })), S.rules ? ruleList(S.rules.slice(1, 5), (S.ruleIcons || []).slice(1, 5), "mini") : h("ul", { class: "fo-rlist mini" }),
         h("button", { class: "fo-lnk", type: "button", onclick: showRules }, "Tüm kurallar")));
-    AVF.mount(VIEW, band, h("div", { class: "wrap fo-wrap", "data-norv": "" }, h("div", { class: "fo-grid" }, h("div", { class: "fo-main" }, mainKids), side)));
+    var consentBar = me && !me.consent ? h("div", { class: "fo-cbar", role: "note" }, AVF.icon("shield"), h("span", { text: "Forumu okuyabilirsin. Konu açmak ve yazmak için sağlık verisi açık rızası gerekir." }), h("button", { class: "btn sm", type: "button", onclick: function () { consentDialog(function () { consentBar.remove(); }); } }, "İncele ve onayla")) : null;
+    AVF.mount(VIEW, band, h("div", { class: "wrap fo-wrap", "data-norv": "" }, consentBar, h("div", { class: "fo-grid" }, h("div", { class: "fo-main" }, mainKids), side)));
     return VIEW.querySelector(".fo-main");
   }
   function showRules() {
@@ -1032,7 +1033,7 @@
     if (!S.me.mod) return notFound();
     title("Moderasyon");
     var tab = qs().t || "open";
-    var tabs = [["open", "Açık şikâyetler"], ["upheld", "Haklı bulunanlar"], ["dismissed", "Reddedilenler"], ["bans", "Forum yasakları"]].concat(S.me.admin ? [["cats", "Kategoriler"]] : []);
+    var tabs = [["open", "Açık şikâyetler"], ["upheld", "Haklı bulunanlar"], ["dismissed", "Reddedilenler"], ["bans", "Forum yasakları"], ["log", "İşlem kaydı"]].concat(S.me.admin ? [["cats", "Kategoriler"]] : []);
     var box = h("div");
     var main = shell({ h1: "Moderasyon", crumbs: [["Moderasyon"]], noNew: true }, [h("div", { class: "fo-tabs2", role: "tablist" }, tabs.map(function (x) {
       return h("button", { type: "button", role: "tab", class: x[0] === tab ? "on" : "", "aria-selected": String(x[0] === tab), onclick: function () { history.replaceState(history.state, "", "/forum/moderasyon?t=" + x[0]); modPage(); } }, x[1]);
@@ -1046,6 +1047,16 @@
       })) : AVF.state("checks", "Aktif forum yasağı yok", ""));
     }, function (e) { AVF.mount(box, errBox(e, modPage)); });
     if (tab === "cats") return catsAdmin(box);
+    if (tab === "log") return api("GET", "/mod/log").then(function (rows) {
+      var NAMES = { forum_blocked_filter: ["filter", "Otomatik filtre engelledi (forum)"], dm_blocked_filter: ["filter", "Otomatik filtre engelledi (özel mesaj)"], forum_ban: ["lock", "Forumdan uzaklaştırma"], forum_unban: ["unlock", "Uzaklaştırma kaldırıldı"],
+        forum_post_edit_mod: ["pen", "Mesaj düzenlendi"], forum_category_update: ["layers", "Kategori güncellendi"], forum_report_uphold: ["flag", "Şikâyet haklı bulundu"], forum_report_dismiss: ["flag", "Şikâyet reddedildi"] };
+      function name(a) { if (NAMES[a]) return NAMES[a]; var m = /^forum_(topic|post)_(.+)$/.exec(a); if (m) return ["shield", (m[1] === "topic" ? "Konu: " : "Mesaj: ") + m[2].replace(/_/g, " ")]; return ["shield", a.replace(/_/g, " ")]; }
+      AVF.mount(box, rows.length ? h("ul", { class: "fo-mini card fo-mlog" }, rows.map(function (r) {
+        var n = name(r.action), link = r.targetType === "forum_topic" ? "/forum/konu/" + r.targetId : r.topic ? "/forum/konu/" + r.topic : null;
+        return h("li", null, h("div", { class: "fo-mlh" }, h("span", { class: "fo-mli" + (/filter/.test(r.action) ? " f" : "") }, AVF.icon(n[0] === "filter" ? "shield" : n[0])), h("b", { text: n[1] }), timeEl(r.at)),
+          h("small", null, h("span", { text: r.actor ? "@" + r.actor : "sistem" }), r.reason ? h("span", { text: " · " + r.reason }) : null, link ? h("span", { text: " · " }) : null, link ? lk(link, "konuya git") : null));
+      })) : AVF.state("checks", "Kayıt yok", "Moderasyon işlemleri ve otomatik filtrenin engelledikleri burada listelenir."));
+    }, function (e) { AVF.mount(box, errBox(e, modPage)); });
     api("GET", "/mod/reports?status=" + tab).then(function (rows) {
       if (!rows.length) return AVF.mount(box, AVF.state("checks", tab === "open" ? "Açık şikâyet yok" : "Kayıt yok", tab === "open" ? "Her şey yolunda görünüyor." : ""));
       AVF.mount(box, h("div", { class: "fo-mq" }, rows.map(function (x) {
@@ -1079,15 +1090,31 @@
   function notFound() { shell({ h1: "Bulunamadı", crumbs: [] }, AVF.state("msg", "Sayfa bulunamadı", "Aradığın forum sayfası burada değil. Belki taşındı, belki hiç yoktu. 🤷", lk("/forum", "Foruma dön", { class: "btn" }))); }
 
   // ------------------------------------------------------------------ giriş kapısı ve yönlendirme
+  var CONSENT_TEXT = "Forumda kendi isteğimle paylaşacağım kilo, ölçü, tahlil ve sağlık durumu gibi sağlık verilerimin, topluluk desteği amacıyla yalnız forum üyelerine gösterilmek üzere işlenmesine açık rıza veriyorum.";
+  function consentDialog(done) {
+    var cb = h("input", { type: "checkbox" }), ok = h("button", { class: "btn", type: "button", disabled: "" }, AVF.icon("check", "bico"), "Onaylıyorum"), m = h("div", { class: "fo-cmsg", role: "alert" });
+    var bg = h("div", { class: "fo-cdlg", role: "dialog", "aria-modal": "true", "aria-labelledby": "fo-cdt" });
+    function close() { bg.remove(); document.removeEventListener("keydown", esc, true); }
+    function esc(e) { if (e.key === "Escape") close(); }
+    cb.addEventListener("change", function () { ok.disabled = !cb.checked; });
+    ok.onclick = function () { AVF.busy(ok, true); AVF.api("PUT", "/forum/me", { healthConsent: true }).then(function () { S.me.consent = true; close(); AVF.toast("Teşekkürler! Artık forumda yazabilirsin. ✍️"); if (done) done(); }, function (e) { AVF.busy(ok, false); m.textContent = AVF.errText(e); }); };
+    bg.appendChild(h("div", { class: "card fo-cdc" }, h("span", { class: "tile" }, AVF.icon("shield")), h("h2", { id: "fo-cdt", text: "Sağlık verisi için açık rıza" }),
+      h("p", { text: "Forumda paylaşılan içerikler kilo, ölçü, tahlil ya da sağlık durumu gibi özel nitelikli kişisel veri içerebilir. KVKK gereği bu verilerin işlenmesi için açık rızan gerekir. Rızanı Forum Ayarları'ndan dilediğin an geri çekebilirsin." }),
+      h("label", { class: "fo-chk big" }, cb, h("span", null, h("span", { text: CONSENT_TEXT + " " }), lk("/yasal/kvkk", "KVKK Aydınlatma Metni"))), m,
+      h("div", { class: "row" }, ok, h("button", { class: "btn ghost", type: "button", onclick: close }, "Şimdilik okuyacağım"))));
+    document.body.appendChild(bg); document.addEventListener("keydown", esc, true); setTimeout(function () { cb.focus(); }, 30);
+  }
+  AVF.forumConsent = consentDialog;
   function gateRules(view, rules, again) {
     AVF.mount(view, h("section", { class: "fo-band", "data-norv": "" }, h("div", { class: "wrap" }, h("div", { class: "fo-bh" }, h("h1", { text: "Forum" }), h("p", { text: "Hoş geldin! İçeri girmeden önce birkaç kısa kuralımız var." })))),
       h("div", { class: "wrap fo-wrap", "data-norv": "" }, (function () {
-        var cb = h("input", { type: "checkbox" }), ok = h("button", { class: "btn", type: "button", disabled: "" }, AVF.icon("arrow", "bico"), "Foruma gir"), m = h("div", { class: "fo-cmsg", role: "alert" });
+        var cb = h("input", { type: "checkbox" }), cb2 = h("input", { type: "checkbox" }), ok = h("button", { class: "btn", type: "button", disabled: "" }, AVF.icon("arrow", "bico"), "Foruma gir"), m = h("div", { class: "fo-cmsg", role: "alert" });
         cb.addEventListener("change", function () { ok.disabled = !cb.checked; });
-        ok.onclick = function () { AVF.busy(ok, true); AVF.api("PUT", "/forum/me", { acceptRules: true }).then(function () { try { sessionStorage.setItem(FKEY, "1"); } catch (e) { /* yok */ } again(); }, function (e) { AVF.busy(ok, false); m.textContent = AVF.errText(e); }); };
+        ok.onclick = function () { AVF.busy(ok, true); AVF.api("PUT", "/forum/me", { acceptRules: true, healthConsent: cb2.checked || undefined }).then(function () { try { sessionStorage.setItem(FKEY, "1"); } catch (e) { /* yok */ } again(); }, function (e) { AVF.busy(ok, false); m.textContent = AVF.errText(e); }); };
         return h("section", { class: "card fo-gate" }, h("span", { class: "tile" }, AVF.icon("shield")), h("h2", { text: "Forum kuralları" }),
           ruleList(rules, S.ruleIcons),
-          h("label", { class: "fo-chk big" }, cb, h("span", { text: "18 yaşından büyüğüm; forum kurallarını okudum ve kabul ediyorum." })), m, h("div", { class: "row" }, ok, lk("/", "Ana sayfaya dön", { class: "btn ghost" })));
+          h("label", { class: "fo-chk big" }, cb, h("span", { text: "18 yaşından büyüğüm; forum kurallarını okudum ve kabul ediyorum." })),
+          h("label", { class: "fo-chk big" }, cb2, h("span", null, h("span", { text: CONSENT_TEXT + " " }), lk("/yasal/kvkk", "KVKK Aydınlatma Metni"), h("small", { class: "hint", text: " (İsteğe bağlı: onaylamazsan forumu okuyabilirsin; yazmak için gerekir.)" }))), m, h("div", { class: "row" }, ok, lk("/", "Ana sayfaya dön", { class: "btn ghost" })));
       })()));
   }
   function boot(view, sub, done) {

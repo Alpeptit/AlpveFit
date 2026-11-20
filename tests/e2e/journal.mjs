@@ -6,7 +6,7 @@ import { signup, sql, chk, finish, BASE } from "./lib.mjs";
 import zlib from "node:zlib";
 
 const U = await signup("Gunluk Uye", "jru"), F = await signup("Gunluk Arkadas", "jrf"), M = await signup("Gunluk Forumcu", "jrm"), X = await signup("Gunluk Yabanci", "jrx");
-for (const p of [U, F, M]) await p.c.call("PUT", "/forum/me", { acceptRules: true });
+for (const p of [U, F, M]) await p.c.call("PUT", "/forum/me", { acceptRules: true });   // U önce rızasız: fotoğrafı paylaşamaz
 const day = (n) => { const d = new Date(Date.now() + 3 * 3600e3); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
 let r = await U.c.call("GET", "/journal"); chk("boş günlük", r.status === 200 && r.body.entries.length === 0 && r.body.stats.streakWeeks === 0, r.body.stats);
 r = await U.c.call("PUT", "/journal/entries", { date: day(-1), weight: 80 }); chk("gelecek tarih reddedilir", r.status === 400 && r.body.field === "date", r.body);
@@ -36,6 +36,8 @@ const get = (p, url) => fetch(BASE + url, { headers: { cookie: p.c.cookieHeader(
 let g = await get(U, ph.url); const b = Buffer.from(await g.arrayBuffer()); chk("sahibi görür; konum bilgisi silinmiş", g.status === 200 && !b.includes(Buffer.from("GPS")), g.status);
 for (const [who, n] of [[F, "arkadaş"], [M, "forum üyesi"], [X, "forumda olmayan"]]) { g = await get(who, ph.url); chk("yalnız ben: " + n + " göremez", g.status === 404, g.status); }
 sql(`INSERT INTO friendships (user_a, user_b, requester, status) VALUES (least('${U.id}'::uuid, '${F.id}'::uuid), greatest('${U.id}'::uuid, '${F.id}'::uuid), '${U.id}', 'accepted')`);
+r = await U.c.call("PATCH", "/journal/photos/" + ph.id, { visibility: "friends" }); chk("açık rıza olmadan fotoğraf paylaşılamaz", r.status === 403 && r.body.code === "consent", r.body);
+await U.c.call("PUT", "/forum/me", { healthConsent: true });
 r = await U.c.call("PATCH", "/journal/photos/" + ph.id, { visibility: "friends" });
 g = await get(F, ph.url); chk("arkadaşlarım: arkadaş görür", g.status === 200, g.status);
 g = await get(M, ph.url); chk("arkadaşlarım: diğer forum üyesi göremez", g.status === 404, g.status);
@@ -44,6 +46,8 @@ g = await get(M, ph.url); chk("forum üyeleri: forum üyesi görür", g.status =
 g = await get(X, ph.url); chk("forum üyeleri: kuralları onaylamamış üye göremez", g.status === 404, g.status);
 r = await M.c.call("GET", "/journal/u/" + U.username); chk("forum profilinde seri ve görünür fotoğraf; ölçü yok", r.body.streakWeeks >= 3 && r.body.photos.length === 1 && !("entries" in r.body), r.body);
 r = await X.c.call("PATCH", "/journal/photos/" + ph.id, { visibility: "private" }); chk("başkasının fotoğrafı değiştirilemez", r.status === 404, r.body);
+await U.c.call("PUT", "/forum/me", { healthConsent: false });
+g = await get(M, ph.url); chk("rıza geri çekilince paylaşılan fotoğraf da gizlenir", g.status === 404, g.status);
 r = await U.c.call("DELETE", "/journal/photos/" + ph.id); chk("fotoğraf silinir", r.body.photos.length === 0, "");
 g = await get(U, ph.url); chk("silinen fotoğraf açılmaz", g.status === 404, g.status);
 finish("journal");

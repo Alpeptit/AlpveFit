@@ -25,7 +25,7 @@ async function ensureProfile(userId) {
 async function state(userId) {
   const { rows } = await pool.query(
     `SELECT u.username, u.role, u.username_changed_at, f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_received, f.reports_upheld,
-            coalesce(f.signature, '') AS signature, coalesce(f.socials, '{}'::jsonb) AS socials, coalesce(f.notify, '{}'::jsonb) AS notify, f.rules_accepted_at, coalesce(f.hide_online, false) AS hide_online, f.is_official, f.frame,
+            coalesce(f.signature, '') AS signature, coalesce(f.socials, '{}'::jsonb) AS socials, coalesce(f.notify, '{}'::jsonb) AS notify, f.rules_accepted_at, coalesce(f.hide_online, false) AS hide_online, f.is_official, f.frame, f.health_consent_at,
             (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'avatar') AS avatar_id,
             (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'sig') AS sig_image_id
        FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1`, [userId]);
@@ -38,7 +38,7 @@ async function state(userId) {
     stats: { topics: r.topics || 0, posts: r.posts || 0, likes: r.likes || 0, dislikes: r.dislikes || 0, reports: r.reports_received || 0 },
     signature: r.signature, socials: r.socials || {}, notify: notifyIn(r.notify), rulesAcceptedAt: r.rules_accepted_at,
     avatarId: r.avatar_id, sigImageId: r.sig_image_id,
-    frame: effectiveFrame(r.frame, lv), frameChoice: r.frame || null, frames: framesFor(lv),
+    frame: effectiveFrame(r.frame, lv), frameChoice: r.frame || null, frames: framesFor(lv), healthConsentAt: r.health_consent_at || null,
     hideOnline: !!r.hide_online, hideOnlineLevel: HIDE_ONLINE_LEVEL, hideOnlineUnlocked: level.assigned || level.n >= HIDE_ONLINE_LEVEL,
   };
 }
@@ -72,6 +72,9 @@ forumRouter.put("/forum/me", requireAuth, async (req, res) => {
     vals.push(JSON.stringify(notifyIn(b.notify))); sets.push(`notify = $${vals.length}`);
   }
   if (b.acceptRules === true) sets.push(`rules_accepted_at = coalesce(rules_accepted_at, now())`);
+  // KVKK açık rızası (forumda sağlık verisi içerebilen paylaşım): verilir ya da her an geri çekilir
+  if (b.healthConsent === true) sets.push(`health_consent_at = coalesce(health_consent_at, now())`);
+  if (b.healthConsent === false) sets.push(`health_consent_at = NULL`);
   if (b.hideOnline !== undefined) {
     // Çevrimiçi durumunu gizleme Pump Avcısı seviyesinde açılır (kapatmak her zaman serbest)
     if (b.hideOnline === true) {
@@ -96,7 +99,7 @@ forumRouter.put("/forum/me", requireAuth, async (req, res) => {
   if (!cur.rows[0].rules_accepted_at && b.acceptRules !== true && (b.signature || (b.socials && Object.values(b.socials).some(Boolean))))
     return res.status(400).json({ error: "İmza ve bağlantı eklemek için forum kurallarını onaylayın.", code: "rules_required" });
   await pool.query(`UPDATE forum_profiles SET ${sets.join(", ")}, updated_at = now() WHERE user_id = $1`, vals);
-  await logAudit(req.user.sub, "forum_settings_update", "user", req.user.sub, { fields: Object.keys(b).filter((k) => ["signature", "socials", "notify", "hideOnline", "frame"].includes(k)) }, ip(req));
+  await logAudit(req.user.sub, "forum_settings_update", "user", req.user.sub, { fields: Object.keys(b).filter((k) => ["signature", "socials", "notify", "hideOnline", "frame", "healthConsent", "acceptRules"].includes(k)) }, ip(req));
   res.json(await state(req.user.sub));
 });
 

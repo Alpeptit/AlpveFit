@@ -35,6 +35,8 @@ const SALES = [
   /\b(kaynak (ver|lazim|ariyorum|oner|bul|paylas)|nereden (alabilirim|alinir|bulurum|bulabilirim|temin)|tedarik(ci)?|temin ed(er|iyorum|ebilirim))\b/,
   /\b(iban|kargo(lu|yla| ile gonder)|kapida odeme)\b/,
   /\b(whatsapp|whats app|telegram|wickr|wa\.me|t\.me\/)/,
+  // sosyal medya ve mesajlaşma hesabı yönlendirmesi (forum dışına çekme)
+  /\b(signal|viber|discord(\.gg)?|snapchat|snap ?:|instagram\.com|insta ?: ?@|ig ?: ?@|tiktok\.com\/@|facebook\.com|fb\.me)\b/,
 ];
 export function salesError(text) {
   const f = fold(text);

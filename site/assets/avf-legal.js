@@ -113,6 +113,11 @@
           "!mail|Başvurularınızı **" + MAIL + "** adresine iletebilirsiniz; en geç **30 gün** içinde ücretsiz olarak yanıtlanır."]],
         ["Açık rıza", [
           "Sağlık ve koçluk bilgilerinizi kaydederken, bu bilgilerin yukarıdaki amaçla ve belirtilen kişilerce işlenmesine **açık rıza** verdiğinizi ayrıca onaylarsınız. Rıza vermemeniz hâlinde hizmetin diğer bölümlerinden yararlanmaya devam edebilirsiniz."]],
+        ["Forum ve Gelişim Günlüğüm", [
+          "• **Forum:** forumda kendi isteğinizle yazdığınız konular, mesajlar ve görseller; kilo, ölçü, tahlil, sağlık durumu gibi **özel nitelikli** bilgiler içerebilir. Bu içerikler, forumun amacı olan topluluk desteği için **yalnız giriş yapmış ve forum kurallarını onaylamış üyelere** gösterilir; arama motorlarına açık değildir.",
+          "• **Gelişim Günlüğüm:** girdiğiniz kilo ve çevre ölçüleri **yalnız size** görünür. Gelişim fotoğraflarının kimlere görüneceğini (yalnız ben / arkadaşlarım / forum üyeleri) siz seçersiniz; fotoğraflardaki konum ve cihaz bilgisi otomatik silinir.",
+          "• Forumda içerik paylaşmak ve gelişim fotoğrafını başkalarına açmak için sağlık verilerinizin bu amaçla işlenmesine **ayrıca açık rıza** vermeniz gerekir. Rıza vermeden forumu okuyabilirsiniz. Rızanızı **Forum Ayarları → Bildirim ve Gizlilik** bölümünden dilediğiniz an geri çekebilirsiniz; geri çekme, önceki paylaşımlarınızı silmez, silmek için içeriği kaldırabilir ya da bize yazabilirsiniz.",
+          "• Bildirimler: telefonunuza / bilgisayarınıza bildirim açarsanız cihazın bildirim adresi saklanır; bildirimler mesaj içeriği taşımaz."]],
       ] },
       en: { title: "KVKK Notice and Explicit Consent", sub: "Information notice under the Personal Data Protection Law No. 6698", sections: [
         ["Data controller", [

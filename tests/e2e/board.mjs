@@ -12,7 +12,15 @@ const png = (w, h) => { const b = Buffer.alloc(57); Buffer.from([0x89, 0x50, 0x4
 let r = await new Client().call("GET", "/board/home"); chk("misafire forum verisi yok", r.status === 401, r.status);
 r = await U.c.call("GET", "/board/home"); chk("kurallar onaylanmadan forum açılmaz (18 yaş + kurallar)", r.status === 403 && r.body.code === "rules" && r.body.rules.length >= 5, r.body);
 r = await U.c.call("GET", "/board/rules"); chk("kurallar okunur", r.status === 200 && r.body.reasons.length >= 6, r.status);
-for (const p of [U, V, W, A]) await p.c.call("PUT", "/forum/me", { acceptRules: true });
+for (const p of [U, V, W, A]) await p.c.call("PUT", "/forum/me", { acceptRules: true, healthConsent: true });
+// KVKK: açık rıza olmadan forum okunur ama yazılamaz; rıza verilince yazılır; geri çekilince yine yazılamaz
+{ const K = await signup("Riza Uye", "rz"); await K.c.call("PUT", "/forum/me", { acceptRules: true });
+  let k = await K.c.call("GET", "/board/home"); chk("rızasız üye forumu okur (consent=false)", k.status === 200 && k.body.me.consent === false, k.body.me);
+  k = await K.c.call("POST", "/board/topics", { category: "serbest-kursu", title: "Rızasız konu denemesi burada", body: "Deneme" }); chk("rıza olmadan konu açılamaz (code=consent)", k.status === 403 && k.body.code === "consent", k.body);
+  k = await K.c.call("PUT", "/forum/me", { healthConsent: true }); chk("açık rıza verilir (zamanı kaydedilir)", !!k.body.healthConsentAt, k.body);
+  k = await K.c.call("POST", "/board/topics", { category: "serbest-kursu", title: "Rızalı konu denemesi burada", body: "Deneme" }); chk("rızadan sonra konu açılır", k.status === 201, k.body);
+  k = await K.c.call("PUT", "/forum/me", { healthConsent: false }); chk("rıza geri çekilir", k.body.healthConsentAt === null, k.body);
+  k = await K.c.call("POST", "/board/t/" + (await K.c.call("GET", "/board/topics?c=serbest-kursu")).body.topics[0].id + "/posts", { body: "Geri çektikten sonra" }); chk("geri çekince yazılamaz", k.status === 403 && k.body.code === "consent", k.body); }
 r = await U.c.call("GET", "/board/home");
 chk("ana sayfa: 7 kategori (Soru – Cevap kaldırıldı), istatistik, üye bilgisi", r.status === 200 && r.body.categories.length === 7 && !r.body.categories.some((c) => c.slug === "soru-cevap") && r.body.stats.members >= 4 && r.body.me.username === U.username && !r.body.me.mod, r.body);
 chk("farmakoloji kategorisinde sabit sağlık uyarısı", r.body.categories.find((c) => c.slug === "farmakoloji").notice.includes("tıbbi tavsiye değildir"), "");
