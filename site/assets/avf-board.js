@@ -125,7 +125,7 @@
       }
       if (t === "[tablo]") {
         var rows = []; i++;
-        while (i < lines.length && lines[i].trim() !== "[/tablo]") { if (lines[i].trim()) rows.push(lines[i].split("|").map(function (c) { return c.trim(); })); i++; }
+        while (i < lines.length && lines[i].trim() !== "[/tablo]") { if (lines[i].trim()) rows.push(lines[i].split(/\|(?![^\[\]]*\])/).map(function (c) { return c.trim(); }));   /* köşeli parantez içindeki | ([kaynak=…|etiket]) hücre ayırıcı değildir */ i++; }
         i++;
         if (rows.length) {
           var tbl = h("table", { class: "fo-tbl" }), th = h("tr");

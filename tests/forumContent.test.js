@@ -8,7 +8,7 @@ const SQL = readFileSync(new URL("../src/db/migrate-v17.sql", import.meta.url), 
 const CORE = readFileSync(new URL("../site/assets/avf-core.js", import.meta.url), "utf8");
 const TOOLS = readFileSync(new URL("../site/assets/avf-tools.js", import.meta.url), "utf8");
 const ICONS = new Set([...CORE.slice(CORE.indexOf("var P = {"), CORE.indexOf("};", CORE.indexOf("var P = {"))).matchAll(/(?:^|[\s,{])"?([a-z0-9]+)"?\s*:/g)].map((m) => m[1]));
-const CATS = ["duyurular", "beslenme", "antrenman", "supplement", "vitamin", "mineral", "gelisim-gunlukleri", "serbest-kursu"];
+const CATS = ["duyurular", "beslenme", "antrenman", "supplement", "vitamin", "mineral", "gelisim-gunlukleri", "serbest-kursu", "farmakoloji"];
 
 test("her konunun anahtarı tekil, alanları geçerli", () => {
   const keys = new Set();
@@ -22,7 +22,7 @@ test("her konunun anahtarı tekil, alanları geçerli", () => {
     assert.ok(c.tags.length >= 1 && c.tags.length <= 5, c.key + " etiket");
     for (const t of c.tags) assert.ok(SQL.includes("'" + t + "'"), c.key + " etiket yok: " + t);
   }
-  assert.equal(CONTENT.length, 26);
+  assert.equal(CONTENT.length, 27);
 });
 
 test("ekip konularının tümü yoruma kapalı ve sabit; kimse yoruma davet edilmez", () => {
