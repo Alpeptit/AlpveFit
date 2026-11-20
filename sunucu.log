@@ -1,0 +1,19 @@
+[server] Alpvefit backend http://localhost:3000 üzerinde çalışıyor
+[migration] migrate-v1.sql uygulandı.
+[migration] migrate-v2.sql uygulandı.
+[migration] migrate-v3.sql uygulandı.
+[migration] migrate-v4.sql uygulandı.
+[migration] migrate-v5.sql uygulandı.
+[migration] migrate-v6.sql uygulandı.
+[migration] migrate-v7.sql uygulandı.
+[migration] migrate-v8.sql uygulandı.
+[migration] migrate-v9.sql uygulandı.
+[migration] migrate-v10.sql uygulandı.
+[migration] migrate-v11.sql uygulandı.
+[migration] migrate-v12.sql uygulandı.
+[migration] migrate-v13.sql uygulandı.
+[migration] migrate-v14.sql uygulandı.
+[migration] migrate-v15.sql uygulandı.
+[migration] migrate-v16.sql uygulandı.
+[migration] migrate-v17.sql uygulandı.
+[server] Veritabanı güncellendi: migrate-v1.sql, migrate-v2.sql, migrate-v3.sql, migrate-v4.sql, migrate-v5.sql, migrate-v6.sql, migrate-v7.sql, migrate-v8.sql, migrate-v9.sql, migrate-v10.sql, migrate-v11.sql, migrate-v12.sql, migrate-v13.sql, migrate-v14.sql, migrate-v15.sql, migrate-v16.sql, migrate-v17.sql
