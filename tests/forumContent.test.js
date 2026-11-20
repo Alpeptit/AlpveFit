@@ -22,7 +22,7 @@ test("her konunun anahtarı tekil, alanları geçerli", () => {
     assert.ok(c.tags.length >= 1 && c.tags.length <= 5, c.key + " etiket");
     for (const t of c.tags) assert.ok(SQL.includes("'" + t + "'"), c.key + " etiket yok: " + t);
   }
-  assert.equal(CONTENT.length, 27);
+  assert.equal(CONTENT.length, 35);
 });
 
 test("ekip konularının tümü yoruma kapalı ve sabit; kimse yoruma davet edilmez", () => {
@@ -44,6 +44,8 @@ test("antrenman sistemleri Antrenman'da; bölgesel program (bro split) önerilme
 test("biçim etiketleri geçerli: simge, araç, görsel, GIF, kaynak", () => {
   for (const c of CONTENT) {
     for (const m of c.body.matchAll(/\[ikon=([a-z0-9]+)\]/g)) assert.ok(ICONS.has(m[1]), c.key + " simge: " + m[1]);
+    assert.ok(c.icon && ICONS.has(c.icon), c.key + " konu simgesi: " + c.icon);
+    assert.ok(!/^[^A-Za-zÇĞİÖŞÜçğıöşü0-9]/.test(c.title), c.key + " başlık emojiyle başlamaz");
     for (const m of c.body.matchAll(/^\[arac=([a-z0-9-]+)\]$/gm)) assert.ok(TOOLS.includes('key: "' + m[1] + '"'), c.key + " araç: " + m[1]);
     for (const m of c.body.matchAll(/^\[gorsel=([a-z0-9-]+)/gm)) assert.ok(existsSync(new URL("../site/assets/forum/" + m[1] + ".svg", import.meta.url)), c.key + " görsel: " + m[1]);
     const gifs = [...c.body.matchAll(/^\[gif=(\d+)\]$/gm)].map((m) => +m[1]);

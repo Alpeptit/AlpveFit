@@ -6,5 +6,6 @@ import { TAKVIYE } from "./takviye.js";
 import { ANTRENMAN } from "./antrenman.js";
 import { TOPLULUK } from "./topluluk.js";
 import { SAGLIK } from "./saglik.js";
+import { REHBERLER } from "./rehberler.js";
 
-export const CONTENT = [...DUYURULAR, ...BESLENME, ...TAKVIYE, ...ANTRENMAN, ...TOPLULUK, ...SAGLIK];
+export const CONTENT = [...DUYURULAR, ...BESLENME, ...TAKVIYE, ...ANTRENMAN, ...TOPLULUK, ...SAGLIK, ...REHBERLER];
