@@ -20,6 +20,7 @@ import { privacyRouter } from "./routes/privacy.js";
 import { accountRouter } from "./routes/account.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { pushRouter } from "./routes/push.js";
+import { journalRouter } from "./routes/journal.js";
 import { ordersRouter } from "./routes/orders.js";
 import { profileRouter } from "./routes/profile.js";
 import { blogRouter } from "./routes/blog.js";
@@ -236,6 +237,7 @@ app.use("/api", plansRouter);         // /api/plans/* — üyenin kendi yayınla
 app.use("/api", privacyRouter);       // /api/me/request-delete, /api/me/confirm-delete
 app.use("/api", accountRouter);       // /api/account/* (ad/e-posta/şifre değişikliği)
 app.use("/api", notificationsRouter); // /api/notifications
+app.use("/api", journalRouter);       // /api/journal/* — Gelişim Günlüğüm (ölçüler, fotoğraflar, seri)
 app.use("/api", pushRouter);          // /api/push/* — telefona / masaüstüne bildirim (Web Push)
 app.use("/api", ordersRouter);        // /api/packages, /api/orders/* — paket siparişi (USDT TRC20)
 // Canlı destek ve destek talepleri: ayrı ve dar bir hız sınırı (yoklama + mesaj gönderimi). Genel sınırlar da geçerlidir.

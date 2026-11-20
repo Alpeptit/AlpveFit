@@ -465,7 +465,7 @@
         var a = link("/panel/" + i[0], [AVF.icon(i[1]), h("span", { text: i[2] }), i[0] === "bildirimler" && unread ? h("span", { class: "badge", text: String(unread) }) : null, i[0] === "arkadaslar" && AVF.dmUnread ? h("span", { class: "badge", text: String(AVF.dmUnread) }) : null]);
         if (i[0] === sub || sub.indexOf(i[0] + "/") === 0 || (i[0] === "siparisler" && sub.indexOf("siparis/") === 0)) a.setAttribute("aria-current", "page"); return a;
       }
-      var row = h("div", { class: "pm-row" }, P.head, F.head, [["arkadaslar", "users", "Arkadaşlar ve Mesajlar"], ["siparisler", "card", "Siparişlerim"], ["destek", "ticket", "Destek Taleplerim"], ["profil", "id", "Kişisel Bilgiler"], ["bildirimler", "bell", "Bildirimler"], ["hesap", "cog", "Hesap Ayarları"]].map(item),
+      var row = h("div", { class: "pm-row" }, P.head, F.head, [["gelisim", "pulse", "Gelişim Günlüğüm"], ["arkadaslar", "users", "Arkadaşlar ve Mesajlar"], ["siparisler", "card", "Siparişlerim"], ["destek", "ticket", "Destek Taleplerim"], ["profil", "id", "Kişisel Bilgiler"], ["bildirimler", "bell", "Bildirimler"], ["hesap", "cog", "Hesap Ayarları"]].map(item),
         h("button", { class: "pm-out", type: "button", onclick: logout }, AVF.icon("out"), h("span", { text: "Güvenli Çıkış Yap" })));
       function place() {
         if (mqMob.matches) { menuEl.appendChild(P.wrap); menuEl.appendChild(F.wrap); }
@@ -487,6 +487,7 @@
       if (sub.indexOf("forum-ayarlari") === 0) return AVF.forumSettingsView(content, sub.slice(15) || "profil");
       if (sub === "arkadaslar" || sub.indexOf("arkadaslar/") === 0) return AVF.friendsView(content, sub.slice(11));
       if (sub === "agirlik-takibi") return (kinds || []).some(function (k) { return k.kind === "training"; }) ? AVF.progressView(content, {}) : AVF.mount(content, h("h2", { class: "ptitle", text: "Ağırlık Takibi" }), AVF.state("lock", "Bu bölüm hesabınız için etkin değil", "Antrenman programınız tanımlandığında ağırlık takibi açılır.", link("/panel", "Planlarıma dön", { class: "btn" })));
+      if (sub === "gelisim") return AVF.journalView(content);
       if (sub === "bildirimler") return notificationsView(content);
       if (sub === "siparisler") return AVF.ordersView(content);
       if (sub === "profil") return AVF.profileView(content);

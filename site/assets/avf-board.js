@@ -961,6 +961,17 @@
         h("div", { class: "fo-pcols" },
           h("section", null, h("h3", { class: "fo-h3", text: "Son konuları" }), u.topics.length ? h("ul", { class: "fo-mini card" }, u.topics.map(function (t) { return h("li", null, lk("/forum/konu/" + t.id, t.title, { "data-notr": "" }), h("small", null, h("span", { text: t.category.name + " · " + num(t.replies) + " yanıt · " }), timeEl(t.lastAt))); })) : h("p", { class: "hint", text: "Henüz konu açmadı." })),
           h("section", null, h("h3", { class: "fo-h3", text: "Son yanıtları" }), u.posts.length ? h("ul", { class: "fo-mini card" }, u.posts.map(function (p) { return h("li", null, lk("/forum/konu/" + p.topicId + "?m=" + p.id, p.title, { "data-notr": "" }), h("p", { "data-notr": "", text: p.excerpt }), h("small", null, timeEl(p.at))); })) : h("p", { class: "hint", text: "Henüz yanıt yazmadı." }))));
+      // gelişim: seri ve üyenin bana açtığı gelişim fotoğrafları (ölçüler hiçbir zaman gösterilmez)
+      var jb = h("section", { class: "fo-jr" }); main.appendChild(jb);
+      AVF.api("GET", "/journal/u/" + encodeURIComponent(u.username)).then(function (j) {
+        if (!j.streakWeeks && !j.photos.length) return;
+        AVF.mount(jb, h("h3", { class: "fo-h3" }, AVF.icon("pulse", "bico"), h("span", { text: "Gelişim" })),
+          h("div", { class: "card fo-jrc" },
+            j.streakWeeks ? h("p", { class: "fo-jrs" }, AVF.icon("flame"), h("b", { text: j.streakWeeks + " hafta" }), h("span", { text: " üst üste gelişim günlüğü kaydı" })) : null,
+            j.photos.length ? h("div", { class: "fo-jrp" }, j.photos.map(function (p) {
+              return h("a", { href: p.url, target: "_blank", rel: "noopener", class: "fo-jri", title: AVF.fmtDate(p.date) }, h("img", { src: p.url, alt: "Gelişim fotoğrafı", loading: "lazy" }), h("small", { text: AVF.fmtDate(p.date) }));
+            })) : h("p", { class: "hint", text: "Bu üye gelişim fotoğraflarını seninle paylaşmıyor." })));
+      }, function () { /* gösterilecek bir şey yok */ });
     }, function (e) { AVF.mount(main, e && e.status === 404 ? AVF.state("user", "Üye bulunamadı", "Bu kullanıcı adıyla bir forum üyesi yok.") : errBox(e)); });
   }
 
