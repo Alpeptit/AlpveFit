@@ -347,7 +347,13 @@
   });
   /** Yatay kaydırmalı sekme şeridi: seçili sekme şeridin tam ortasına yumuşakça gelir. Şerit her geçişte yeniden çizildiği için
    *  önceki kaydırma konumu anahtarla hatırlanır (sıfırdan zıplamaz). */
-  AVF.stripCenter = function (nav, key, sel) {
+  /** Profil fotoğrafı çerçevesi: avatar öğesini seçilen çerçeveyle sarar (çerçeve yoksa öğeyi olduğu gibi döndürür). size: xs | sm | md | lg | xl */
+AVF.FRAME_NAMES = { kum: "Kum", gumus: "Gümüş Halka", komur: "Kömür", pump: "Turuncu Pump", okyanus: "Okyanus", orman: "Orman", demir: "Demir", bronz: "Bronz", ates: "Ateş", neon: "Neon", sahne: "Sahne Işığı", altin: "Altın", efsane: "Efsane", aura: "Gökkuşağı Aura", tanri: "Ayna Tanrısı", mod: "Moderatör Kalkanı", admin: "Yönetici", ekip: "AlpveFit Ekibi" };
+AVF.framed = function (el, frame, size) {
+  if (!frame || !AVF.FRAME_NAMES[frame]) return el;
+  return AVF.h("span", { class: "avf-fr fr-" + frame + (size ? " fz-" + size : ""), title: AVF.FRAME_NAMES[frame] + " çerçevesi" }, el);
+};
+AVF.stripCenter = function (nav, key, sel) {
     var mem = AVF._strip || (AVF._strip = {});
     requestAnimationFrame(function () {
       if (!nav.isConnected) return;

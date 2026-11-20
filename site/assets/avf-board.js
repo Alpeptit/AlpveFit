@@ -32,7 +32,8 @@
   function timeEl(iso) { return h("time", { datetime: iso, title: AVF.fmtDateTime(iso), text: ago(iso) }); }
   function num(n) { try { return new Intl.NumberFormat("tr-TR", { notation: n >= 10000 ? "compact" : "standard" }).format(n || 0); } catch (e) { return String(n || 0); } }
   function hue(s) { var x = 0; for (var i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) % 360; return x; }
-  function avatar(a, size) {
+  function avatar(a, size) { return AVF.framed(avatarEl(a, size), a && a.frame, size || "md"); }
+  function avatarEl(a, size) {
     var cls = "fo-av" + (size ? " " + size : "");
     if (!a || !a.username) return h("span", { class: cls + " none", "aria-hidden": "true" }, AVF.icon("user"));
     if (a.avatarId) return h("img", { class: cls, src: "/api/forum/media/" + a.avatarId, alt: "", loading: "lazy", decoding: "async" });

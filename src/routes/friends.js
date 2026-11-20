@@ -8,6 +8,7 @@ import { pool } from "../db/pool.js";
 import { requireAuth } from "../middleware/auth.js";
 import { checkHourlyActionLimit } from "../utils/rateLimit.js";
 import { forumLevel, publicLevel, MESSAGING_LEVEL, LEVELS } from "../utils/forumLevels.js";
+import { effectiveFrame } from "../utils/forumFrames.js";
 import { imageInfo } from "../utils/forumRules.js";
 import { raw, sendAttachment } from "./uploads.js";
 import { openStream, emit } from "../utils/live.js";
@@ -23,8 +24,8 @@ const ACTIVE = `NOT (u.locked_at IS NOT NULL AND u.locked_reason LIKE 'admin\\_%
 // resmî forum hesabı (sistem hesabı) arkadaş eklenemez ve mesaj almaz
 const NOT_SYSTEM = `coalesce(u.locked_reason, '') <> 'system_account'`;
 const PUB = `u.id, u.username, u.role, (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'avatar') AS avatar_id,
-  f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld`;
-function pub(r) { return { id: r.id, username: r.username, avatarId: r.avatar_id, level: publicLevel(forumLevel(r, r.role)) }; }
+  f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld, f.is_official, f.frame`;
+function pub(r) { const lv = forumLevel(r, r.role); return { id: r.id, username: r.username, avatarId: r.avatar_id, frame: effectiveFrame(r.frame, lv), level: publicLevel(lv) }; }
 export function canMessage(r) { const l = forumLevel(r, r.role); return !!l.assigned || r.role === "coach" || l.n >= MESSAGING_LEVEL; }
 async function profileOf(id) {
   const { rows } = await pool.query(`SELECT ${PUB} FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1 AND ${ACTIVE}`, [id]);

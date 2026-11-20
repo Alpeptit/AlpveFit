@@ -8,6 +8,7 @@ import { logAudit } from "../utils/auditLog.js";
 import { checkHourlyActionLimit } from "../utils/rateLimit.js";
 import { verifyPassword } from "../utils/password.js";
 import { LEVELS, MESSAGING_LEVEL, HIDE_ONLINE_LEVEL, forumLevel, publicLevel } from "../utils/forumLevels.js";
+import { FRAMES, framesFor, effectiveFrame } from "../utils/forumFrames.js";
 import { syncLevel } from "../utils/levelSync.js";
 import { forumUsernameError, USERNAME_RULES, USERNAME_COOLDOWN_DAYS, signatureError, SIGNATURE_RULES, SIGNATURE_MAX, SOCIALS, socialsIn, NOTIFY, notifyIn, AVATAR_RULES, MEDIA, imageInfo } from "../utils/forumRules.js";
 import { raw, sendAttachment } from "./uploads.js";
@@ -24,12 +25,12 @@ async function ensureProfile(userId) {
 async function state(userId) {
   const { rows } = await pool.query(
     `SELECT u.username, u.role, u.username_changed_at, f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_received, f.reports_upheld,
-            coalesce(f.signature, '') AS signature, coalesce(f.socials, '{}'::jsonb) AS socials, coalesce(f.notify, '{}'::jsonb) AS notify, f.rules_accepted_at, coalesce(f.hide_online, false) AS hide_online, f.is_official,
+            coalesce(f.signature, '') AS signature, coalesce(f.socials, '{}'::jsonb) AS socials, coalesce(f.notify, '{}'::jsonb) AS notify, f.rules_accepted_at, coalesce(f.hide_online, false) AS hide_online, f.is_official, f.frame,
             (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'avatar') AS avatar_id,
             (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'sig') AS sig_image_id
        FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1`, [userId]);
   const r = rows[0];
-  const level = publicLevel(forumLevel(r, r.role));
+  const lv = forumLevel(r, r.role), level = publicLevel(lv);
   const nextChange = r.username_changed_at ? new Date(new Date(r.username_changed_at).getTime() + USERNAME_COOLDOWN_DAYS * 864e5) : null;
   return {
     username: r.username, usernameNextChangeAt: nextChange && nextChange > new Date() ? nextChange.toISOString() : null,
@@ -37,6 +38,7 @@ async function state(userId) {
     stats: { topics: r.topics || 0, posts: r.posts || 0, likes: r.likes || 0, dislikes: r.dislikes || 0, reports: r.reports_received || 0 },
     signature: r.signature, socials: r.socials || {}, notify: notifyIn(r.notify), rulesAcceptedAt: r.rules_accepted_at,
     avatarId: r.avatar_id, sigImageId: r.sig_image_id,
+    frame: effectiveFrame(r.frame, lv), frameChoice: r.frame || null, frames: framesFor(lv),
     hideOnline: !!r.hide_online, hideOnlineLevel: HIDE_ONLINE_LEVEL, hideOnlineUnlocked: level.assigned || level.n >= HIDE_ONLINE_LEVEL,
   };
 }
@@ -78,13 +80,23 @@ forumRouter.put("/forum/me", requireAuth, async (req, res) => {
     }
     sets.push(`hide_online = ${b.hideOnline === true ? "true" : "false"}`);
   }
+  if (b.frame !== undefined) {
+    // Profil çerçevesi: seviyeye göre açılanlardan biri, "yok" (çerçevesiz) ya da null (varsayılan). Ekip çerçevelerini üyeler seçemez.
+    const key = b.frame === null ? null : String(b.frame);
+    if (key !== null && key !== "yok") {
+      const st = await state(req.user.sub), f = FRAMES.find((x) => x.key === key);
+      if (!f) return res.status(400).json({ error: "Böyle bir çerçeve yok.", field: "frame" });
+      if (!st.frames.some((x) => x.key === key && x.unlocked)) return res.status(403).json({ error: f.min ? `Bu çerçeve ${LEVELS[f.min - 1].name} seviyesinde açılır.` : "Bu çerçeve ekibe özeldir.", field: "frame" });
+    }
+    vals.push(key); sets.push(`frame = $${vals.length}`);
+  }
   if (!sets.length) return res.status(400).json({ error: "Değişiklik yok." });
   await ensureProfile(req.user.sub);
   const cur = await pool.query(`SELECT rules_accepted_at FROM forum_profiles WHERE user_id = $1`, [req.user.sub]);
   if (!cur.rows[0].rules_accepted_at && b.acceptRules !== true && (b.signature || (b.socials && Object.values(b.socials).some(Boolean))))
     return res.status(400).json({ error: "İmza ve bağlantı eklemek için forum kurallarını onaylayın.", code: "rules_required" });
   await pool.query(`UPDATE forum_profiles SET ${sets.join(", ")}, updated_at = now() WHERE user_id = $1`, vals);
-  await logAudit(req.user.sub, "forum_settings_update", "user", req.user.sub, { fields: Object.keys(b).filter((k) => ["signature", "socials", "notify", "hideOnline"].includes(k)) }, ip(req));
+  await logAudit(req.user.sub, "forum_settings_update", "user", req.user.sub, { fields: Object.keys(b).filter((k) => ["signature", "socials", "notify", "hideOnline", "frame"].includes(k)) }, ip(req));
   res.json(await state(req.user.sub));
 });
 

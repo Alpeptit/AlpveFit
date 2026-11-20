@@ -11,6 +11,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { logAudit } from "../utils/auditLog.js";
 import { checkHourlyActionLimit } from "../utils/rateLimit.js";
 import { forumLevel, publicLevel, forumScore, LEVELS } from "../utils/forumLevels.js";
+import { effectiveFrame } from "../utils/forumFrames.js";
 import { syncLevel } from "../utils/levelSync.js";
 import { notifyIn, imageInfo } from "../utils/forumRules.js";
 import { stripImageMetadata } from "../utils/imageClean.js";
@@ -33,12 +34,12 @@ const int = (v, d, min, max) => { const n = Number.parseInt(v, 10); return Numbe
 const AUTHOR = `u.id AS uid, u.username, u.role, u.created_at AS joined_at,
   (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'avatar') AS avatar_id,
   f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld, coalesce(f.signature, '') AS signature,
-  (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'sig') AS sig_image_id, f.last_seen_at, f.hide_online, f.is_official`;
+  (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'sig') AS sig_image_id, f.last_seen_at, f.hide_online, f.is_official, f.frame`;
 function authorOut(r) {
   if (!r || !r.username) return { username: null, deleted: true };
   const lv = forumLevel(r, r.role);
   // Yönetici ve moderatörlerin katılım tarihi gösterilmez (ekip bilgisi); üyelerinki görünür.
-  return { id: r.uid, username: r.username, avatarId: r.avatar_id, level: publicLevel(lv), joinedAt: lv.assigned ? null : r.joined_at,
+  return { id: r.uid, username: r.username, avatarId: r.avatar_id, frame: effectiveFrame(r.frame, lv), level: publicLevel(lv), joinedAt: lv.assigned ? null : r.joined_at,
     expert: r.role === "coach" || r.role === "admin" || !!r.is_official,   // koç / yönetici / ekip: yanıtlarında "Uzman yanıtı" rozeti
     stats: { topics: r.topics || 0, posts: r.posts || 0, likes: r.likes || 0 }, signature: r.signature || "", sigImageId: r.sig_image_id || null,
     online: !r.hide_online && !!(r.last_seen_at && Date.now() - new Date(r.last_seen_at).getTime() < 15 * 60000) };
@@ -249,7 +250,7 @@ boardRouter.get("/board/topics", member, async (req, res) => {
             EXISTS (SELECT 1 FROM forum_polls pl WHERE pl.topic_id = t.id) AS has_poll,
             EXISTS (SELECT 1 FROM attachments a WHERE a.forum_post_id = fp.id) AS has_images,
             au.username AS author, au.role AS author_role, (SELECT id FROM attachments WHERE user_id = au.id AND scope = 'avatar') AS author_avatar,
-            af.level_override, af.forum_role, af.topics, af.posts, af.likes, af.dislikes, af.reports_upheld, af.is_official,
+            af.level_override, af.forum_role, af.topics, af.posts, af.likes, af.dislikes, af.reports_upheld, af.is_official, af.frame AS author_frame,
             lu.username AS last_user
        ${base.replace("LEFT JOIN forum_reads", "LEFT JOIN users au ON au.id = t.author_id LEFT JOIN forum_profiles af ON af.user_id = au.id LEFT JOIN users lu ON lu.id = t.last_poster_id LEFT JOIN forum_reads")}
       ORDER BY ${order} LIMIT ${PAGE_TOPICS} OFFSET ${(page - 1) * PAGE_TOPICS}`, vals);
@@ -262,7 +263,7 @@ boardRouter.get("/board/topics", member, async (req, res) => {
       replies: t.reply_count, views: t.view_count, likes: t.like_count, infinite: !!(t.is_official || t.author_role === "admin"), lastAt: t.last_post_at, createdAt: t.created_at, unread: !!t.unread, seen: !!t.seen,
       hasPoll: t.has_poll, hasImages: t.has_images, excerpt: t.excerpt,
       category: { slug: t.cat_slug, name: t.cat_name, icon: t.cat_icon, color: t.cat_color || "slate" },
-      author: t.author ? { username: t.author, avatarId: t.author_avatar, level: publicLevel(forumLevel(t, t.author_role)) } : null, lastUser: t.last_user,
+      author: t.author ? { username: t.author, avatarId: t.author_avatar, frame: effectiveFrame(t.author_frame, forumLevel(t, t.author_role)), level: publicLevel(forumLevel(t, t.author_role)) } : null, lastUser: t.last_user,
     })),
   });
 });
@@ -596,11 +597,11 @@ boardRouter.get("/board/members", member, async (req, res) => {
   const q = String(req.query.q || "").toLowerCase().replace(/^@/, "").slice(0, 20);
   if (q && !/^[a-z0-9._]{1,20}$/.test(q)) return res.json({ members: [], total: 0, page: 1, pages: 1 });
   const { rows } = await pool.query(
-    `SELECT u.username, u.role, f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld, f.is_official, f.hide_online, f.last_seen_at,
+    `SELECT u.username, u.role, f.level_override, f.forum_role, f.topics, f.posts, f.likes, f.dislikes, f.reports_upheld, f.is_official, f.hide_online, f.last_seen_at, f.frame,
             (SELECT id FROM attachments WHERE user_id = u.id AND scope = 'avatar') AS avatar_id
        FROM forum_profiles f JOIN users u ON u.id = f.user_id
       WHERE f.rules_accepted_at IS NOT NULL AND NOT f.ban_permanent AND ($1 = '' OR u.username LIKE $1 || '%') LIMIT 5000`, [q.replace(/[%_\\]/g, (c) => "\\" + c)]);
-  const list = rows.map((r) => { const l = forumLevel(r, r.role); return { username: r.username, avatarId: r.avatar_id, level: publicLevel(l), score: l.assigned ? 1e9 + l.n : forumScore(r),
+  const list = rows.map((r) => { const l = forumLevel(r, r.role); return { username: r.username, avatarId: r.avatar_id, frame: effectiveFrame(r.frame, l), level: publicLevel(l), score: l.assigned ? 1e9 + l.n : forumScore(r),
     online: !r.hide_online && !!(r.last_seen_at && Date.now() - new Date(r.last_seen_at).getTime() < 15 * 60000) }; });
   list.sort((a, b) => b.level.n - a.level.n || b.score - a.score || a.username.localeCompare(b.username));
   const per = 60, pages = Math.max(1, Math.ceil(list.length / per)), page = int(req.query.page, 1, 1, pages);

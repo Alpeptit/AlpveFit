@@ -5,7 +5,8 @@
   "use strict";
   var AVF = window.AVF, h = AVF.h;
   var REASONS = [["spam", "Spam / istenmeyen mesaj"], ["abuse", "Hakaret / taciz"], ["obscene", "Müstehcen içerik"], ["political", "Siyasi / ideolojik içerik"], ["scam", "Dolandırıcılık / reklam"], ["other", "Diğer"]];
-  function av(u, cls) { return u.avatarId ? h("img", { class: "fr-av " + (cls || ""), src: "/api/forum/media/" + u.avatarId, alt: "" }) : h("span", { class: "fr-av ph " + (cls || "") }, AVF.icon("user")); }
+  function av(u, cls) { return AVF.framed(avEl(u, cls), u && u.frame, /lg|big/.test(cls || "") ? "lg" : "sm"); }
+  function avEl(u, cls) { return u.avatarId ? h("img", { class: "fr-av " + (cls || ""), src: "/api/forum/media/" + u.avatarId, alt: "" }) : h("span", { class: "fr-av ph " + (cls || "") }, AVF.icon("user")); }
   function go(p) { if (AVF.go) AVF.go(p); else location.href = p; }
   function hm(t) { var d = new Date(t); return d.toLocaleTimeString(AVF.lang === "en" ? "en-GB" : "tr-TR", { hour: "2-digit", minute: "2-digit" }); }
   function dayKey(t) { var d = new Date(t); return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); }

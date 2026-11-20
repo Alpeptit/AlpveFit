@@ -75,7 +75,19 @@
         precheck(f, "avatar").then(function (e) { if (e) return msg(avBox, AVF.t(e), true); msg(avBox, AVF.t("Yükleniyor…")); upload("avatar", f, acc.checked).then(function (n) { refresh(n, "Avatar güncellendi."); }, function (er) { msg(avBox, AVF.errText(er), true); }); });
       });
       var av = h("button", { class: "fs-avb", type: "button", "aria-label": AVF.t(ST.avatarId ? "Avatarı değiştir" : "Avatar yükle"), title: AVF.t(ST.avatarId ? "Avatarı değiştir" : "Avatar yükle"), onclick: function () { pick.click(); } },
-        ST.avatarId ? h("img", { class: "fs-av", src: media(ST.avatarId), alt: "" }) : h("span", { class: "fs-av ph" }, AVF.icon("user")), h("span", { class: "fs-cam" }, AVF.icon("image")));
+        AVF.framed(ST.avatarId ? h("img", { class: "fs-av", src: media(ST.avatarId), alt: "" }) : h("span", { class: "fs-av ph" }, AVF.icon("user")), ST.frame, "xl"), h("span", { class: "fs-cam" }, AVF.icon("image")));
+      // profil çerçevesi: seviyeye göre açılanlar seçilebilir; kilitliler hangi seviyede açılacağını gösterir. Ekip çerçeveleri yalnız ekibe görünür.
+      var frBox = h("div");
+      function frameTile(key, name, sub, unlocked, staff) {
+        var on = (ST.frameChoice || (ST.frame ? ST.frame : "yok")) === key || (!ST.frameChoice && !ST.frame && key === "yok");
+        var face = ST.avatarId ? h("img", { class: "fs-fra", src: media(ST.avatarId), alt: "" }) : h("span", { class: "fs-fra" }, AVF.icon("user"));
+        return h("button", { type: "button", class: "fs-fr" + (on ? " on" : "") + (staff ? " staff" : ""), disabled: unlocked ? null : "", "aria-pressed": on ? "true" : "false",
+          onclick: function () { if (!unlocked || on) return; msg(frBox, null);
+            AVF.api("PUT", "/forum/me", { frame: key }).then(function (n) { refresh(n, "Çerçeven güncellendi."); }, function (er) { msg(frBox, AVF.errText(er), true); }); } },
+          key === "yok" ? face : AVF.framed(face, key, "lg"), h("b", { text: name }), sub ? h("small", null, unlocked ? null : AVF.icon("lock"), h("span", { text: sub })) : null);
+      }
+      var frGrid = h("div", { class: "fs-frames" }, frameTile("yok", "Çerçevesiz", null, true, false),
+        (ST.frames || []).map(function (f) { return frameTile(f.key, f.name, f.staff ? "Ekibe özel" : f.unlocked ? null : (ST.levels[f.min - 1] || {}).name + " seviyesinde", f.unlocked, f.staff); }));
       var un = AVF.input("text", { maxlength: "20", value: ST.username, autocomplete: "username", spellcheck: "false", autocapitalize: "off", "aria-label": "Kullanıcı adı" });
       var pw = AVF.input("password", { autocomplete: "current-password", placeholder: "Mevcut şifreniz", "aria-label": "Mevcut şifre" });
       un.addEventListener("input", function () { var v = un.value.toLowerCase().replace(/[^a-z0-9._]/g, ""); if (v !== un.value) un.value = v; pwRow.hidden = v === ST.username; });
@@ -97,6 +109,7 @@
             h("div", { class: "fstats" }, h("span", { title: AVF.t("Konu") }, AVF.icon("msg"), String(ST.stats.topics)), h("span", { title: AVF.t("Mesaj") }, AVF.icon("chat"), String(ST.stats.posts)), h("span", { title: AVF.t("Beğeni") }, AVF.icon("like"), String(ST.stats.likes)), h("span", { title: AVF.t("Beğenmeme") }, AVF.icon("dislike"), String(ST.stats.dislikes))),
             form)),
         avBox,
+        sec("star", "Profil çerçevesi", "Seviye atladıkça yeni çerçeveler açılır. Seçtiğin çerçeve forumda profil fotoğrafının çevresinde görünür.", h("div", null, frGrid, frBox)),
         sec("user", "Avatar kuralları", "Avatarınızı değiştirmek için görselinize dokunun.", rulesList(R.avatar)),
         sec("atsign", "Kullanıcı adı kuralları", "Herkese açıktır; forumda ve girişte kullanılır.", rulesList(R.username))];
     }
