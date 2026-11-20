@@ -174,7 +174,7 @@ await V.c.call("POST", "/board/posts/" + vp + "/react", { value: 1 });
 r = await V.c.call("GET", "/board/me/likes"); chk("beğenilenler listesi", r.status === 200 && r.body.some((x) => x.postId === vp), r.body);
 // üyeler: yalnız ad, avatar, seviye
 r = await U.c.call("GET", "/board/members"); const keys = Object.keys(r.body.members[0] || {}).sort().join();
-chk("üye listesi seviyeye göre ve kişisel bilgi içermez", r.status === 200 && r.body.total >= 4 && keys === "avatarId,level,online,username" && r.body.members[0].level.n >= r.body.members[r.body.members.length - 1].level.n, keys);
+chk("üye listesi seviyeye göre ve kişisel bilgi içermez", r.status === 200 && r.body.total >= 4 && keys === "avatarId,frame,level,online,username" && r.body.members[0].level.n >= r.body.members[r.body.members.length - 1].level.n, keys);
 r = await U.c.call("GET", "/board/members?q=" + U.username.slice(0, 5)); chk("üye araması", r.body.members.some((m) => m.username === U.username), r.body.total);
 r = await new Client().call("GET", "/board/members"); chk("üye listesi misafire kapalı", r.status === 401, r.status);
 // çevrimiçi gizleme: Pump Avcısı seviyesinde açılır

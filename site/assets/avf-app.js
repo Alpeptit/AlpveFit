@@ -278,7 +278,8 @@
   function logout() {
     AVF.confirmDialog({ icon: "out", title: "Çıkış yapmak istediğinize emin misiniz?", text: "Güvenli çıkış yaptığınızda oturumunuz bu cihazda kapatılır.", confirm: "Evet, çıkış yap", cancel: "Vazgeç" }).then(function (ok) {
       if (!ok) return;
-      AVF.api("POST", "/account/logout", {}).then(null, function () { /* oturum zaten kapalı olabilir */ }).then(function () { sessionGone(); AVF.toast("Çıkış yapıldı."); });
+      // çıkışta bu cihazın bildirim aboneliği kaldırılır: oturumu kapalı cihaza bildirim gitmez
+      (AVF.push ? AVF.push.disable().then(null, function () {}) : Promise.resolve()).then(function () { return AVF.api("POST", "/account/logout", {}); }).then(null, function () { /* oturum zaten kapalı olabilir */ }).then(function () { sessionGone(); AVF.toast("Çıkış yapıldı."); });
     });
   }
   function sessionGone(why, data) {

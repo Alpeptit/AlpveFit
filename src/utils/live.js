@@ -30,9 +30,18 @@ function write(res, event, data, prefix = "") {
   try { res.write(`${prefix}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); if (res.flush) res.flush(); } catch { /* bağlantı kapanmış */ }
 }
 
+// Açık sekmesi olmayan kullanıcıya bildirim ya da yeni mesaj olayı: telefona / masaüstüne itme (bkz. webpush.js).
+// Döngüsel içe aktarmayı önlemek için kanca dışarıdan kaydedilir.
+let offlineHook = null;
+export function onOffline(fn) { offlineHook = fn; }
+
 /** Kullanıcının tüm açık sekmelerine olay gönderir. */
 export function emit(userId, event, data) {
-  const set = subs.get(String(userId)); if (!set) return 0;
+  const set = subs.get(String(userId));
+  if (!set) {
+    if (offlineHook && (event === "notif" || (event === "dm" && !(data && data.mine)))) { try { offlineHook(String(userId), event, data); } catch { /* yok say */ } }
+    return 0;
+  }
   for (const res of set) write(res, event, data);
   return set.size;
 }

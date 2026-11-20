@@ -3,7 +3,7 @@
    özeti (?v=…) bulunan herkese açık /assets dosyaları saklanır. Sayfalar her zaman ağdan gelir (bağlantı yoksa çevrimdışı sayfası);
    /api, yönetim alanı ve "private / no-store" yanıtlar hiçbir koşulda saklanmaz. Başka sitelere giden isteklere dokunulmaz. */
 "use strict";
-var CACHE = "avf-v1";
+var CACHE = "avf-v2";   // v2: telefona bildirim (push)
 var OFFLINE = "/offline.html";
 var PRECACHE = [OFFLINE, "/assets/icons/icon-192.png", "/assets/icons/icon-512.png"];
 var SKIP = /^\/(api|uzman|admin)(\/|$)|^\/assets\/uzman\//;
@@ -42,4 +42,25 @@ self.addEventListener("fetch", function (e) {
       });
     }));
   }
+});
+
+// ---- telefona / masaüstüne bildirim (Web Push) ----
+// İtme içerik taşımaz; kısa metin oturumla sunucudan çekilir. Oturum kapalıysa ya da bağlantı yoksa genel bir bildirim gösterilir.
+self.addEventListener("push", function (e) {
+  e.waitUntil(fetch("/api/push/latest", { credentials: "include", cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; })
+    .then(function (d) {
+      d = d || { title: "AlpveFit", body: "Yeni bir bildirimin var.", url: "/panel/bildirimler", tag: "n" };
+      return self.registration.showNotification(d.title || "AlpveFit", { body: d.body || "", tag: d.tag || "n", renotify: true,
+        icon: "/assets/icons/icon-192.png", badge: "/assets/icons/icon-192.png", data: { url: typeof d.url === "string" && d.url.charAt(0) === "/" ? d.url : "/panel/bildirimler" } });
+    }));
+});
+self.addEventListener("notificationclick", function (e) {
+  e.notification.close();
+  var url = (e.notification.data && e.notification.data.url) || "/";
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
+    for (var i = 0; i < list.length; i++) { var c = list[i]; if (new URL(c.url).origin === self.location.origin && "focus" in c) { c.focus(); if ("navigate" in c) return c.navigate(url); return; } }
+    return self.clients.openWindow(url);
+  }));
 });

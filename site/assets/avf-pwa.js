@@ -67,6 +67,60 @@
     setTimeout(function () { var f = sheet && sheet.querySelector(".btn"); if (f) f.focus({ preventScroll: true }); }, 60);
   }
 
+  // ---- telefona / masaüstüne bildirim (Web Push) ----
+  // iPhone / iPad'de yalnız ana ekrana eklenmiş uygulamada çalışır (iOS 16.4+); diğerlerinde tarayıcı izni yeterli.
+  function b64uToBytes(s) { var p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+  function reg() { return navigator.serviceWorker && navigator.serviceWorker.getRegistration ? navigator.serviceWorker.getRegistration("/") : Promise.resolve(null); }
+  AVF.push = {
+    /** "unsupported" | "install" (iOS: önce ana ekrana ekle) | "denied" | "on" | "off" */
+    state: function () {
+      var can = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+      if (!can) return Promise.resolve(isIOS && !standalone() ? "install" : "unsupported");
+      if (Notification.permission === "denied") return Promise.resolve("denied");
+      return reg().then(function (r) { return r && r.pushManager ? r.pushManager.getSubscription() : null; }).then(function (sub) { return sub && Notification.permission === "granted" ? "on" : "off"; }, function () { return "off"; });
+    },
+    enable: function () {
+      return Notification.requestPermission().then(function (p) {
+        if (p !== "granted") throw { data: { error: p === "denied" ? "Bildirim izni reddedildi. Tarayıcı ayarlarından bu site için bildirimlere izin verebilirsin." : "Bildirim izni verilmedi." } };
+        return Promise.all([navigator.serviceWorker.ready, AVF.api("GET", "/push/key")]);
+      }).then(function (x) {
+        var r = x[0];
+        return r.pushManager.getSubscription().then(function (old) { return old || r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(x[1].key) }); });
+      }).then(function (sub) { var j = sub.toJSON(); return AVF.api("POST", "/push/subscribe", { endpoint: j.endpoint }); });
+    },
+    disable: function () {
+      return reg().then(function (r) { return r && r.pushManager ? r.pushManager.getSubscription() : null; }).then(function (sub) {
+        if (!sub) return null;
+        var ep = sub.endpoint;
+        return sub.unsubscribe().then(function () { return AVF.api("POST", "/push/unsubscribe", { endpoint: ep }).then(null, function () { return null; }); });
+      });
+    },
+    test: function () { return AVF.api("POST", "/push/test", {}); },
+  };
+
+  /** Ayarlar bölümü: "Telefonuma bildirim gönder" anahtarı + deneme bildirimi. sec / msg: Forum Ayarları'nın yardımcıları. */
+  AVF.pushSection = function (sec, msg) {
+    var h = AVF.h, box = h("div"), body = h("div", { class: "fs-tgs" });
+    var c = h("input", { type: "checkbox", disabled: "" }), testB = h("button", { class: "btn ghost sm", type: "button", style: "display:none" }, AVF.icon("bell", "bico"), "Deneme bildirimi gönder");
+    var note = h("small", { class: "hint" });
+    function paint(st) {
+      c.checked = st === "on"; c.disabled = st === "unsupported" || st === "install" || st === "denied"; testB.style.display = st === "on" ? "" : "none";
+      note.textContent = st === "install" ? "iPhone / iPad'de bildirim için önce AlpveFit'i ana ekrana ekle (menüde Uygulamayı indir), sonra uygulamadan aç."
+        : st === "unsupported" ? "Bu tarayıcı bildirimleri desteklemiyor."
+        : st === "denied" ? "Bildirim izni kapalı. Tarayıcı / telefon ayarlarından AlpveFit için bildirimlere izin ver."
+        : "Uygulama ya da site kapalıyken yeni mesaj, yanıt ve koçluk bildirimleri telefonuna gelir. Mesaj içeriği bildirimde gösterilmez.";
+    }
+    AVF.push.state().then(paint);
+    c.addEventListener("change", function () {
+      msg(box, null); c.disabled = true;
+      (c.checked ? AVF.push.enable() : AVF.push.disable()).then(function () { msg(box, c.checked ? "Bildirimler bu cihazda açık. 🔔" : "Bu cihazda bildirimler kapatıldı."); },
+        function (er) { msg(box, AVF.errText(er), true); }).then(function () { return AVF.push.state(); }).then(paint);
+    });
+    testB.addEventListener("click", function () { msg(box, null); AVF.push.test().then(function () { msg(box, "Deneme bildirimi gönderildi. Birkaç saniye içinde gelmezse uygulamayı kapatıp tekrar dene."); }, function (er) { msg(box, AVF.errText(er), true); }); });
+    body.appendChild(h("label", { class: "fs-tg" }, h("span", null, h("span", { text: "Telefonuma / bilgisayarıma bildirim gönder" }), note), h("span", { class: "sw" }, c, h("i"))));
+    return sec("phone", "Cihaz bildirimleri", "Site kapalıyken de haberdar ol. Her cihazda ayrı açılır.", [body, h("div", { class: "row" }, testB), box]);
+  };
+
   AVF.pwa = {
     // misafir dahil herkes: uygulama olarak açık değilse seçenek görünür (Chrome ailesinde doğrudan, diğerlerinde rehberle)
     available: function () { return !standalone(); },

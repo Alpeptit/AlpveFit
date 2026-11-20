@@ -2398,3 +2398,5 @@ footer.foot{padding-bottom:env(safe-area-inset-bottom)}
 .fs-fr .fs-fra{width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--pri-soft);display:inline-flex;align-items:center;justify-content:center}
 .fs-fr .fs-fra .ico{width:26px;height:26px;color:var(--muted)}
 .fs-fr.staff{background:linear-gradient(180deg,var(--card),var(--paper))}
+.fs-tg>span:first-child{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fs-tg>span:first-child>small{font-weight:500}

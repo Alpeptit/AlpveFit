@@ -193,7 +193,7 @@
           AVF.api("PUT", "/forum/me", { notify: v }).then(function (ns) { ST = ns; msg(box, AVF.t("Bildirim tercihi kaydedildi.")); }, function (er) { c.checked = !c.checked; msg(box, AVF.errText(er), true); });
         });
         return h("label", { class: "fs-tg" + (n.locked ? " off" : "") }, h("span", { text: n.label }), h("span", { class: "sw" }, c, h("i")), n.locked ? h("small", { class: "hint", text: "Kapatılamaz" }) : null);
-      })), box]), privacy()];
+      })), box]), AVF.pushSection ? AVF.pushSection(sec, msg) : null, privacy()];
     }
     // Gizlilik: çevrimiçi durumunu gizleme (Pump Avcısı seviyesinde açılır)
     function privacy() {
