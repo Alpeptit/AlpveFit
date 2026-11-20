@@ -21,6 +21,7 @@ import { accountRouter } from "./routes/account.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { pushRouter } from "./routes/push.js";
 import { journalRouter } from "./routes/journal.js";
+import { startDigestJob } from "./utils/digest.js";
 import { ordersRouter } from "./routes/orders.js";
 import { profileRouter } from "./routes/profile.js";
 import { blogRouter } from "./routes/blog.js";
@@ -313,7 +314,7 @@ process.on("uncaughtException", (err) => {
 let jobsStarted = false;
 function startBackgroundJobs() {   // 180 gün veri saklama — migration bittikten sonra, bir kez
   if (jobsStarted || process.env.RUN_BACKGROUND_JOBS === "false") return;
-  jobsStarted = true; startDataRetentionJob(); startPlanMailJob();
+  jobsStarted = true; startDataRetentionJob(); startPlanMailJob(); startDigestJob();
   // ekip içerikleri (forum): eksikler eklenir, sürümü artanlar güncellenir; hata açılışı durdurmaz
   if (process.env.FORUM_SEED !== "false") setTimeout(() => { seedOfficialContent().catch((e) => console.error("[forum] ekip içerikleri eklenemedi:", e.message)); }, 1500);
 }

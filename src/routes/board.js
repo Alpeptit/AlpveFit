@@ -12,6 +12,7 @@ import { logAudit } from "../utils/auditLog.js";
 import { checkHourlyActionLimit } from "../utils/rateLimit.js";
 import { forumLevel, publicLevel, forumScore, LEVELS } from "../utils/forumLevels.js";
 import { effectiveFrame } from "../utils/forumFrames.js";
+import { challengeFor, weekStart, todayTR, addDays, GOAL_DAYS } from "../utils/challenges.js";
 import { syncLevel } from "../utils/levelSync.js";
 import { notifyIn, imageInfo } from "../utils/forumRules.js";
 import { stripImageMetadata } from "../utils/imageClean.js";
@@ -696,6 +697,36 @@ boardRouter.get("/board/mention", member, async (req, res) => {
       WHERE f.rules_accepted_at IS NOT NULL AND u.username LIKE $1 || '%' AND u.id <> $2 ORDER BY f.last_seen_at DESC NULLS LAST LIMIT 6`, [q.replace(/[%_\\]/g, (c) => "\\" + c), req.fm.id]);
   res.json(rows.map((r) => ({ username: r.username, avatarId: r.avatar_id })));
 });
+// ------------------------------------------------------------------ haftanın meydan okuması
+// Pazartesi–Pazar; üye günleri kendisi işaretler (bugün ve bu haftanın geçmiş günleri). 7 günde 5 gün → rozet + bildirim.
+async function challengeState(userId) {
+  const today = todayTR(), ws = weekStart(today), ch = challengeFor(ws);
+  const mine = (await pool.query(`SELECT to_char(day, 'YYYY-MM-DD') AS d FROM challenge_checkins WHERE user_id = $1 AND week_start = $2`, [userId, ws])).rows.map((r) => r.d);
+  const agg = (await pool.query(`SELECT count(DISTINCT user_id)::int AS people, count(*) FILTER (WHERE TRUE)::int AS marks FROM challenge_checkins WHERE week_start = $1 AND challenge_key = $2`, [ws, ch.key])).rows[0];
+  const fin = (await pool.query(`SELECT count(*)::int AS n FROM forum_badges WHERE week_start = $1 AND key = $2`, [ws, ch.key])).rows[0].n;
+  const earned = (await pool.query(`SELECT 1 FROM forum_badges WHERE user_id = $1 AND week_start = $2 AND key = $3`, [userId, ws, ch.key])).rows.length > 0;
+  const NAMES = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+  return { key: ch.key, title: ch.title, icon: ch.icon, text: ch.text, weekStart: ws, goal: GOAL_DAYS, earned, participants: agg.people, finishers: fin,
+    days: NAMES.map((n, i) => { const d = addDays(ws, i); return { date: d, label: n, done: mine.includes(d), today: d === today, future: d > today }; }), doneCount: mine.length };
+}
+boardRouter.get("/board/challenge", member, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(await challengeState(req.fm.id));
+});
+boardRouter.post("/board/challenge/checkin", member, async (req, res) => {
+  const b = req.body || {}, today = todayTR(), ws = weekStart(today), ch = challengeFor(ws), day = String(b.day || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || day < ws || day > today) return res.status(400).json({ error: "Yalnız bu haftanın bugüne kadarki günleri işaretlenebilir." });
+  if (req.fm.banned) return res.status(403).json({ error: "Forumdan uzaklaştırılmışken meydan okumaya katılamazsın." });
+  if (b.done === false) await pool.query(`DELETE FROM challenge_checkins WHERE user_id = $1 AND day = $2`, [req.fm.id, day]);
+  else await pool.query(`INSERT INTO challenge_checkins (user_id, day, week_start, challenge_key) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, day) DO NOTHING`, [req.fm.id, day, ws, ch.key]);
+  const n = (await pool.query(`SELECT count(*)::int AS n FROM challenge_checkins WHERE user_id = $1 AND week_start = $2`, [req.fm.id, ws])).rows[0].n;
+  if (n >= GOAL_DAYS) {
+    const ins = await pool.query(`INSERT INTO forum_badges (user_id, key, week_start, label, icon) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, key, week_start) DO NOTHING RETURNING id`, [req.fm.id, ch.key, ws, ch.title, ch.icon]);
+    if (ins.rows.length) await note(req.fm.id, `🏅 Rozet kazandın: "${ch.title}" meydan okumasını tamamladın!`, { kind: "badge", key: ch.key });
+  }
+  res.json(await challengeState(req.fm.id));
+});
+
 boardRouter.get("/board/u/:username", member, async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const un = String(req.params.username || "").toLowerCase();
@@ -709,10 +740,12 @@ boardRouter.get("/board/u/:username", member, async (req, res) => {
   const posts = await pool.query(`SELECT p.id, p.topic_id, left(${plainSql("p.body")}, 160) AS excerpt, p.created_at, t.title
       FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id WHERE p.author_id = $1 AND NOT p.is_first AND p.hidden_at IS NULL AND t.hidden_at IS NULL ORDER BY p.created_at DESC LIMIT 8`, [u.id]);
   const best = (await pool.query(`SELECT count(*)::int AS n FROM forum_topics t JOIN forum_posts p ON p.id = t.accepted_post_id WHERE p.author_id = $1 AND t.hidden_at IS NULL`, [u.id])).rows[0].n;
+  const badges = (await pool.query(`SELECT key, label, icon, to_char(week_start, 'YYYY-MM-DD') AS week, earned_at FROM forum_badges WHERE user_id = $1 ORDER BY earned_at DESC LIMIT 24`, [u.id])).rows;
+  const badgeTotal = (await pool.query(`SELECT count(*)::int AS n FROM forum_badges WHERE user_id = $1`, [u.id])).rows[0].n;
   const rel = u.id === req.fm.id ? "self" : ((await pool.query(`SELECT status, requester FROM friendships WHERE user_a = least($1::uuid, $2::uuid) AND user_b = greatest($1::uuid, $2::uuid)`, [req.fm.id, u.id])).rows[0] || {});
   const socials = Object.fromEntries(Object.entries(u.socials || {}).filter(([, v]) => typeof v === "string" && v));
   const out = authorOut(u);
-  res.json({ ...out, socials, forumSince: out.level.assigned ? null : u.rules_accepted_at, bestAnswers: best,
+  res.json({ ...out, socials, forumSince: out.level.assigned ? null : u.rules_accepted_at, bestAnswers: best, badges, badgeTotal,
     banned: req.fm.mod ? !!(u.ban_permanent || (u.banned_until && new Date(u.banned_until) > new Date())) : undefined,
     relation: rel === "self" ? "self" : !rel.status ? "none" : rel.status === "accepted" ? "friend" : rel.status === "blocked" ? "none" : rel.requester === req.fm.id ? "outgoing" : "incoming",
     topics: topics.rows.map((t) => ({ id: t.id, title: t.title, replies: t.reply_count, lastAt: t.last_post_at, solved: !!t.accepted_post_id, kind: t.kind, category: { name: t.cat_name, icon: t.icon } })),

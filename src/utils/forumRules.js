@@ -111,6 +111,7 @@ export const NOTIFY = [
   ["quoted", "İçeriğimin alıntılanması", true],
   ["message", "Özel mesajlar (Pump Avcısı seviyesinde açılır)", true],
   ["moderation", "Moderasyon işlemleri (içeriğimin düzenlenmesi, kaldırılması, konunun kilitlenmesi)", true],
+  ["digest", "Haftalık forum özeti e-postası (Pazartesi sabahı: haftanın öne çıkan konuları ve meydan okuması)", false],
 ];
 export function notifyIn(raw) {
   const out = {};

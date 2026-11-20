@@ -143,6 +143,7 @@
     var d = n.data || {};
     if (n.type === "plan_published" && d.kind && AVF.KIND[d.kind]) return "/panel/" + AVF.KIND[d.kind].slug;
     if (n.type === "plan_updated") return d.kinds && d.kinds.length === 1 && AVF.KIND[d.kinds[0]] ? "/panel/" + AVF.KIND[d.kinds[0]].slug : "/panel";
+    if (n.type === "forum" && d.kind === "badge") return AVF.session.user && AVF.session.user.username ? "/forum/uye/" + AVF.session.user.username : "/forum";
     if (n.type === "forum" && d.topicId) return "/forum/konu/" + d.topicId + (d.postId ? "?m=" + d.postId : "");
     if (n.type === "level_up" || n.type === "forum") return n.type === "forum" && d.kind === "moderation" && !d.topicId ? "/forum" : "/panel/forum-ayarlari/seviye";
     if (n.type === "friend") return "/panel/arkadaslar";

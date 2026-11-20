@@ -333,3 +333,18 @@ export function ticketReplyMail(lang, o) {
   const { html, text } = layout(lg, { preheader: t, eyebrow: en ? "Support" : "Destek", title: t, blocks });
   return { subject: subj(en ? "Support Request Answered" : "Destek Talebi Yanıtlandı"), html, text };
 }
+
+/** Haftalık forum özeti (yalnız açıkça isteyen üyelere). o: { topics: [{ title, url, meta }], guides: [{ title, url }], challenge: { title, text }, settingsUrl } */
+export function digestMail(lang, o) {
+  const lg = L(lang), base = siteBase();
+  const t = "Forumda bu hafta";
+  const link = (x) => `<a href="${esc(x.url)}" style="color:${C.ink};font-weight:700;text-decoration:underline">${esc(x.title)}</a>`;
+  const blocks = [p(esc("Haftanın öne çıkan konuları, yeni ekip rehberleri ve bu haftanın meydan okuması aşağıda. İyi antrenmanlar!"))];
+  if (o.topics.length) blocks.push(p(`<b>Öne çıkan konular</b><br>${o.topics.map((x) => `• ${link(x)} <span style="color:${C.muted}">— ${esc(x.meta)}</span>`).join("<br>")}`));
+  if (o.guides.length) blocks.push(p(`<b>Yeni ekip rehberleri</b><br>${o.guides.map((x) => `• ${link(x)}`).join("<br>")}`));
+  if (o.challenge) blocks.push(callout(`<b>Haftanın meydan okuması: ${esc(o.challenge.title)}</b><br>${esc(o.challenge.text)} 7 günün en az 5'inde tamamla, rozeti kap!`));
+  blocks.push(button("Foruma git", base ? `${base}/forum` : ""));
+  blocks.push(p(`<span style="font-size:12.5px;color:${C.muted}">${esc("Bu e-postayı Forum Ayarları'nda haftalık özeti açtığın için alıyorsun. Kapatmak için:")} <a href="${esc(o.settingsUrl)}" style="color:${C.muted}">${esc("Bildirim ve Gizlilik")}</a></span>`));
+  const { html, text } = layout(lg, { preheader: t, eyebrow: "Forum", title: t, blocks });
+  return { subject: subj("Haftalık Forum Özeti"), html, text };
+}

@@ -2444,3 +2444,26 @@ footer.foot{padding-bottom:env(safe-area-inset-bottom)}
 .fo-jrp{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .fo-jri{display:block;border-radius:14px;overflow:hidden;background:var(--paper);position:relative;aspect-ratio:3/4}.fo-jri img{width:100%;height:100%;object-fit:cover;display:block}
 .fo-jri small{position:absolute;left:6px;bottom:6px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:700}
+/* haftanın meydan okuması */
+.fo-ch{padding:16px;background:linear-gradient(160deg,var(--card),var(--paper))}
+.fo-chh{display:flex;gap:12px;align-items:center}.fo-chh small{display:block;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#EA580C}.fo-chh b{display:block;font-size:16px;line-height:1.25}
+.fo-chi{flex:none;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(135deg,#FB923C,#EA580C);box-shadow:0 6px 16px rgba(234,88,12,.3)}.fo-chi .ico{width:22px;height:22px}
+.fo-cht{font-size:13px;color:var(--muted);margin:10px 0 12px;line-height:1.45}
+.fo-chd{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.fo-chday{display:flex;flex-direction:column;align-items:center;gap:4px;padding:0;border:0;background:none;cursor:pointer;font:inherit;color:var(--text)}
+.fo-chday small{font-size:10.5px;font-weight:700;color:var(--muted)}
+.fo-chday>span{width:30px;height:30px;border-radius:50%;border:2px solid var(--line2);display:flex;align-items:center;justify-content:center;background:var(--card);transition:transform .15s,background .15s}
+.fo-chday.today>span{border-color:#EA580C}.fo-chday.today small{color:#EA580C}
+.fo-chday.on>span{background:#EA580C;border-color:#EA580C;color:#fff}.fo-chday.on .ico{width:16px;height:16px}
+.fo-chday:not([disabled]):hover>span{transform:scale(1.08)}.fo-chday[disabled]{cursor:default;opacity:.45}
+.fo-chp{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13px;font-weight:700}
+.fo-chbar{flex:1;height:8px;border-radius:999px;background:var(--line);overflow:hidden}.fo-chbar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#FB923C,#EA580C);transition:width .3s}
+.fo-ch .hint{margin:8px 0 0;font-size:12px}
+.fo-ch.mob{display:none;margin-bottom:16px}
+@media (max-width:900px){.fo-side .fo-ch{display:none}.fo-ch.mob{display:block}}
+/* rozetler (profil) */
+.fo-bdg{margin-top:18px}.fo-bdg .fo-h3{display:flex;align-items:center;gap:6px}
+.fo-bdgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:14px}
+.fo-bd{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:12px 8px;border-radius:14px;background:var(--paper)}
+.fo-bdi{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:conic-gradient(#F59E0B,#EA580C,#F59E0B);box-shadow:0 0 0 3px var(--card),0 0 0 5px #F59E0B}
+.fo-bd b{font-size:12.5px;line-height:1.25}.fo-bd small{font-size:11px;color:var(--muted)}

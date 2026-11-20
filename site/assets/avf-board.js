@@ -401,6 +401,29 @@
   }
 
   // ------------------------------------------------------------------ iskelet (başlık bandı + yan panel)
+  // Haftanın meydan okuması: 7 gün; bugün ve bu haftanın geçmiş günleri işaretlenir; 5 gün → rozet.
+  var CH_BOXES = [];   // aynı anda iki kart olabilir (masaüstü yan sütun + telefonda ana sütun): hepsi birlikte güncellenir
+  function challengeCard(extra) {
+    var box = h("section", { class: "card fo-ch" + (extra ? " " + extra : "") });
+    CH_BOXES = CH_BOXES.filter(function (b) { return document.body.contains(b); }); CH_BOXES.push(box);
+    function paint(c) { S.challenge = c; CH_BOXES.forEach(function (b) { if (b === box || document.body.contains(b)) draw(b, c); }); }
+    function draw(box, c) {
+      var pct = Math.min(100, Math.round(c.doneCount / c.goal * 100));
+      AVF.mount(box, h("div", { class: "fo-chh" }, h("span", { class: "fo-chi" }, AVF.icon(c.icon)), h("div", null, h("small", { text: "Haftanın meydan okuması" }), h("b", { text: c.title }))),
+        h("p", { class: "fo-cht", text: c.text }),
+        h("div", { class: "fo-chd", role: "group", "aria-label": "Bu haftanın günleri" }, c.days.map(function (d) {
+          return h("button", { type: "button", class: "fo-chday" + (d.done ? " on" : "") + (d.today ? " today" : ""), disabled: d.future || S.me.banned ? "" : null, "aria-pressed": d.done ? "true" : "false",
+            title: d.future ? "Henüz gelmedi" : d.done ? "İşareti kaldır" : "Tamamladım", onclick: function () {
+              AVF.api("POST", "/board/challenge/checkin", { day: d.date, done: !d.done }).then(function (n) { var had = c.earned; paint(n); if (n.earned && !had) AVF.toast("🏅 Rozet kazandın: " + n.title + "!"); }, function (er) { AVF.toast(AVF.errText(er), "err"); });
+            } }, h("small", { text: d.label }), h("span", null, d.done ? AVF.icon("check") : null));
+        })),
+        h("div", { class: "fo-chp" }, h("span", { class: "fo-chbar" }, h("i", { style: "width:" + pct + "%" })), h("span", { text: c.earned ? "🏅 Rozet kazandın!" : c.doneCount + " / " + c.goal + " gün" })),
+        h("p", { class: "hint", text: c.participants ? c.participants + " üye katıldı" + (c.finishers ? ", " + c.finishers + " üye rozeti kaptı" : "") + "." : "İlk katılan sen ol!" }));
+    }
+    if (S.challenge) paint(S.challenge);
+    AVF.api("GET", "/board/challenge").then(paint, function () { box.remove(); });
+    return box;
+  }
   function shell(opts, mainKids) {
     var me = S.me, st = S.stats;
     var q = AVF.input("search", { placeholder: "Forumda ara… (yazdıkça sonuçlar gelir)", "aria-label": "Forumda ara", value: opts.q || "", autocomplete: "off" });
@@ -445,6 +468,7 @@
         h("nav", { class: "fo-mel" }, nav.map(function (x) {
           return lk(x[0], [AVF.icon(x[1]), h("span", { text: x[2] })], { "aria-current": location.pathname === x[0] ? "page" : null });
         }), me.mod ? lk("/forum/moderasyon", [AVF.icon("shield"), h("span", { text: "Moderasyon" }), me.openReports ? h("span", { class: "fo-cnt-b", text: String(me.openReports) }) : null], { class: "mod", "aria-current": location.pathname === "/forum/moderasyon" ? "page" : null }) : null)) : null,
+      me ? challengeCard() : null,
       st ? h("section", { class: "card fo-stats" }, h("h3", null, AVF.icon("chart"), h("span", { text: "Forum nabzı" })),
         h("dl", null, [["Konu", st.topics, "file"], ["Mesaj", st.posts, "chat"], ["Üye", st.members, "users"]].map(function (x) { return h("div", null, AVF.icon(x[2]), h("dd", { text: num(x[1]) }), h("dt", { text: x[0] })); })),
         h("p", { class: "fo-on" }, h("i", { "aria-hidden": "true" }), h("span", { text: num(st.online) + " üye şu an burada" })), st.newest ? h("p", { class: "hint" }, h("span", { text: "Aramıza son katılan: " }), lk("/forum/uye/" + st.newest, "@" + st.newest, { class: "fo-men" }), h("span", { text: " — hoş geldin! 🎉" })) : null,
@@ -496,6 +520,7 @@
     var tabs = [["", "Son hareketler"], ["new", "Yeni konular"], ["unread", "Okunmamış"], ["unanswered", "Yanıt bekleyenler"]], cur = qs().l || "";
     var listBox = h("div", { class: "fo-latest" });
     var main = shell({ h1: "Forum", sub: "Demir, tabak ve gelişim üzerine konuşan, birbirine destek olan bir topluluk. Sor, paylaş, ilham ver." }, [
+      S.me ? challengeCard("mob") : null,
       h("section", { class: "fo-cats" }, S.cats.map(function (c) {
         return h("article", { class: "fo-c card c-" + (c.color || "slate") + (c.kind === "announce" ? " ann" : "") + (c.unread ? " unread" : "") },
           catTile(c),
@@ -961,6 +986,8 @@
         h("div", { class: "fo-pcols" },
           h("section", null, h("h3", { class: "fo-h3", text: "Son konuları" }), u.topics.length ? h("ul", { class: "fo-mini card" }, u.topics.map(function (t) { return h("li", null, lk("/forum/konu/" + t.id, t.title, { "data-notr": "" }), h("small", null, h("span", { text: t.category.name + " · " + num(t.replies) + " yanıt · " }), timeEl(t.lastAt))); })) : h("p", { class: "hint", text: "Henüz konu açmadı." })),
           h("section", null, h("h3", { class: "fo-h3", text: "Son yanıtları" }), u.posts.length ? h("ul", { class: "fo-mini card" }, u.posts.map(function (p) { return h("li", null, lk("/forum/konu/" + p.topicId + "?m=" + p.id, p.title, { "data-notr": "" }), h("p", { "data-notr": "", text: p.excerpt }), h("small", null, timeEl(p.at))); })) : h("p", { class: "hint", text: "Henüz yanıt yazmadı." }))));
+      if (u.badgeTotal) main.appendChild(h("section", { class: "fo-bdg" }, h("h3", { class: "fo-h3" }, AVF.icon("award", "bico"), h("span", { text: "Rozetler (" + u.badgeTotal + ")" })),
+        h("div", { class: "card fo-bdgs" }, u.badges.map(function (b) { return h("div", { class: "fo-bd", title: b.label + " · " + AVF.fmtDate(b.week) + " haftası" }, h("span", { class: "fo-bdi" }, AVF.icon(b.icon)), h("b", { text: b.label }), h("small", { text: AVF.fmtDate(b.week) })); }))));
       // gelişim: seri ve üyenin bana açtığı gelişim fotoğrafları (ölçüler hiçbir zaman gösterilmez)
       var jb = h("section", { class: "fo-jr" }); main.appendChild(jb);
       AVF.api("GET", "/journal/u/" + encodeURIComponent(u.username)).then(function (j) {
