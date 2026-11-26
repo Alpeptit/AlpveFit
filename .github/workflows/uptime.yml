@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Canlı site
         env:
-          SITE: https://alpvefit.com
+          SITE: https://www.alpvefit.com   # kanonik adres (alpvefit.com buraya 301 ile yönlenir)
         run: |
           fail=0
           probe() {   # $1 adres, $2 tür (health | data)
