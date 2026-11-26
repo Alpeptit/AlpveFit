@@ -454,9 +454,10 @@
     function paintMenu() {
       groups = [];
       var granted = (kinds || []).map(function (k) { return k.kind; });
-      var onKind = Object.keys(AVF.KIND).some(function (k) { return AVF.KIND[k].slug === sub; }) || sub === "agirlik-takibi";
+      var onKind = Object.keys(AVF.KIND).some(function (k) { return AVF.KIND[k].slug === sub; }) || sub === "agirlik-takibi" || sub === "asistan";
       var planItems = Object.keys(AVF.KIND).map(function (k) { return { href: "/panel/" + AVF.KIND[k].slug, icon: AVF.KIND[k].icon, label: AVF.KIND[k].label, locked: kinds && granted.indexOf(k) < 0, current: sub === AVF.KIND[k].slug }; });
       planItems.push({ href: "/panel/agirlik-takibi", icon: "chart", label: "Ağırlık Takibi", locked: kinds && granted.indexOf("training") < 0, current: sub === "agirlik-takibi" });
+      if (AVF.overview && AVF.overview.assistant) planItems.push({ href: "/panel/asistan", icon: "spark", label: "Koç Asistanı", current: sub === "asistan" });
       var P = collapsible("plans", "/panel", "list", "Planlarım", planItems, onKind, sub === "");
       var fsub = sub.indexOf("forum-ayarlari") === 0 ? sub.slice(15) || "profil" : null;
       var F = collapsible("forum", "/panel/forum-ayarlari", "msg", "Forum Ayarları", AVF.FORUM_TABS.map(function (t) {
@@ -489,6 +490,7 @@
       if (sub === "arkadaslar" || sub.indexOf("arkadaslar/") === 0) return AVF.friendsView(content, sub.slice(11));
       if (sub === "agirlik-takibi") return (kinds || []).some(function (k) { return k.kind === "training"; }) ? AVF.progressView(content, {}) : AVF.mount(content, h("h2", { class: "ptitle", text: "Ağırlık Takibi" }), AVF.state("lock", "Bu bölüm hesabınız için etkin değil", "Antrenman programınız tanımlandığında ağırlık takibi açılır.", link("/panel", "Planlarıma dön", { class: "btn" })));
       if (sub === "gelisim") return AVF.journalView(content);
+      if (sub === "asistan") return AVF.assistantView ? AVF.assistantView(content) : null;
       if (sub === "bildirimler") return notificationsView(content);
       if (sub === "siparisler") return AVF.ordersView(content);
       if (sub === "profil") return AVF.profileView(content);
@@ -517,6 +519,9 @@
         h("span", { class: "t", style: "flex:1;min-width:0" }, h("b", { style: "display:block;font-size:16px", text: m.label }), h("small", { style: "color:var(--muted)", text: !k ? "Hesabınız için henüz etkin değil" : k.count ? k.count + " yayınlanmış plan" + (k.lastPublishedAt ? " · son: " + AVF.fmtDate(k.lastPublishedAt) : "") : "Henüz yayınlanmış plan yok" })), AVF.icon(k ? "chev" : "lock", k ? "chev" : "pm-lock")],
         { class: "card ovk" + (k ? "" : " off"), style: "display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none" });
     })));
+    if (o.assistant) el.appendChild(link("/panel/asistan", [h("span", { class: "tile" }, AVF.icon("spark")),
+      h("span", { class: "t", style: "flex:1;min-width:0" }, h("b", { style: "display:block;font-size:16px", text: "Koç Asistanı" }), h("small", { style: "color:var(--muted)", text: "Kalori, antrenman programın ve kilo takibin hakkında hemen soru sor" })), AVF.icon("chev", "chev")],
+      { class: "card ovk ai-ov", style: "display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;margin-top:12px" }));
     allPlansColumn(el, o);
   }
   /** v25: tüm güncel planlar tek sütunda — beslenme, antrenman, supplement, farmakoloji ve notlar alt alta; üstte bölümlere atlama. */

@@ -21,6 +21,7 @@ import { accountRouter } from "./routes/account.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { pushRouter } from "./routes/push.js";
 import { journalRouter } from "./routes/journal.js";
+import { assistantRouter } from "./routes/assistant.js";
 import { startDigestJob } from "./utils/digest.js";
 import { ordersRouter } from "./routes/orders.js";
 import { profileRouter } from "./routes/profile.js";
@@ -235,6 +236,7 @@ app.use("/api/admin", adminRouter);   // uzman/yönetici paneli (hideAdminApi yu
 app.use("/api", progressRouter);      // /api/progress — ağırlık takibi
 app.use("/api", friendsRouter);       // /api/friends*, /api/messages* — arkadaşlar ve özel mesajlar
 app.use("/api", plansRouter);         // /api/plans/* — üyenin kendi yayınlanmış planları
+app.use("/api", assistantRouter);     // /api/assistant* — koçluk asistanı (yalnız koçluk üyeleri, açık rızayla)
 app.use("/api", privacyRouter);       // /api/me/request-delete, /api/me/confirm-delete
 app.use("/api", accountRouter);       // /api/account/* (ad/e-posta/şifre değişikliği)
 app.use("/api", notificationsRouter); // /api/notifications

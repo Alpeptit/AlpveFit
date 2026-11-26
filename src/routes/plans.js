@@ -6,6 +6,7 @@ import { pool } from "../db/pool.js";
 import { requireAuth } from "../middleware/auth.js";
 import { PLAN_KINDS, KIND_LABELS, isPlanKind } from "../utils/permissions.js";
 import { catalog as planCatalog } from "../utils/planCatalog.js";
+import { aiConfig } from "../utils/coachAi.js";
 
 export const plansRouter = withAsyncErrors(express.Router());
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,6 +32,7 @@ plansRouter.get("/plans/overview", requireAuth, async (req, res) => {
   res.json({
     kinds: PLAN_KINDS.filter((k) => granted.has(k)).map((k) => ({ kind: k, label: KIND_LABELS[k], count: counts[k]?.n || 0, lastPublishedAt: counts[k]?.last_at || null })),
     coaches: svc.rows.map((r) => ({ name: r.coach_name, delivery: r.delivery })),
+    assistant: granted.size > 0 && aiConfig().enabled,   // v25: koçluk asistanı yalnız koçluk üyelerine
   });
 });
 

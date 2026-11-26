@@ -35,7 +35,20 @@ async function load(file, prefix) {
   routes.forEach((r) => { r.handlers = [...pre, ...r.handlers]; });
   prefixes.push([routes, prefix]);
 }
-await load("auth.js", "/api/auth"); await load("twoFactor.js", "/api"); await load("account.js", "/api"); await load("notifications.js", "/api"); await load("push.js", "/api"); await load("journal.js", "/api");
+// Koçluk asistanı: sahte yapay zekâ sağlayıcısı (YALNIZ test). Son istek GET /__ai ile okunur; özel sözcükler hata / güvensiz yanıt üretir.
+if (process.env.AI_MOCK !== "0") {
+  process.env.AI_API_URL ||= "https://ai.mock.test/v1"; process.env.AI_API_KEY ||= "mock-key-0123456789abcdef"; process.env.AI_MODEL ||= "mock-model";
+  globalThis.__AI_REQS = [];
+  globalThis.__AI_MOCK = async (url, body, opts) => {
+    globalThis.__AI_REQS.push({ url, body, auth: opts && opts.headers && opts.headers.Authorization }); if (globalThis.__AI_REQS.length > 20) globalThis.__AI_REQS.shift();
+    const last = String(body.messages[body.messages.length - 1].content || "");
+    if (/HATATEST/.test(last)) throw Object.assign(new Error("mock 500"), { code: "ERR_BAD_RESPONSE" });
+    const text = /DOZTEST/.test(last) ? "Günde 250 mcg kullanabilirsin." : /BAGLANTITEST/.test(last) ? "Ayrıntı: https://kotu.example/x ve https://alpvefit.com/panel" :
+      "Plana göre bugünkü toplamın " + ((body.messages[0].content.match(/toplam (\d+) kcal/) || [])[1] || "?") + " kcal. **Öneri:** koçunla konuş.";
+    return { data: { choices: [{ message: { role: "assistant", content: text } }] } };
+  };
+}
+await load("auth.js", "/api/auth"); await load("twoFactor.js", "/api"); await load("account.js", "/api"); await load("notifications.js", "/api"); await load("push.js", "/api"); await load("journal.js", "/api"); await load("assistant.js", "/api");
 await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("uploads.js", "/api"); await load("support.js", "/api"); await load("forum.js", "/api"); await load("board.js", "/api"); await load("progress.js", "/api"); await load("friends.js", "/api"); await load("admin.js", "/api/admin");
 const { hideAdminApi, panelUser, sessionUser } = await import(join(root, "src/utils/panelSession.js"));
 // ekip içerikleri (forum) — sunucudaki gibi açılışta; FORUM_SEED=false ile kapatılır
@@ -57,6 +70,7 @@ const body = (req) => new Promise((ok) => { const c = []; req.on("data", (d) => 
 http.createServer(async (rq, rs) => {
   const url = new URL(rq.url, "http://x"); const path = url.pathname.replace(/\/+$/, "") || "/";
   try {
+    if (path === "/__ai") { rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify(globalThis.__AI_REQS || [])); }
     if (path === "/__mails") { const to = url.searchParams.get("to"); const m = [...mails].reverse().find((x) => !to || x.to === to); rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify(m || null)); }
     if (path === "/__digest") { const { runDigest } = await import("../src/utils/digest.js"); const r = await runDigest(Date.now(), { force: true }); rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify(r)); }
     if (path === "/__flush-plan-mails") { const { flushPlanMails } = await import("../src/utils/planNotify.js"); const n = await flushPlanMails(); rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify({ n })); }

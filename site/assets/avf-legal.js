@@ -101,9 +101,10 @@
           "• Üyelik, hesap güvenliği ve hizmetin sunulması — **sözleşmenin ifası** (m.5/2-c) ve **meşru menfaat** (m.5/2-f).",
           "• Sipariş, ödeme ve mali yükümlülükler — **hukuki yükümlülük** (m.5/2-ç).",
           "• Kişiye özel program için sağlık ve koçluk bilgilerinin işlenmesi — **açık rızanız** (m.6/2). Rızanızı dilediğiniz zaman geri alabilirsiniz.",
+          "• Koç Asistanı (isteğe bağlı, yalnız koçluk üyeleri): planınız ile kilo, ölçü ve kaldırış kayıtlarınızın yapay zekâ hizmet sağlayıcısına iletilerek sorularınızın yanıtlanması — **ayrı açık rızanız** (m.6/2, m.9). Rıza vermezseniz hiçbir veriniz iletilmez; rızanızı ve görüşme geçmişinizi Koç Asistanı sayfasından dilediğiniz an geri alıp silebilirsiniz. Görüşme geçmişi 90 gün sonra kendiliğinden silinir.",
           "• Kötüye kullanımın önlenmesi ve bilgi güvenliği — **meşru menfaat**."]],
         ["Verilerin aktarılması", [
-          "Verileriniz yalnızca hizmetin gerektirdiği ölçüde; koçunuza, barındırma, e-posta ve güvenlik (reCAPTCHA) hizmet sağlayıcılarına ve kanunen yetkili kamu kurumlarına aktarılabilir. Yurt dışındaki sağlayıcılara aktarım **KVKK m.9** kapsamında yapılır.",
+          "Verileriniz yalnızca hizmetin gerektirdiği ölçüde; koçunuza, barındırma, e-posta ve güvenlik (reCAPTCHA) hizmet sağlayıcılarına, açık rıza verdiyseniz Koç Asistanı için yapay zekâ hizmet sağlayıcısına ve kanunen yetkili kamu kurumlarına aktarılabilir. Yurt dışındaki sağlayıcılara aktarım **KVKK m.9** kapsamında yapılır.",
           "!shield|Sağlık bilgileriniz ve planlarınız **başka üyelere gösterilmez**. Verileriniz **satılmaz ve reklam amacıyla kullanılmaz**."]],
         ["Saklama süresi", [
           "Giriş kayıtları, bildirimler, destek yazışmaları ve süresi dolmuş siparişler **180 gün** sonra silinir. Ödenmiş sipariş kayıtları mali mevzuatın öngördüğü süre boyunca saklanır. Hesabınızı sildiğinizde profil ve plan verileriniz silinir."]],
@@ -132,9 +133,10 @@
           "• Membership, account security and delivering the service — **performance of a contract** (Art. 5/2-c) and **legitimate interest** (Art. 5/2-f).",
           "• Orders, payments and financial obligations — **legal obligation** (Art. 5/2-ç).",
           "• Processing health and coaching information for a personalised program — **your explicit consent** (Art. 6/2). You can withdraw it at any time.",
+          "• Coach Assistant (optional, coaching members only): sending your plan and your weight, measurement and lift logs to an AI service provider to answer your questions — **separate explicit consent** (Art. 6/2, Art. 9). Without it nothing is sent; you can withdraw consent and delete the conversation history on the Coach Assistant page at any time. History is deleted automatically after 90 days.",
           "• Preventing abuse and information security — **legitimate interest**."]],
         ["Transfers", [
-          "Your data may be shared only as far as the service requires with your coach, hosting, e-mail and security (reCAPTCHA) providers, and competent public authorities. Transfers to providers abroad are made under **KVKK Art. 9**.",
+          "Your data may be shared only as far as the service requires with your coach, hosting, e-mail and security (reCAPTCHA) providers, the AI service provider for the Coach Assistant if you have consented, and competent public authorities. Transfers to providers abroad are made under **KVKK Art. 9**.",
           "!shield|Your health information and plans are **never shown to other members**. Your data is **not sold or used for advertising**."]],
         ["Retention", [
           "Login records, notifications, support conversations and expired orders are deleted after **180 days**. Paid order records are kept for the period required by financial legislation. When you delete your account, your profile and plan data are deleted."]],
