@@ -15,7 +15,7 @@ const b = await chromium.launch(); const errs = [];
 async function ctxOf(p, o) {
   const c = await b.newContext(o || { viewport: { width: 1360, height: 900 } });
   await c.addCookies(Object.entries(p.c.jar).map(([k, v]) => ({ name: k, value: v, url: BASE })));
-  await c.addInitScript(() => { try { localStorage.setItem("avf_lang", "tr"); localStorage.setItem("avf_cookie", "1"); } catch (e) {} });
+  await c.addInitScript(() => { try { localStorage.setItem("avf_lang", "tr"); localStorage.setItem("avf_cookie", JSON.stringify({ c: "ess", v: 2, t: 1 })); } catch (e) {} });
   const q = await c.newPage(); q.on("pageerror", (e) => errs.push(e.message)); return q;
 }
 const q = await ctxOf(U);
@@ -95,7 +95,7 @@ const vis = () => mob.evaluate(() => { const x = [...document.querySelectorAll("
 const before = await vis(); await mob.locator(".fo-ch .fo-chday.today").filter({ visible: true }).first().click(); await mob.waitForTimeout(900);
 chk("meydan okuma kartı anında güncellenir (mobil)", /\d \/ 5 gün/.test(before) && before !== await vis(), [before, await vis()]);
 // misafir: ekip rehberleri açık, üye konusu kapalı, yazma ve arama yok
-const gc = await b.newContext({ viewport: { width: 1360, height: 900 } }); await gc.addInitScript(() => { try { localStorage.setItem("avf_lang", "tr"); localStorage.setItem("avf_cookie", "1"); sessionStorage.setItem("avf_forum_18", "1"); } catch (e) {} });
+const gc = await b.newContext({ viewport: { width: 1360, height: 900 } }); await gc.addInitScript(() => { try { localStorage.setItem("avf_lang", "tr"); localStorage.setItem("avf_cookie", JSON.stringify({ c: "ess", v: 2, t: 1 })); sessionStorage.setItem("avf_forum_18", "1"); } catch (e) {} });
 const g = await gc.newPage(); g.on("pageerror", (e) => errs.push("misafir: " + e.message));
 await g.goto(BASE + "/forum"); await g.waitForTimeout(1500);
 chk("misafir forum ana sayfasını görür (ekip rehberleri + katıl kartı)", await g.locator(".fo-join").count() >= 1 && await g.locator(".fo-tlist .fo-t").count() > 0 && await g.locator(".fo-search").count() === 0 && await g.locator(".fo-new").count() === 0, "");

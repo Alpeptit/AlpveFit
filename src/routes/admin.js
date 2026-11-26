@@ -7,6 +7,7 @@ import express from "express";
 import { withAsyncErrors } from "../utils/asyncRoutes.js";
 import { pool } from "../db/pool.js";
 import { requireAuth, requirePanel, requireAdmin } from "../middleware/auth.js";
+import { analyticsSummary } from "./analytics.js";
 import { PLAN_KINDS, KIND_LABELS, isPlanKind, canAuthorKind, normalizeKinds, FORBIDDEN } from "../utils/permissions.js";
 import { isNonEmptyString } from "../utils/validate.js";
 import { logAudit } from "../utils/auditLog.js";
@@ -346,6 +347,12 @@ adminRouter.get("/forum/metrics", requireAdmin, async (req, res) => {
   res.json({ week: cur, prevWeek: prev, returning: ret.n, returningRate: prev.active ? Math.round(ret.n / prev.active * 100) : null,
     firstReply: { medianMinutes: fr.median == null ? null : Math.round(fr.median), answered: fr.answered, total: fr.total },
     repliesPerTopic: cur.topics ? Math.round(cur.replies / cur.topics * 10) / 10 : null, usage: use, top });
+});
+
+// v25: site kullanım ölçümü — yalnız Tam yetki (üye bazında gezinti kişisel veridir)
+adminRouter.get("/analytics", requireAdmin, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(await analyticsSummary(req.query.days));
 });
 
 adminRouter.get("/audit/actions", requireAdmin, async (req, res) => {

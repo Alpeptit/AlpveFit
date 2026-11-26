@@ -5,6 +5,6 @@ function Router() {
   return r;
 }
 function express() { return Router(); }
-express.Router = Router; express.json = () => (q, s, n) => n(); express.static = () => (q, s, n) => n(); express.urlencoded = express.json;
+express.Router = Router; express.json = () => (q, s, n) => n(); express.text = () => (q, s, n) => n(); express.static = () => (q, s, n) => n(); express.urlencoded = express.json;
 export default express;
 export { Router };

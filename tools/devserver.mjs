@@ -48,7 +48,7 @@ if (process.env.AI_MOCK !== "0") {
     return { data: { choices: [{ message: { role: "assistant", content: text } }] } };
   };
 }
-await load("auth.js", "/api/auth"); await load("twoFactor.js", "/api"); await load("account.js", "/api"); await load("notifications.js", "/api"); await load("push.js", "/api"); await load("journal.js", "/api"); await load("assistant.js", "/api");
+await load("auth.js", "/api/auth"); await load("twoFactor.js", "/api"); await load("account.js", "/api"); await load("notifications.js", "/api"); await load("push.js", "/api"); await load("journal.js", "/api"); await load("assistant.js", "/api"); await load("analytics.js", "/api");
 await load("privacy.js", "/api"); await load("plans.js", "/api"); await load("orders.js", "/api"); await load("profile.js", "/api"); await load("blog.js", "/api"); await load("uploads.js", "/api"); await load("support.js", "/api"); await load("forum.js", "/api"); await load("board.js", "/api"); await load("progress.js", "/api"); await load("friends.js", "/api"); await load("admin.js", "/api/admin");
 const { hideAdminApi, panelUser, sessionUser } = await import(join(root, "src/utils/panelSession.js"));
 // ekip içerikleri (forum) — sunucudaki gibi açılışta; FORUM_SEED=false ile kapatılır

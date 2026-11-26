@@ -4,7 +4,7 @@
 (function () {
   "use strict";
   var AVF = window.AVF, h = AVF.h;
-  var view, tools, drawer, nav, unread = 0, kinds = null;
+  var view, tools, drawer, nav, unread = 0, kinds = null, kindsAt = 0;
 
   function link(href, children, attrs) {
     attrs = attrs || {}; attrs.href = href; attrs["data-link"] = "";
@@ -18,7 +18,21 @@
     if (p.indexOf("/forum") === 0 && !/^\/forum\/(konu|yeni)(\/|$)/.test(p)) return "forum";
     return null;
   }
+  // v25: sayfa geçişleri — site yeni sürüme güncellendiyse sonraki geçiş tam sayfa yüklemesiyle yapılır (eski kodla yeni sunucu
+  // uyuşmazlığı "yenileyince düzeliyor" sorununa yol açıyordu). Denetim en çok 5 dakikada bir, arka planda yapılır.
+  var BUILD = (function () { var el = document.querySelector('script[src*="/assets/avf-app.js"]'), m = el && /[?&]v=(\w+)/.exec(el.getAttribute("src") || ""); return m ? m[1] : null; })();
+  var stale = false, buildAt = Date.now();
+  function checkBuild() {
+    if (!BUILD || stale || Date.now() - buildAt < 5 * 60000) return;
+    buildAt = Date.now();
+    fetch("/", { cache: "no-store", credentials: "same-origin" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
+      var m = /\/assets\/avf-app\.js\?v=(\w+)/.exec(t || ""); if (m && m[1] !== BUILD) stale = true;
+    }, function () {});
+  }
+  AVF._checkBuild = function () { buildAt = 0; checkBuild(); };
   function go(path, replace) {
+    if (stale) { if (replace) location.replace(path); else location.assign(path); return; }
+    checkBuild();
     var from = location.pathname, y = window.pageYOffset || 0;
     if (location.pathname === path) { route(); return; }
     history[replace ? "replaceState" : "pushState"]({ i: replace ? idx() : idx() + 1 }, "", path); route();
@@ -79,7 +93,18 @@
       var a = e.target.closest && e.target.closest("a[data-link]"); if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
       e.preventDefault(); drawer.classList.remove("open"); go(a.getAttribute("href"));
     });
-    window.addEventListener("popstate", function () { route(); });
+    window.addEventListener("popstate", function () { if (stale) { location.reload(); return; } route(); });
+    // Geri / ileri tuşuyla tarayıcı önbelleğinden (bfcache) dönülünce: oturum yeniden doğrulanır, plan önbelleği atılır, görünüm tazelenir.
+    window.addEventListener("pageshow", function (e) {
+      if (!e.persisted) return;
+      var was = AVF.session.user ? AVF.session.user.id : null;
+      kindsAt = 0; if (AVF.dropPlanCache) AVF.dropPlanCache();
+      AVF.api("GET", "/auth/me").then(function (u) { return u; }, function () { return null; }).then(function (u) {
+        if ((u ? u.id : null) !== was) { location.reload(); return; }
+        AVF.session.user = u; route(true);
+      });
+    });
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) checkBuild(); });
     if (!history.state) { try { history.replaceState({ i: 0 }, "", location.href); } catch (e) { /* yok say */ } }
   }
   var NAV = [["/", "home", "Ana Sayfa"], ["/hakkimizda", "users", "Hakkımızda"], ["/sss", "help", "SSS"], ["/paketler", "tag", "Paketler"], ["/araclar", "wrench", "Araçlar"], ["/forum", "msg", "Forum"]];
@@ -104,7 +129,7 @@
             })))),
         col("building", "Kurumsal", [fl("/", "home", "Ana Sayfa"), fl("/hakkimizda", "users", "Hakkımızda"), fl("/sss", "help", "SSS")]),
         col("compass", "Keşfet", [fl("/paketler", "tag", "Paketler"), fl("/blog", "book", "Blog"), fl("/forum", "msg", "Forum"), fl("/araclar", "wrench", "Araçlar")]),
-        col("scale", "Yasal", AVF.LEGAL_LINKS.map(function (l) { return fl("/yasal/" + l[0], LEGAL_ICONS[l[0]] || "file", l[1]); })),
+        col("scale", "Yasal", AVF.LEGAL_LINKS.map(function (l) { return fl("/yasal/" + l[0], LEGAL_ICONS[l[0]] || "file", l[1]); }).concat([h("a", { href: "#", class: "f-ck", onclick: function (e) { e.preventDefault(); AVF.cookiePrefs(); } }, AVF.icon("cookie"), h("span", { text: "Çerez tercihleri" }))])),
         col("headset", "İletişim", [h("a", { href: "mailto:destek@alpvefit.com" }, AVF.icon("mail"), h("span", { text: "destek@alpvefit.com" })),
           h("a", { href: "/panel/destek/yeni", onclick: function (e) { e.preventDefault(); AVF.openTicket(); } }, AVF.icon("ticket"), h("span", { text: "Ticket gönder" })),
           AVF.pwa && AVF.pwa.available() ? h("a", { href: "#", class: "f-app", onclick: function (e) { e.preventDefault(); AVF.pwa.install(); } }, AVF.icon("phone"), h("span", { text: "Uygulamayı indir" })) : null].filter(Boolean))),
@@ -261,7 +286,7 @@
     if (live.es || !AVF.session.user || !window.EventSource) return;
     var es = live.es = new EventSource("/api/live");
     es.addEventListener("hello", function () { live.ok = true; });
-    es.addEventListener("notif", function (e) { refreshSoon(); liveFire("notif", JSON.parse(e.data || "{}")); });
+    es.addEventListener("notif", function (e) { refreshSoon(); kindsAt = 0; if (AVF.dropPlanCache) AVF.dropPlanCache(); liveFire("notif", JSON.parse(e.data || "{}")); });   // plan / erişim değişikliği: sonraki geçişte taze veri
     es.addEventListener("dm", function (e) {
       var d = JSON.parse(e.data || "{}"); liveFire("dm", d);
       if (!d.mine) {
@@ -336,6 +361,7 @@
 
   function route(rerender) {
     var p = location.pathname.replace(/\/+$/, "") || "/";
+    if (!rerender) trackStart(p);
     paintBack(p);
     if (AVF.langLock && AVF.langLock(p === "/forum" || p.indexOf("/forum/") === 0)) renderFooter();   // forum: yalnız Türkçe, dil seçici yok
     renderChrome(); document.title = "AlpveFit";
@@ -501,9 +527,17 @@
       if (sub === "") return overviewView(content);
       AVF.mount(content, AVF.state("alert", "Sayfa bulunamadı", "", link("/panel", "Panele dön", { class: "btn" })));
     }
-    if (kinds) return draw();
+    // v25: önbellekteki bölüm listesi hemen çizilir; 30 sn'den eskiyse arka planda tazelenir, değiştiyse (yeni erişim, yeni plan) yeniden çizilir.
+    if (kinds) {
+      draw();
+      if (Date.now() - kindsAt > 30000) AVF.api("GET", "/plans/overview").then(function (o) {
+        var changed = JSON.stringify(o) !== JSON.stringify(AVF.overview); kinds = o.kinds; AVF.overview = o; kindsAt = Date.now();
+        if (changed && content.isConnected) { if (AVF.dropPlanCache) AVF.dropPlanCache(); draw(); }
+      }, function () {});
+      return;
+    }
     paintMenu(); AVF.mount(content, AVF.skeleton(3));
-    AVF.take("/plans/overview").then(function (o) { kinds = o.kinds; AVF.overview = o; draw(); }, function (e) {
+    AVF.take("/plans/overview").then(function (o) { kinds = o.kinds; AVF.overview = o; kindsAt = Date.now(); draw(); }, function (e) {
       AVF.mount(content, AVF.state("alert", "Planlar yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: function () { panelPage(sub); } }, "Tekrar dene")));
     });
   }
@@ -676,14 +710,61 @@
     }, function (e) { AVF.mount(el, AVF.state("alert", "Hesap bilgileri yüklenemedi", AVF.errText(e), h("button", { class: "btn", type: "button", onclick: function () { accountView(el, u); } }, "Tekrar dene"))); });
   }
 
-  // ---------- çerez bildirimi (yalnız gerekli çerezler; tek düğme) ----------
-  function cookieBanner() {
-    try { if (localStorage.getItem("avf_cookie")) return; } catch (e) { /* depolama yok: yine göster */ }
-    var b = h("div", { class: "ck", role: "region", "aria-label": "Çerez bildirimi" }, h("b", null, h("span", { class: "tile" }, AVF.icon("cookie")), "Çerezler"),
-      h("p", { text: "Oturumunuzu açık tutmak ve siteyi kötüye kullanıma karşı korumak için gerekli çerezleri kullanırız. Reklam veya izleme çerezi kullanmayız." }),
-      h("button", { class: "btn block", type: "button", onclick: function () { try { localStorage.setItem("avf_cookie", String(Date.now())); } catch (e) { /* yok say */ } b.parentNode.removeChild(b); } }, "Kabul et"));
+  // ---------- çerez bildirimi (v25, 2. sürüm): "Yalnız gerekli" ya da "Kabul et" (birinci taraf sayfa süresi ölçümü) ----------
+  // Eski (1. sürüm) onay ölçüme izin sayılmaz; bildirim bir kez yeniden gösterilir. Tercih alt bilgideki "Çerez tercihleri" ile değişir.
+  var CK_VER = 2;
+  function ckRead() { try { var c = JSON.parse(localStorage.getItem("avf_cookie") || "null"); return c && c.v === CK_VER ? c : null; } catch (e) { return null; } }
+  AVF.analyticsOk = function () { var c = ckRead(); return !!(c && c.c === "all"); };
+  function cookieBanner(force) {
+    if (!force && ckRead()) return;
+    var old = document.querySelector(".ck"); if (old) old.parentNode.removeChild(old);
+    function set(v) { try { localStorage.setItem("avf_cookie", JSON.stringify({ c: v, v: CK_VER, t: Date.now() })); } catch (e) { /* yok say */ } if (b.parentNode) b.parentNode.removeChild(b); if (v === "all") { TRK.path = null; trackStart(curPath(), true); } }   // izin öncesi süre gönderilmez
+    var b = h("div", { class: "ck", role: "region", "aria-label": "Çerez bildirimi" }, h("b", null, h("span", { class: "tile" }, AVF.icon("cookie")), "Çerezler ve ölçüm"),
+      h("p", { text: "Oturumunuzu açık tutmak ve siteyi korumak için gerekli çerezleri kullanırız. İzin verirseniz hangi sayfada ne kadar süre geçirildiğini yalnız kendi sunucumuzda ölçeriz; reklam ve üçüncü taraf izleme yoktur, IP kaydı tutulmaz." }),
+      h("div", { class: "ck-row" }, h("button", { class: "btn ghost ck-ess", type: "button", onclick: function () { set("ess"); } }, "Yalnız gerekli"), h("button", { class: "btn ck-yes", type: "button", onclick: function () { set("all"); } }, "Kabul et")));
     document.body.appendChild(b);
   }
+  AVF.cookiePrefs = function () { cookieBanner(true); };
+
+  // ---------- sayfa süresi ölçümü (yalnız "Kabul et" ile; sekme görünürken geçen süre) ----------
+  var TRK = { path: null, acc: 0, t0: 0, ref: "direct", sent: false, entry: null, mem: null };
+  function curPath() { return location.pathname.replace(/\/+$/, "") || "/"; }
+  function trkSid() {
+    function rnd() { var a = new Uint8Array(16); (window.crypto || window.msCrypto).getRandomValues(a); return [].map.call(a, function (x) { return ("0" + x.toString(16)).slice(-2); }).join(""); }
+    try { var v = sessionStorage.getItem("avf_sid"); if (!/^[a-f0-9]{32}$/.test(v || "")) { v = rnd(); sessionStorage.setItem("avf_sid", v); } return v; } catch (e) { return TRK.mem || (TRK.mem = rnd()); }
+  }
+  function refOf(r) {
+    if (!r) return "direct";
+    try { var u = new URL(r); if (u.host === location.host) return "internal"; var hh = u.hostname;
+      if (/(^|\.)(google|bing|yandex|duckduckgo|yahoo|ecosia|brave)\./i.test(hh)) return "search";
+      if (/(^|\.)(instagram|facebook|fb|t|twitter|x|youtube|tiktok|whatsapp|telegram|reddit|linkedin|pinterest)\.(com|co|me|org)$/i.test(hh)) return "social";
+      return "other"; } catch (e) { return "other"; }
+  }
+  function trkSend(path, ms) {
+    if (!AVF.analyticsOk() || ms < 300) return;
+    var body = JSON.stringify({ sid: trkSid(), path: path, ms: Math.round(ms), device: window.matchMedia && window.matchMedia("(max-width: 760px)").matches ? "mobile" : "desktop", ref: TRK.ref, lang: AVF.lang === "en" ? "en" : "tr" });
+    TRK.sent = true;
+    try { if (navigator.sendBeacon && navigator.sendBeacon("/api/analytics/hit", new Blob([body], { type: "text/plain" }))) return; } catch (e) { /* aşağıda */ }
+    try { fetch("/api/analytics/hit", { method: "POST", body: body, headers: { "Content-Type": "text/plain" }, credentials: "same-origin", keepalive: true }).catch(function () {}); } catch (e) { /* yok say */ }
+  }
+  function trackFlush() {
+    if (!TRK.path) return;
+    var ms = TRK.acc + (TRK.t0 ? Date.now() - TRK.t0 : 0), p = TRK.path;
+    TRK.path = null; TRK.acc = 0; TRK.t0 = 0;
+    trkSend(p, ms);
+  }
+  function trackStart(path, force) {
+    if (!force && path === TRK.path) return;
+    trackFlush();
+    if (TRK.entry === null) TRK.entry = refOf(document.referrer);
+    TRK.ref = TRK.sent ? "internal" : TRK.entry;   // oturumun ilk ölçülen sayfası giriş kaynağını taşır
+    TRK.path = path; TRK.acc = 0; TRK.t0 = document.visibilityState === "hidden" ? 0 : Date.now();
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") { if (TRK.path) { var p = TRK.path; trackFlush(); TRK.path = p; TRK.ref = "internal"; } }   // arka plandaki süre sayılmaz
+    else if (TRK.path && !TRK.t0) TRK.t0 = Date.now();
+  });
+  window.addEventListener("pagehide", function () { trackFlush(); });
 
   // ---------- açılış ----------
   // Hız: oturum ipucu (yalnız "1", kişisel veri yok). Misafir genel sayfaları oturum yanıtını beklemeden hemen görür;

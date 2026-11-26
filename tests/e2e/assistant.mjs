@@ -59,7 +59,7 @@ const b = await chromium.launch(); const errs = [];
 async function ctxOf(p, o) {
   const c = await b.newContext(o || { viewport: { width: 1360, height: 900 } });
   await c.addCookies(Object.entries(p.c.jar).map(([k, v]) => ({ name: k, value: v, url: BASE })));
-  await c.addInitScript(() => { try { localStorage.setItem("avf_lang", "tr"); localStorage.setItem("avf_cookie", "1"); } catch (e) {} });
+  await c.addInitScript(() => { try { localStorage.setItem("avf_lang", "tr"); localStorage.setItem("avf_cookie", JSON.stringify({ c: "ess", v: 2, t: 1 })); } catch (e) {} });
   const q2 = await c.newPage(); q2.on("pageerror", (e) => errs.push(e.message)); q2.on("dialog", (d) => d.accept()); return q2;
 }
 const confirmYes = async (pg) => { await pg.waitForTimeout(250); await pg.locator(".cdlg button.btn:not(.ghost)").last().click(); await pg.waitForTimeout(700); };

@@ -22,6 +22,7 @@ import { notificationsRouter } from "./routes/notifications.js";
 import { pushRouter } from "./routes/push.js";
 import { journalRouter } from "./routes/journal.js";
 import { assistantRouter } from "./routes/assistant.js";
+import { analyticsRouter } from "./routes/analytics.js";
 import { startDigestJob } from "./utils/digest.js";
 import { ordersRouter } from "./routes/orders.js";
 import { profileRouter } from "./routes/profile.js";
@@ -138,7 +139,7 @@ app.use(attackSignatureFilter); // query/path parametrelerinde açık saldırı 
 // Genel bir istek sınırlaması — tüm rotalar için taban seviye koruma
 // v28: oturum yoklaması (/auth/me, her sayfa açılışında) ve canlı destek yoklaması (3 sn'de bir; kendi dakikalık sınırı var)
 // bu ortak kotayı tüketip kullanıcıları SEBEPSİZ oturumdan atıyordu (429 → "çıkış yapıldı" sanılıyordu); kota dışındadırlar.
-const SESSION_POLL_PATHS = new Set(["/api/auth/me", "/api/health", "/api/config"]);
+const SESSION_POLL_PATHS = new Set(["/api/auth/me", "/api/health", "/api/config", "/api/analytics/hit"]);   // ölçüm ucu kendi sınırına tabi (aşağıda)
 const exemptFromBaseLimit = (req) => SESSION_POLL_PATHS.has(req.path);
 app.use(
   rateLimit({
@@ -236,6 +237,8 @@ app.use("/api/admin", adminRouter);   // uzman/yönetici paneli (hideAdminApi yu
 app.use("/api", progressRouter);      // /api/progress — ağırlık takibi
 app.use("/api", friendsRouter);       // /api/friends*, /api/messages* — arkadaşlar ve özel mesajlar
 app.use("/api", plansRouter);         // /api/plans/* — üyenin kendi yayınlanmış planları
+app.use("/api/analytics/hit", rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false, message: { error: "Çok fazla istek gönderildi." } }));
+app.use("/api", analyticsRouter);     // /api/analytics/hit — birinci taraf sayfa süresi ölçümü (yalnız izinle)
 app.use("/api", assistantRouter);     // /api/assistant* — koçluk asistanı (yalnız koçluk üyeleri, açık rızayla)
 app.use("/api", privacyRouter);       // /api/me/request-delete, /api/me/confirm-delete
 app.use("/api", accountRouter);       // /api/account/* (ad/e-posta/şifre değişikliği)

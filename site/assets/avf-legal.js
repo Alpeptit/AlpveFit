@@ -102,7 +102,8 @@
           "• Sipariş, ödeme ve mali yükümlülükler — **hukuki yükümlülük** (m.5/2-ç).",
           "• Kişiye özel program için sağlık ve koçluk bilgilerinin işlenmesi — **açık rızanız** (m.6/2). Rızanızı dilediğiniz zaman geri alabilirsiniz.",
           "• Koç Asistanı (isteğe bağlı, yalnız koçluk üyeleri): planınız ile kilo, ölçü ve kaldırış kayıtlarınızın yapay zekâ hizmet sağlayıcısına iletilerek sorularınızın yanıtlanması — **ayrı açık rızanız** (m.6/2, m.9). Rıza vermezseniz hiçbir veriniz iletilmez; rızanızı ve görüşme geçmişinizi Koç Asistanı sayfasından dilediğiniz an geri alıp silebilirsiniz. Görüşme geçmişi 90 gün sonra kendiliğinden silinir.",
-          "• Kötüye kullanımın önlenmesi ve bilgi güvenliği — **meşru menfaat**."]],
+          "• Kötüye kullanımın önlenmesi ve bilgi güvenliği — **meşru menfaat**.",
+          "• Sitenin hangi sayfalarında ne kadar süre geçirildiğinin ölçülmesi (birinci taraf, IP kaydı yok) — çerez bildirimindeki **izniniz**; dilediğiniz an Çerez tercihleri bağlantısından geri alabilirsiniz."]],
         ["Verilerin aktarılması", [
           "Verileriniz yalnızca hizmetin gerektirdiği ölçüde; koçunuza, barındırma, e-posta ve güvenlik (reCAPTCHA) hizmet sağlayıcılarına, açık rıza verdiyseniz Koç Asistanı için yapay zekâ hizmet sağlayıcısına ve kanunen yetkili kamu kurumlarına aktarılabilir. Yurt dışındaki sağlayıcılara aktarım **KVKK m.9** kapsamında yapılır.",
           "!shield|Sağlık bilgileriniz ve planlarınız **başka üyelere gösterilmez**. Verileriniz **satılmaz ve reklam amacıyla kullanılmaz**."]],
@@ -134,7 +135,8 @@
           "• Orders, payments and financial obligations — **legal obligation** (Art. 5/2-ç).",
           "• Processing health and coaching information for a personalised program — **your explicit consent** (Art. 6/2). You can withdraw it at any time.",
           "• Coach Assistant (optional, coaching members only): sending your plan and your weight, measurement and lift logs to an AI service provider to answer your questions — **separate explicit consent** (Art. 6/2, Art. 9). Without it nothing is sent; you can withdraw consent and delete the conversation history on the Coach Assistant page at any time. History is deleted automatically after 90 days.",
-          "• Preventing abuse and information security — **legitimate interest**."]],
+          "• Preventing abuse and information security — **legitimate interest**.",
+          "• Measuring time spent on the site’s pages (first-party, no IP logging) — your **permission** in the cookie notice; you can withdraw it at any time via Cookie preferences."]],
         ["Transfers", [
           "Your data may be shared only as far as the service requires with your coach, hosting, e-mail and security (reCAPTCHA) providers, the AI service provider for the Coach Assistant if you have consented, and competent public authorities. Transfers to providers abroad are made under **KVKK Art. 9**.",
           "!shield|Your health information and plans are **never shown to other members**. Your data is **not sold or used for advertising**."]],
@@ -154,7 +156,8 @@
         ["Genel", [
           "Gizliliğiniz bizim için önceliklidir. Kişisel verilerinizin nasıl işlendiği **KVKK Aydınlatma Metni**’nde ayrıntılı olarak açıklanmıştır. Verileriniz **satılmaz**, reklam veya profilleme amacıyla kullanılmaz."]],
         ["Çerezler", [
-          "Yalnızca **zorunlu çerezler** kullanılır: oturumunuzu açık tutan **avf_session** ve istek sahteciliğine karşı koruyan **avf_csrf**. Reklam, analiz veya izleme çerezi **kullanılmaz**; bu nedenle çerez bildirimi yalnızca bilgilendirme amaçlıdır. Dil ve çerez bildirimi tercihiniz tarayıcınızın yerel depolamasında tutulur.",
+          "Yalnızca **zorunlu çerezler** kullanılır: oturumunuzu açık tutan **avf_session** ve istek sahteciliğine karşı koruyan **avf_csrf**. Reklam veya üçüncü taraf izleme çerezi **kullanılmaz**. Dil ve çerez tercihiniz tarayıcınızın yerel depolamasında tutulur.",
+          "**Sayfa süresi ölçümü (isteğe bağlı):** Çerez bildiriminde “Kabul et”i seçerseniz hangi sayfada ne kadar süre geçirdiğiniz (yalnız sekme görünürken) **kendi sunucumuzda** ölçülür; oturum kimliği tarayıcı sekmenizde tutulur ve sunucuda özetlenerek saklanır. IP adresi, adres çubuğundaki sorgu değerleri ve kişiye özel sayfa kimlikleri kaydedilmez; giriş yaptıysanız kayıt hesabınıza bağlanır. Kayıtlar **90 gün** sonra silinir. “Yalnız gerekli”yi seçerseniz ölçüm yapılmaz; tercihinizi alt bilgideki **Çerez tercihleri** bağlantısından dilediğiniz an değiştirebilirsiniz.",
           "Yazı tipleri AlpveFit sunucularından yüklenir; bu amaçla üçüncü taraf bir hizmete istek gönderilmez.",
           "Kayıt ve giriş sırasında kötüye kullanımı önlemek için **Google reCAPTCHA** kullanılır; Google bu kapsamda cihaz ve tarayıcı bilgisi işleyebilir."]],
         ["Güvenlik", [
@@ -168,7 +171,8 @@
         ["General", [
           "Your privacy is our priority. How your personal data is processed is explained in detail in the **KVKK Notice**. Your data is **not sold** or used for advertising or profiling."]],
         ["Cookies", [
-          "Only **strictly necessary cookies** are used: **avf_session**, which keeps you signed in, and **avf_csrf**, which protects against request forgery. **No** advertising, analytics or tracking cookies are used; the cookie notice is therefore for information only. Your language and cookie-notice preferences are kept in your browser’s local storage.",
+          "Only **strictly necessary cookies** are used: **avf_session**, which keeps you signed in, and **avf_csrf**, which protects against request forgery. **No** advertising or third-party tracking cookies are used. Your language and cookie preferences are kept in your browser’s local storage.",
+          "**Page-time measurement (optional):** if you choose “Accept” in the cookie notice, the time you spend on each page (only while the tab is visible) is measured **on our own server**; a session ID is kept in your browser tab and stored on the server only in hashed form. IP addresses, query values in the address bar and personal page IDs are not recorded; if you are signed in, records are linked to your account. Records are deleted after **90 days**. If you choose “Necessary only”, nothing is measured; you can change your choice at any time via **Cookie preferences** in the footer.",
           "Fonts are served from AlpveFit’s own servers; no request is sent to a third-party service for this.",
           "**Google reCAPTCHA** is used during registration and sign-in to prevent abuse; Google may process device and browser information for this purpose."]],
         ["Security", [

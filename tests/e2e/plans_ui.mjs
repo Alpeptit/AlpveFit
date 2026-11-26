@@ -18,7 +18,7 @@ const b = await chromium.launch(); const errs = [];
 async function ctxOf(p, o) {
   const c = await b.newContext(o || { viewport: { width: 1360, height: 900 } });
   await c.addCookies(Object.entries(p.c.jar).map(([k, v]) => ({ name: k, value: v, url: BASE })));
-  await c.addInitScript(() => { try { localStorage.setItem("avf_lang", "tr"); localStorage.setItem("avf_cookie", "1"); } catch (e) {} });
+  await c.addInitScript(() => { try { localStorage.setItem("avf_lang", "tr"); localStorage.setItem("avf_cookie", JSON.stringify({ c: "ess", v: 2, t: 1 })); } catch (e) {} });
   const q = await c.newPage(); q.on("pageerror", (e) => errs.push(e.message)); q.on("dialog", (d) => d.accept()); return q;
 }
 async function openPlans(q) {

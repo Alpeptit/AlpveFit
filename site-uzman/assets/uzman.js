@@ -34,7 +34,7 @@
   function frame(content) {
     // v25: koçluk üyeleri ile forum üyeleri ayrı listelenir; forum yönetimi (şikâyet, yasak, kategori, kayıt) panelin içinde
     var tabs = [["uyeler", "users", me.role === "admin" ? "Koçluk Üyeleri" : "Üyeler"]];
-    if (me.role === "admin") tabs.push(["forum-uyeler", "award", "Forum Üyeleri"], ["siparisler", "tag", "Siparişler"], ["destek", "headset", "Destek Talepleri"], ["forum", "msg", "Forum Yönetimi"], ["denetim", "list", "Denetim Kaydı"]);
+    if (me.role === "admin") tabs.push(["forum-uyeler", "award", "Forum Üyeleri"], ["siparisler", "tag", "Siparişler"], ["destek", "headset", "Destek Talepleri"], ["forum", "msg", "Forum Yönetimi"], ["analiz", "chart", "Ziyaret Analizi"], ["denetim", "list", "Denetim Kaydı"]);
     var menu = h("nav", { class: "card menu", "aria-label": "Uzman menüsü" }, tabs.map(function (t) {
       var b = h("a", { href: "#", onclick: function (e) { e.preventDefault(); tab = t[0]; sel = null; render(); } }, AVF.icon(t[1]), t[2]); if (t[0] === tab) b.setAttribute("aria-current", "page"); return b;
     }));
@@ -50,6 +50,7 @@
     if (tab === "destek") return supportView(c);
     if (tab === "forum") return forumView(c);
     if (tab === "forum-uyeler") return forumMembersView(c);
+    if (tab === "analiz") return visitsView(c);
     if (tab === "denetim") return auditView(c);
     if (sel) return memberView(c, sel);
     return me.role === "admin" ? membersAdminView(c) : clientsView(c);
@@ -770,6 +771,54 @@
           return h("li", { style: "margin:4px 0" }, h("a", { href: "/forum/konu/" + t.id, target: "_blank", rel: "noopener", "data-notr": "", text: t.title }), h("small", { style: "color:var(--muted)" }, " · ", h("span", { text: t.reply_count + " yanıt · " + t.like_count + " beğeni · " + t.view_count + " görüntülenme" })));
         }))) : null);
     }, function (e) { err(box, e); });
+  }
+
+  // ---------- yönetici: ZİYARET ANALİZİ — kim, hangi sayfada, ne kadar süre (yalnız ölçüme izin veren ziyaretçiler) ----------
+  var vdays = 7;
+  function dur(ms) {
+    var sec = Math.round((ms || 0) / 1000), hh = Math.floor(sec / 3600), mm = Math.floor((sec % 3600) / 60), ss = sec % 60, EN = AVF.lang === "en";
+    if (hh) return hh + (EN ? " h " : " sa ") + mm + (EN ? " min" : " dk");
+    if (mm) return mm + (EN ? " min " : " dk ") + ss + (EN ? " s" : " sn");
+    return ss + (EN ? " s" : " sn");
+  }
+  var REF_TR = { direct: "Doğrudan", internal: "Site içi", search: "Arama motoru", social: "Sosyal medya", other: "Diğer siteler" };
+  function visitsView(c) {
+    var body = h("div", null, AVF.skeleton(3)), seg = h("div", { class: "fseg", role: "group", "aria-label": "Dönem" });
+    function paintSeg() { AVF.mount(seg, [[1, "Bugün"], [7, "7 gün"], [30, "30 gün"], [90, "90 gün"]].map(function (x) { return h("button", { type: "button", "data-days": String(x[0]), class: x[0] === vdays ? "on" : "", "aria-pressed": String(x[0] === vdays), onclick: function () { vdays = x[0]; paintSeg(); load(); } }, x[1]); })); }
+    paintSeg();
+    AVF.mount(c, h("h2", { class: "ptitle" }, AVF.icon("chart"), " Ziyaret Analizi"),
+      h("p", { class: "hint", style: "margin:-4px 0 12px", text: "Yalnız çerez bildiriminde ölçüme izin veren ziyaretçiler sayılır; sekme arka plandayken geçen süre sayılmaz. IP ve sorgu dizesi saklanmaz; kayıtlar 90 gün sonra silinir." }), seg, body);
+    function load() {
+      AVF.mount(body, AVF.skeleton(3));
+      api("GET", "/analytics?days=" + vdays).then(function (d) {
+        var sm = d.summary, tile = function (icon, label, val, sub) { return h("div", { class: "card ftile" }, h("span", { class: "tile" }, AVF.icon(icon)), h("div", null, h("small", { text: label }), h("b", { "data-notr": "", text: String(val) }), sub ? h("small", { "data-notr": "", text: sub }) : null)); };
+        if (!sm.views) return AVF.mount(body, AVF.state("chart", "Bu dönemde ölçüm yok", "Ziyaretçiler ölçüme izin verdikçe veriler burada görünür."));
+        var maxH = Math.max.apply(null, d.hours.map(function (x) { return x.views; }).concat([1])), H = {}; d.hours.forEach(function (x) { H[x.h] = x.views; });
+        AVF.mount(body,
+          h("div", { class: "fstat-g" }, tile("eye", "Görüntülenme", sm.views), tile("refresh", "Oturum", sm.sessions), tile("users", "Giriş yapmış üye", sm.members),
+            tile("clock", "Toplam süre", dur(sm.total_ms)), tile("pulse", "Sayfa başına ort.", dur(sm.avg_ms)), tile("phone", "Mobil", Math.round(sm.mobile / Math.max(1, sm.views) * 100) + "%", (AVF.lang === "en" ? "desktop " : "masaüstü ") + sm.desktop + " · " + (AVF.lang === "en" ? "mobile " : "mobil ") + sm.mobile)),
+          h("div", { class: "vgrid" },
+            h("section", { class: "card vcard" }, h("h3", { text: "Ziyaret saatleri" }), h("div", { class: "vhours", role: "img", "aria-label": "Saatlere göre görüntülenme" }, Array.from({ length: 24 }, function (_, i) {
+              var v = H[i] || 0; return h("div", { class: "vh", title: i + ":00 · " + v }, h("i", { style: "height:" + Math.round(v / maxH * 100) + "%" }), i % 3 === 0 ? h("small", { "data-notr": "", text: String(i) }) : h("small", { text: "" }));
+            }))),
+            h("section", { class: "card vcard" }, h("h3", { text: "Nereden geldiler" }), h("ul", { class: "vrefs" }, d.refs.filter(function (r) { return r.ref !== "internal"; }).map(function (r) { return h("li", null, h("span", { text: REF_TR[r.ref] || r.ref }), h("b", { "data-notr": "", text: String(r.sessions) })); })))),
+          h("section", { class: "card vcard" }, h("h3", { text: "Sayfalar — nerede ne kadar vakit geçirildi" }), h("div", { class: "tbl-w" }, h("table", { class: "t stackm" },
+            h("thead", null, h("tr", null, ["Sayfa", "Görüntülenme", "Oturum", "Toplam süre", "Ortalama"].map(function (x) { return h("th", { text: x }); }))),
+            h("tbody", null, d.pages.map(function (p) { return h("tr", null, h("td", { "data-l": "Sayfa" }, h("code", { "data-notr": "", text: p.path })), h("td", { "data-l": "Görüntülenme", "data-notr": "", text: String(p.views) }), h("td", { "data-l": "Oturum", "data-notr": "", text: String(p.sessions) }), h("td", { "data-l": "Toplam süre", text: dur(p.total_ms) }), h("td", { "data-l": "Ortalama", text: dur(p.avg_ms) })); }))))),
+          h("section", { class: "card vcard" }, h("h3", { text: "Üyeler — kim ne kadar vakit geçirdi" }), d.members.length ? h("div", { class: "tbl-w" }, h("table", { class: "t stackm" },
+            h("thead", null, h("tr", null, ["Üye", "Oturum", "Toplam süre", "En çok vakit", "Son görülme", "Cihaz"].map(function (x) { return h("th", { text: x }); }))),
+            h("tbody", null, d.members.map(function (m) { return h("tr", null, h("td", { "data-l": "Üye" }, h("b", { "data-notr": "", text: m.full_name }), h("small", { class: "sub", "data-notr": "", text: "@" + m.username }), m.coaching ? h("span", { class: "chip lime", text: "Koçluk üyesi" }) : null),
+              h("td", { "data-l": "Oturum", "data-notr": "", text: String(m.sessions) }), h("td", { "data-l": "Toplam süre", text: dur(m.total_ms) }), h("td", { "data-l": "En çok vakit" }, h("code", { "data-notr": "", text: m.top_path || "—" })),
+              h("td", { "data-l": "Son görülme", text: AVF.fmtDateTime(m.last_seen) }), h("td", { "data-l": "Cihaz", text: m.device === "mobile" ? "Mobil" : "Masaüstü" })); }))))
+            : h("p", { class: "hint", text: "Bu dönemde giriş yapmış üye ölçümü yok." })),
+          h("section", { class: "card vcard" }, h("h3", { text: "Son oturumlar — nasıl gezindi" }), h("ul", { class: "vsess" }, d.sessions.map(function (x) {
+            return h("li", null, h("div", { class: "vs-h" }, h("b", { "data-notr": "", text: x.username ? "@" + x.username : "" }), x.username ? null : h("b", { text: "Misafir" }),
+              h("small", { text: AVF.fmtDateTime(x.started) + " · " + (x.device === "mobile" ? "Mobil" : "Masaüstü") + " · " + (REF_TR[x.ref] || REF_TR.internal) + " · " + dur(x.total_ms) })),
+              h("ol", { class: "vs-p" }, x.paths.map(function (pp, i) { return h("li", null, h("code", { "data-notr": "", text: pp }), h("small", { text: dur(x.durations[i]) })); })));
+          }))));
+      }, function (e) { err(body, e); });
+    }
+    load();
   }
 
   // ---------- yönetici: DENETİM KAYDI (arama, filtre, her kaydın ayrıntısı) ----------
