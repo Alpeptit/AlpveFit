@@ -27,3 +27,11 @@ export function normalizeHit(b) {
   if (!Number.isFinite(ms) || ms < 300) return null;
   return { sid: b.sid, path, ms: Math.min(ms, MAX_MS), device: b.device === "mobile" ? "mobile" : "desktop", ref: REFS.includes(b.ref) ? b.ref : "other", lang: b.lang === "en" ? "en" : "tr" };
 }
+
+// v27 — paket → satın alma hunisi adımları (oturum başına her biri bir kez)
+export const FUNNEL_EVENTS = ["pkg_select", "order"];
+export function normalizeEvent(b) {
+  if (!b || typeof b !== "object") return null;
+  if (typeof b.sid !== "string" || !/^[a-f0-9]{32}$/.test(b.sid)) return null;
+  return FUNNEL_EVENTS.includes(b.event) ? { sid: b.sid, event: b.event } : null;
+}

@@ -1,5 +1,6 @@
 // Gelişim Günlüğüm: kilo ve vücut ölçüleri, gelişim fotoğrafları, haftalık seri.
-// Gizlilik: ölçüler YALNIZ üyenin kendisine görünür. Fotoğrafların görünürlüğünü üye seçer: yalnız ben (varsayılan),
+// Gizlilik: ölçüler varsayılan olarak YALNIZ üyenin kendisine görünür; üye isterse kilo ve bel ölçüsünü kendisine atanmış uzmanla
+// (ve yöneticiyle) paylaşır — varsayılan kapalı, istediği an kapatır (erişim anında kesilir). Fotoğraflar ve notlar paylaşılmaz. Fotoğrafların görünürlüğünü üye seçer: yalnız ben (varsayılan),
 // arkadaşlarım ya da forum üyeleri (kuralları onaylamış, uzaklaştırılmamış üyeler). Fotoğraflardan konum ve cihaz bilgisi silinir.
 import express from "express";
 import { withAsyncErrors } from "../utils/asyncRoutes.js";
@@ -9,6 +10,7 @@ import { checkHourlyActionLimit } from "../utils/rateLimit.js";
 import { imageInfo } from "../utils/forumRules.js";
 import { stripImageMetadata } from "../utils/imageClean.js";
 import { raw, sendAttachment } from "./uploads.js";
+import { logAudit } from "../utils/auditLog.js";
 
 export const journalRouter = withAsyncErrors(express.Router());
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,6 +50,10 @@ async function loadAll(userId) {
   const back = (n) => { const d = new Date(today + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
   const w = (from, to) => entries.filter((e) => e.weight != null && e.date > back(from) && e.date <= back(to)).map((e) => e.weight);
   const ws = entries.filter((e) => e.weight != null);
+  const sh = (await pool.query(
+    `SELECT u.journal_share_coach AS on, u.journal_shared_at AS since,
+            (SELECT coalesce(json_agg(cu.full_name ORDER BY cu.full_name), '[]') FROM coach_clients c JOIN users cu ON cu.id = c.coach_id WHERE c.member_id = u.id) AS coaches
+       FROM users u WHERE u.id = $1`, [userId])).rows[0] || {};
   const diary = (await pool.query(
     `SELECT t.id FROM forum_topics t JOIN forum_categories c ON c.id = t.category_id WHERE t.author_id = $1 AND c.slug = 'gelisim-gunlukleri' AND t.hidden_at IS NULL ORDER BY t.created_at DESC LIMIT 1`, [userId])).rows[0];
   return {
@@ -55,6 +61,7 @@ async function loadAll(userId) {
     stats: { streakWeeks: streakWeeks([...entries.map((e) => e.date), ...photos.map((p) => p.date)]), thisWeek: avg(w(7, 0)), lastWeek: avg(w(14, 7)),
       start: ws.length ? ws[ws.length - 1].weight : null, latest: ws.length ? ws[0].weight : null, count: entries.length },
     diaryTopicId: diary ? diary.id : null, photoMax: PHOTO_MAX, labels: LABEL,
+    share: { coach: !!sh.on, since: sh.since || null, coaches: sh.coaches || [] },
   };
 }
 
@@ -97,6 +104,29 @@ journalRouter.delete("/journal/entries/:id", requireAuth, async (req, res) => {
   await pool.query(`DELETE FROM body_logs WHERE id = $1 AND user_id = $2`, [req.params.id, req.user.sub]);
   res.json(await loadAll(req.user.sub));
 });
+
+// Kilo ve bel ölçüsünü uzmanla paylaşma izni (yalnız üyenin kendisi değiştirir; denetim kaydına yazılır).
+journalRouter.put("/journal/share", requireAuth, async (req, res) => {
+  const on = (req.body || {}).coach;
+  if (typeof on !== "boolean") return res.status(400).json({ error: "Geçersiz seçim." });
+  const r = await pool.query(
+    `UPDATE users SET journal_share_coach = $2, journal_shared_at = CASE WHEN $2 THEN coalesce(CASE WHEN journal_share_coach THEN journal_shared_at END, now()) ELSE NULL END
+      WHERE id = $1 RETURNING id`, [req.user.sub, on]);
+  if (!r.rows.length) return res.status(404).json({ error: "Hesap bulunamadı." });
+  await logAudit(req.user.sub, on ? "journal_share_on" : "journal_share_off", "user", req.user.sub, {}, String(req.ip || "").slice(0, 64));
+  res.json(await loadAll(req.user.sub));
+});
+
+/** Uzman görünümü: üye izin verdiyse son 365 günün kilo ve bel ölçüleri (fotoğraf ve not yok). İzin yoksa veri dönmez. */
+export async function sharedTrend(memberId) {
+  const u = (await pool.query(`SELECT journal_share_coach, journal_shared_at FROM users WHERE id = $1`, [memberId])).rows[0];
+  if (!u || !u.journal_share_coach) return { shared: false };
+  const entries = (await pool.query(
+    `SELECT to_char(logged_on, 'YYYY-MM-DD') AS date, weight_kg::float AS weight, waist_cm::float AS waist
+       FROM body_logs WHERE user_id = $1 AND logged_on >= (now() AT TIME ZONE 'Europe/Istanbul')::date - 365 AND (weight_kg IS NOT NULL OR waist_cm IS NOT NULL)
+      ORDER BY logged_on ASC LIMIT 400`, [memberId])).rows;
+  return { shared: true, since: u.journal_shared_at, entries };
+}
 
 // Fotoğraf: PNG / JPG, en fazla 4 MB, en az 240 piksel; konum ve cihaz bilgisi silinerek saklanır.
 journalRouter.post("/journal/photos", requireAuth, raw, async (req, res) => {

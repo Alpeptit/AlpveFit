@@ -14,6 +14,7 @@ import { logAudit } from "../utils/auditLog.js";
 import { sendMail } from "../utils/mailer.js";
 import { planPublishedMail, ticketReplyMail, mailLang } from "../utils/emailTemplates.js";
 import { markOrderPaid } from "../services/orderFulfilment.js";
+import { openDeliveries } from "../services/deliveryReminder.js";
 import { PROFILE_COLS } from "./profile.js";
 import { FILE_COLS, sendAttachment, withAttachments, checkTicketAttachments, linkAttachments } from "./uploads.js";
 import { forumLevel, LEVELS } from "../utils/forumLevels.js";
@@ -22,6 +23,7 @@ import { validatePlanData, planDataHasContent } from "../utils/planData.js";
 import { notePlanChange } from "../utils/planNotify.js";
 import { syncLevel } from "../utils/levelSync.js";
 import { allowedExercises, memberLogs } from "./progress.js";
+import { sharedTrend } from "./journal.js";
 import { catalog as planCatalog } from "../utils/planCatalog.js";
 import { emit } from "../utils/live.js";
 
@@ -92,6 +94,20 @@ adminRouter.get("/clients", async (req, res) => {
     admin ? [ID_RE.test(String(req.query.id || "")) ? String(req.query.id) : ""] : [req.user.sub]   // ?id= : tek üye (yönetim listesinden açılır)
   );
   res.json(rows);
+});
+
+// ---------- üyenin paylaştığı gelişim (kilo / bel) — yalnız üye izin verdiyse; erişim denetim kaydına yazılır ----------
+adminRouter.get("/clients/:id/journal", async (req, res) => {
+  if (!ID_RE.test(req.params.id) || !(await canAccessMember(req, req.params.id))) return res.status(404).json({ error: "Üye bulunamadı." });
+  res.setHeader("Cache-Control", "no-store");
+  const out = await sharedTrend(req.params.id);
+  if (out.shared) await logAudit(req.user.sub, "journal_trend_view", "user", req.params.id, { count: out.entries.length }, ip(req));
+  res.json(out);
+});
+
+// ---------- teslim bekleyen planlar (yönetici: tümü; uzman: yalnız kendisine atanmış üyeler) ----------
+adminRouter.get("/due-plans", async (req, res) => {
+  res.json(await openDeliveries(req.adminRole, req.user.sub));
 });
 
 // ---------- planlar ----------
@@ -593,6 +609,7 @@ adminRouter.patch("/orders/:id/delivery", requireAdmin, async (req, res) => {
   const { rows } = await pool.query(
     `UPDATE orders SET delivery_status = $2, delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE NULL END WHERE id = $1 AND status = 'paid' RETURNING id, user_id, order_number`, [req.params.id, st]);
   if (!rows[0]) return res.status(409).json({ error: "Teslim durumu yalnız ödenmiş siparişlerde değiştirilebilir." });
+  if (st === "delivered") await pool.query(`DELETE FROM notifications WHERE order_id = $1 AND type = 'plan_due' AND read_at IS NULL`, [rows[0].id]).catch(() => {});
   if (st === "delivered" && rows[0].user_id) await pool.query(`INSERT INTO notifications (user_id, type, text, order_id) VALUES ($1, 'order_paid', $2, $3)`,
     [rows[0].user_id, `${rows[0].order_number} numaralı siparişinizin planları teslim edildi.`, rows[0].id]).catch(() => {});
   await logAudit(req.user.sub, "order_delivery_set", "order", req.params.id, { status: st }, ip(req));

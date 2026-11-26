@@ -31,6 +31,7 @@
   }
   AVF._checkBuild = function () { buildAt = 0; checkBuild(); };
   function go(path, replace) {
+    if (/^\/uzman(\/|$)/.test(path)) { location.assign(path); return; }   // uzman paneli ayrı sayfadır
     if (stale) { if (replace) location.replace(path); else location.assign(path); return; }
     checkBuild();
     var from = location.pathname, y = window.pageYOffset || 0;
@@ -175,9 +176,10 @@
     if (n.type === "ticket" && d.ticketId) return "/panel/destek/" + d.ticketId;
     if ((n.type === "order_paid" || n.type === "order_payment") && n.order_id) return "/panel/siparis/" + n.order_id;
     if (n.type === "security") return "/panel/hesap";
+    if (n.type === "plan_due") return "/uzman";
     return "/panel/bildirimler";
   }
-  function notifIcon(n) { return n.type === "security" ? "shield" : n.type === "ticket" ? "ticket" : n.type.indexOf("order") === 0 ? "card" : n.type === "level_up" ? "award" : n.type === "friend" ? "users" : n.type === "forum" ? "msg" : "list"; }
+  function notifIcon(n) { return n.type === "plan_due" ? "clock" : n.type === "security" ? "shield" : n.type === "ticket" ? "ticket" : n.type.indexOf("order") === 0 ? "card" : n.type === "level_up" ? "award" : n.type === "friend" ? "users" : n.type === "forum" ? "msg" : "list"; }
   // Bildirimler iki gruptadır: "Koçluk ve Sistem" (plan, sipariş, destek, güvenlik) ve "Forum" (forum, seviye, arkadaşlık).
   var NGROUPS = [["coach", "Koçluk ve Sistem", "list"], ["forum", "Forum", "msg"]];
   function ngroup(n) { return n.group || (n.type === "forum" || n.type === "level_up" || n.type === "friend" ? "forum" : "coach"); }
@@ -642,6 +644,8 @@
     if (n.type === "ticket") return h("div", { text: n.text });
     if (n.type === "plan_published" && d.kind && AVF.KIND[d.kind]) return h("div", {}, h("span", {}, "Yeni plan yayınlandı: "), h("span", {}, AVF.KIND[d.kind].label), h("span", {}, " — "), h("span", { "data-notr": "", text: d.title || "" }));
     if (n.type === "plan_updated") return h("div", {}, h("span", { text: "Planlarınız güncellendi" }), d.kinds && d.kinds.length ? h("small", { class: "nk", text: d.kinds.filter(function (k) { return AVF.KIND[k]; }).map(function (k) { return AVF.t(AVF.KIND[k].label); }).join(" · ") }) : null);
+    if (n.type === "plan_due") return h("div", {}, h("span", { text: d.stage === "overdue" ? "Plan teslim zamanı geçti" : "Plan teslim zamanı yaklaşıyor" }),
+      h("small", { class: "nk", "data-notr": "", text: [d.orderNumber, d.memberName].filter(Boolean).join(" · ") }));
     if (n.type === "level_up" && d.name) return h("div", {}, h("span", { text: "Tebrikler! Forum seviyeniz yükseldi: " }), h("b", { text: d.name }));
     if (n.type === "friend") return h("div", { text: n.text });
     // forum bildirimi: konu başlığı kullanıcı içeriğidir (çevrilmez); moderasyon gerekçesi ve toplu sayı ayrıca gösterilir
@@ -747,6 +751,14 @@
     try { if (navigator.sendBeacon && navigator.sendBeacon("/api/analytics/hit", new Blob([body], { type: "text/plain" }))) return; } catch (e) { /* aşağıda */ }
     try { fetch("/api/analytics/hit", { method: "POST", body: body, headers: { "Content-Type": "text/plain" }, credentials: "same-origin", keepalive: true }).catch(function () {}); } catch (e) { /* yok say */ }
   }
+  // Paket → satın alma hunisi adımı: yalnız ölçüm izniyle, oturumda her adım bir kez (sayfa ölçümüyle aynı oturum kimliği).
+  AVF.trackEvent = function (name) {
+    if (!AVF.analyticsOk()) return;
+    try { if (sessionStorage.getItem("avf_ev_" + name)) return; sessionStorage.setItem("avf_ev_" + name, "1"); } catch (e) { /* yok say */ }
+    var body = JSON.stringify({ sid: trkSid(), event: name });
+    try { if (navigator.sendBeacon && navigator.sendBeacon("/api/analytics/event", new Blob([body], { type: "text/plain" }))) return; } catch (e) { /* aşağıda */ }
+    try { fetch("/api/analytics/event", { method: "POST", body: body, headers: { "Content-Type": "text/plain" }, credentials: "same-origin", keepalive: true }).catch(function () {}); } catch (e) { /* yok say */ }
+  };
   function trackFlush() {
     if (!TRK.path) return;
     var ms = TRK.acc + (TRK.t0 ? Date.now() - TRK.t0 : 0), p = TRK.path;

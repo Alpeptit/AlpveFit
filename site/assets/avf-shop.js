@@ -96,11 +96,12 @@
       lbl(chk3, [lnk("kvkk", "KVKK Aydınlatma Metni"), "’ni okudum."]), err, go);
     ov = h("div", { class: "ov", onmousedown: function (e) { if (e.target === ov) close(); } }, dlg);
     document.body.appendChild(ov); AVF.lockScroll(true); document.addEventListener("keydown", key, true);
+    if (AVF.trackEvent) AVF.trackEvent("pkg_select");
     go.addEventListener("click", function () {
       err.style.display = "none";
       if (!chk1.checked || (p.pharmacology && !chk2.checked) || !chk3.checked) { err.textContent = "Devam etmek için tüm onay kutularını işaretlemeniz gerekir."; err.style.display = ""; return; }
       AVF.busy(go, true, "Hazırlanıyor…");
-      AVF.api("POST", "/orders", { packageKey: p.key, weeks: opt.weeks, consent: true }).then(function (r) { close(); AVF.go("/panel/siparis/" + r.order.id); },
+      AVF.api("POST", "/orders", { packageKey: p.key, weeks: opt.weeks, consent: true }).then(function (r) { if (AVF.trackEvent) AVF.trackEvent("order"); close(); AVF.go("/panel/siparis/" + r.order.id); },
         function (e) { AVF.busy(go, false); err.textContent = AVF.errText(e); err.style.display = ""; });
     });
   };

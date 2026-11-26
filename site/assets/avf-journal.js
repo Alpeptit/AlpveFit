@@ -30,6 +30,8 @@
     return el;
   }
 
+  AVF.journalChart = chart;   // uzman paneli: üyenin paylaştığı kilo / bel grafiği aynı çizimle gösterilir
+
   /** İki fotoğrafı üst üste koyup kaydırıcıyla karşılaştırma. */
   function compare(a, b) {
     var range = h("input", { type: "range", min: "0", max: "100", value: "50", class: "jr-rng", "aria-label": "Karşılaştırma kaydırıcısı" });
@@ -43,7 +45,7 @@
   AVF.journalView = function (content) {
     var D = null, metric = "weight", span = 90, cmpSel = [];
     var root = h("div", { class: "jr" });
-    AVF.mount(content, h("h2", { class: "ptitle", text: "Gelişim Günlüğüm" }), h("p", { class: "psub", text: "Kilonu, ölçülerini ve fotoğraflarını tek yerde takip et. Ölçülerin yalnız sana görünür." }), root);
+    AVF.mount(content, h("h2", { class: "ptitle", text: "Gelişim Günlüğüm" }), h("p", { class: "psub", text: "Kilonu, ölçülerini ve fotoğraflarını tek yerde takip et. Ölçülerin yalnız sana görünür; istersen uzmanınla paylaşabilirsin." }), root);
     AVF.mount(root, AVF.skeleton(3));
     function load() { return AVF.api("GET", "/journal").then(function (d) { D = d; paint(); }, function (e) { AVF.mount(root, AVF.state("alert", "Yüklenemedi", AVF.errText(e))); }); }
     function msg(box, t, bad) { AVF.mount(box, t ? h("div", { class: "note" + (bad ? " err" : " ok"), role: bad ? "alert" : "status", text: t }) : null); }
@@ -163,7 +165,24 @@
         } }, AVF.icon("send", "bico"), D.diaryTopicId ? "Günlüğüme ekle" : "Günlüğümü başlat"));
     }
 
-    function paint() { AVF.mount(root, stats(), h("div", { class: "jr-cols" }, form(), share()), graph(), photos(), list()); }
+    // Uzmanla paylaşım: varsayılan kapalı; açıkken yalnız kilo ve bel ölçüsü uzmana (ve yöneticiye) grafik olarak görünür.
+    function coachShare() {
+      var sh = D.share || { coach: false, coaches: [] }, on = !!sh.coach, btn;
+      var who = sh.coaches && sh.coaches.length ? [h("span", { text: "Uzmanın" }), h("span", { "data-notr": "", text: ": " + sh.coaches.join(", ") })] : [h("span", { text: "Sana henüz uzman atanmadı; açarsan atandığında görebilir." })];
+      btn = h("button", { class: on ? "btn ghost sm" : "btn sm", type: "button", "data-share": on ? "off" : "on", onclick: function () {
+        (on ? Promise.resolve(true) : AVF.confirmDialog({ icon: "users", title: "Ölçülerin uzmanınla paylaşılsın mı?", text: "Kilo ve bel ölçülerin, sana atanmış uzman ve yönetici tarafından grafik olarak görülebilir. Fotoğrafların ve notların paylaşılmaz. İstediğin an kapatabilirsin.", confirm: "Paylaş", cancel: "Vazgeç" }))
+          .then(function (y) {
+            if (!y) return; AVF.busy(btn, true);
+            AVF.api("PUT", "/journal/share", { coach: !on }).then(function (d) { D = d; paint(); AVF.toast(on ? "Paylaşım kapatıldı. Uzmanın artık ölçülerini göremez." : "Ölçülerin uzmanınla paylaşılıyor."); }, function (er) { AVF.busy(btn, false); AVF.toast(AVF.errText(er), "err"); });
+          });
+      } }, AVF.icon(on ? "lock" : "users", "bico"), on ? "Paylaşımı kapat" : "Uzmanımla paylaş");
+      return h("section", { class: "card jr-share", id: "jr-share" }, h("span", { class: "tile" }, AVF.icon(on ? "users" : "lock")), h("div", { class: "grow" },
+        h("h3", { text: on ? "Ölçülerin uzmanınla paylaşılıyor" : "Ölçülerimi uzmanımla paylaş" }),
+        h("p", { class: "hint", text: on ? "Kilo ve bel ölçülerin uzmanının panelinde grafik olarak görünür; böylece planını gelişimine göre ayarlayabilir. Fotoğraflar ve notlar paylaşılmaz." : "Kapalı: ölçülerini yalnız sen görürsün. Açarsan kilo ve bel ölçülerin uzmanının panelinde grafik olarak görünür; fotoğraflar ve notlar paylaşılmaz." }),
+        h("p", { class: "hint jr-who" }, who, on && sh.since ? [h("span", { text: " · " }), h("span", { text: "Paylaşım tarihi" }), h("span", { "data-notr": "", text: ": " + AVF.fmtDate(sh.since) })] : null)), btn);
+    }
+
+    function paint() { AVF.mount(root, stats(), h("div", { class: "jr-cols" }, form(), share()), coachShare(), graph(), photos(), list()); }
     load();
   };
 })();

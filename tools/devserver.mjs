@@ -73,6 +73,7 @@ http.createServer(async (rq, rs) => {
     if (path === "/__ai") { rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify(globalThis.__AI_REQS || [])); }
     if (path === "/__mails") { const to = url.searchParams.get("to"); const m = [...mails].reverse().find((x) => !to || x.to === to); rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify(m || null)); }
     if (path === "/__digest") { const { runDigest } = await import("../src/utils/digest.js"); const r = await runDigest(Date.now(), { force: true }); rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify(r)); }
+    if (path === "/__delivery-reminders") { const { runDeliveryReminders } = await import("../src/services/deliveryReminder.js"); const n = await runDeliveryReminders(); rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify({ n })); }
     if (path === "/__flush-plan-mails") { const { flushPlanMails } = await import("../src/utils/planNotify.js"); const n = await flushPlanMails(); rs.writeHead(200, { "content-type": "application/json" }); return rs.end(JSON.stringify({ n })); }
     if (path === "/api/health") { rs.writeHead(200, { "content-type": "application/json" }); return rs.end('{"ok":true}'); }
     if (path === "/api/config") { rs.writeHead(200, { "content-type": "application/json" }); return rs.end('{"recaptchaSiteKey":""}'); }

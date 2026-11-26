@@ -305,6 +305,21 @@ export function orderPaidMail(lang, o) {
   return { subject: subj(en ? "Payment Confirmed" : "Ödeme Onaylandı"), html, text };
 }
 
+/** Uzman / yönetici: plan teslim zamanı yaklaşan ya da geçen siparişler (bir turdaki tüm siparişler tek e-postada; üye adı yok). */
+export function planDueMail(lang, o = {}) {
+  const lg = L(lang), en = lg === "en", base = siteBase();
+  const items = (o.items || []).slice(0, 30), late = items.some((i) => i.overdue);
+  const t = late ? (en ? "Plan delivery time has passed" : "Plan teslim zamanı geçti") : (en ? "Plan delivery time is approaching" : "Plan teslim zamanı yaklaşıyor");
+  const blocks = [
+    p(esc(en ? "The following paid orders are not marked as delivered yet. Publish the plans and set the delivery status in the panel."
+             : "Aşağıdaki ödenmiş siparişler henüz “Teslim edildi” olarak işaretlenmedi. Planları yayınlayıp panelden teslim durumunu güncelleyin.")),
+    rows(items.map((i) => [i.orderNumber, (i.overdue ? (en ? "Overdue · " : "Gecikti · ") : (en ? "Due · " : "Teslim · ")) + fmtDate(i.dueAt, lg)])),
+    button(en ? "Open the panel" : "Paneli aç", base ? `${base}/uzman` : ""),
+  ];
+  const { html, text } = layout(lg, { preheader: t, eyebrow: en ? "Delivery reminder" : "Teslim hatırlatması", title: t, blocks });
+  return { subject: subj(late ? (en ? "Plan Delivery Overdue" : "Plan Teslimi Gecikti") : (en ? "Plan Delivery Approaching" : "Plan Teslimi Yaklaşıyor")), html, text };
+}
+
 /** Hesap etkinleştirildi (kayıt doğrulaması tamamlandı). */
 export function welcomeMail(lang, o = {}) {
   const lg = L(lang), en = lg === "en", base = siteBase();

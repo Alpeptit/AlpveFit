@@ -23,6 +23,7 @@ export async function cleanup() {
     r.chats = (await pool.query(`DELETE FROM live_chats WHERE status = 'closed' AND last_message_at < ${d}`)).rowCount;
     r.ai = (await pool.query(`DELETE FROM ai_messages WHERE created_at < now() - interval '90 days'`)).rowCount;   // koçluk asistanı geçmişi: 90 gün
     r.pageViews = (await pool.query(`DELETE FROM page_views WHERE created_at < now() - interval '90 days'`)).rowCount;   // site kullanım ölçümü: 90 gün
+    r.siteEvents = (await pool.query(`DELETE FROM site_events WHERE created_at < now() - interval '90 days'`)).rowCount;   // satın alma hunisi adımları: 90 gün
     r.offline = (await pool.query(`DELETE FROM support_offline_messages WHERE created_at < ${d}`)).rowCount;
     r.pendingFiles = (await pool.query(`DELETE FROM attachments WHERE scope = 'ticket' AND message_id IS NULL AND created_at < now() - interval '1 day'`)).rowCount;
     r.tickets = (await pool.query(`DELETE FROM tickets WHERE status = 'closed' AND updated_at < ${d}`)).rowCount;

@@ -58,6 +58,8 @@
 
   // ---------- üyeler ----------
   function clientsView(c) {
+    var due = duePanel(), body = h("div");
+    AVF.mount(c, due, body); c = body;
     AVF.mount(c, h("h2", { class: "ptitle", text: "Üyeler" }), AVF.skeleton(3));
     api("GET", "/clients").then(function (rows) {
       if (!rows.length) return AVF.mount(c, h("h2", { class: "ptitle", text: "Üyeler" }), AVF.state("users", me.role === "admin" ? "Henüz üye yok" : "Size atanmış üye yok", me.role === "admin" ? "" : "Yönetici size üye atadığında burada görünür."));
@@ -187,6 +189,10 @@
     var pgBox = h("div");
     infoBox.parentNode.insertBefore(AVF.accordion({ icon: "chart", title: AVF.t("Ağırlık takibi"), sub: AVF.t("Üyenin koçun hareketleri için girdiği ağırlık kayıtları"), content: [pgBox] }), box);
     AVF.progressView(pgBox, { admin: true, memberId: m.id });
+    // Gelişim (kilo / bel): yalnız üye "Ölçülerimi uzmanımla paylaş" seçeneğini açtıysa; açılınca yüklenir (her görüntüleme denetim kaydına yazılır)
+    var trBox = h("div", { class: "tr-box" }, AVF.skeleton(2)), trLoaded = false;
+    infoBox.parentNode.insertBefore(AVF.accordion({ icon: "scale", title: AVF.t("Gelişim: kilo ve bel"), sub: AVF.t("Üyenin Gelişim Günlüğü'nde girdiği ölçüler — yalnız üye paylaşmayı seçtiyse"),
+      onOpen: function () { if (!trLoaded) { trLoaded = true; trendView(trBox, m); } }, content: [trBox] }), box);
 
     function newPlanBtn() {
       var avail = KINDS.filter(function (k) { return me.role === "admin" || me.kinds.indexOf(k) >= 0; });
@@ -271,6 +277,62 @@
     load();
   }
 
+  // ---------- üyenin paylaştığı gelişim grafiği ----------
+  function nf(n, u) { return n == null ? "—" : String(Math.round(n * 10) / 10).replace(".", ",") + (u ? " " + u : ""); }
+  function trendView(box, m) {
+    api("GET", "/clients/" + m.id + "/journal").then(function (d) {
+      if (!d.shared) return AVF.mount(box, AVF.state("lock", "Üye ölçülerini paylaşmıyor", "Üye, panelindeki Gelişim Günlüğüm bölümünden “Ölçülerimi uzmanımla paylaş” seçeneğini açtığında kilo ve bel grafiği burada görünür. Fotoğraflar ve notlar paylaşılmaz."));
+      var metric = "weight";
+      var tabs = h("div", { class: "fseg", role: "group", "aria-label": "Ölçü" }), out = h("div");
+      function series(k) { return d.entries.filter(function (e) { return e[k] != null; }).map(function (e) { return { date: e.date, v: e[k] }; }); }
+      function stat(label, val, sub) { return h("div", { class: "tr-st" }, h("small", { text: label }), h("b", { "data-notr": "", text: val }), sub ? h("span", { "data-notr": "", text: sub }) : null); }
+      function paint() {
+        AVF.mount(tabs, [["weight", "Kilo"], ["waist", "Bel"]].map(function (k) { return h("button", { type: "button", class: metric === k[0] ? "on" : "", "data-m": k[0], "aria-pressed": metric === k[0] ? "true" : "false", onclick: function () { metric = k[0]; paint(); } }, k[1]); }));
+        var pts = series(metric), unit = metric === "weight" ? "kg" : "cm";
+        if (!pts.length) return AVF.mount(out, AVF.state("chart", "Henüz kayıt yok", metric === "weight" ? "Üye henüz kilo kaydı girmedi." : "Üye henüz bel ölçüsü girmedi."));
+        var first = pts[0], last = pts[pts.length - 1], cut = new Date(Date.parse(last.date) - 30 * 864e5).toISOString().slice(0, 10);
+        var base30 = pts.filter(function (p) { return p.date >= cut; })[0], d30 = base30 && base30 !== last ? last.v - base30.v : null, tot = pts.length > 1 ? last.v - first.v : null;
+        function sign(x) { return x == null ? "—" : (x > 0 ? "+" : "") + nf(x, unit); }
+        AVF.mount(out, h("div", { class: "tr-stats" }, stat("Son kayıt", nf(last.v, unit), AVF.fmtDate(last.date)), stat("Son 30 gün", sign(d30), null), stat("İlk kayıttan beri", sign(tot), AVF.fmtDate(first.date)), stat("Kayıt", String(pts.length), null)),
+          AVF.journalChart ? AVF.journalChart(pts, unit) : null,
+          h("p", { class: "hint", text: "Kalın çizgi 7 günlük ortalamadır. Üye paylaşımı kapatırsa bu grafik hemen gizlenir." }));
+      }
+      AVF.mount(box, h("p", { class: "hint", "data-notr": "", text: AVF.t("Paylaşım tarihi") + ": " + AVF.fmtDate(d.since) }), tabs, out); paint();
+    }, function (e) { AVF.mount(box, AVF.state("alert", "Yüklenemedi", AVF.errText(e))); });
+  }
+
+  // ---------- teslim bekleyen planlar (ödenmiş, "Teslim edildi" işaretlenmemiş) ----------
+  function dueLeft(iso) {
+    var ms = Date.parse(iso) - Date.now(), hrs = Math.round(Math.abs(ms) / 36e5);
+    var span = hrs < 1 ? "1 saatten az" : hrs < 48 ? hrs + " saat" : Math.round(hrs / 24) + " gün";
+    return ms < 0 ? { cls: "late", text: span + " gecikti" } : { cls: ms < 6 * 36e5 ? "soon" : "", text: span + " kaldı" };
+  }
+  function duePanel() {
+    var box = h("section", { class: "card due", hidden: "" });
+    api("GET", "/due-plans").then(function (rows) {
+      if (!rows.length) return;
+      var late = rows.filter(function (r) { return Date.parse(r.plans_due_at) < Date.now(); }).length;
+      box.removeAttribute("hidden");
+      AVF.mount(box, h("div", { class: "due-h" }, h("span", { class: "tile" }, AVF.icon("clock")), h("div", null, h("h3", { text: "Teslim bekleyen planlar" }),
+        h("p", { class: "hint", text: rows.length + " sipariş" + (late ? " · " + late + " gecikmiş" : "") + " · Planları yayınlayıp siparişi “Teslim edildi” olarak işaretleyin." }))),
+        h("div", { class: "due-l" }, rows.map(function (r) {
+          var t = dueLeft(r.plans_due_at), st = DST[r.delivery_status] || DST.waiting;
+          return h("button", { type: "button", class: "due-i " + t.cls, disabled: r.member_id ? null : "", onclick: function () { openMember(r.member_id); } },
+            h("span", { class: "due-m" }, h("b", { "data-notr": "", text: r.member_name || "Silinmiş üye" }), h("small", { "data-notr": "", text: [r.order_number, pkgText(r), st[0], "Yayınlanan plan: " + r.plans_published].join(" · ") })),
+            h("span", { class: "due-t" }, h("b", { text: t.text }), h("small", { text: AVF.fmtDateTime(r.plans_due_at) })));
+        })));
+    }, function () {});
+    return box;
+  }
+  function openMember(id) {
+    if (!id) return;
+    api("GET", "/clients" + (me.role === "admin" ? "?id=" + encodeURIComponent(id) : "")).then(function (rows) {
+      var r = rows.filter(function (x) { return x.id === id; })[0];
+      if (!r) return AVF.toast("Üye bulunamadı.", "err");
+      tab = "uyeler"; sel = r; render(); window.scrollTo(0, 0);
+    }, function (e) { AVF.toast(AVF.errText(e), "err"); });
+  }
+
   // Yönetici: üyenin erişim izinleri + uzman ataması
   function adminTools(box, m) {
     var access = (m.access || []).slice();
@@ -333,7 +395,7 @@
       { key: "totp", type: "select", label: "Google Auth", icon: "key", options: [["", "Tümü"], ["on", "Açık"], ["off", "Kapalı"]] },
       { key: "role", type: "select", label: "Yetki", icon: "cog", options: [["", "Tümü"], ["user", "Üye"], ["coach", "Uzman"], ["admin", "Yönetici"]] },
       { key: "sort", type: "select", label: "Sırala", icon: "list", options: [["new", "En yeni kayıt"], ["old", "En eski kayıt"], ["name", "Ada göre"], ["reports", "En çok şikâyet"]] }], load);
-    AVF.mount(c, h("div", { class: "row between", style: "margin-bottom:12px" }, h("h2", { class: "ptitle", style: "margin:0" }, AVF.icon("users"), " Koçluk Üyeleri"), count),
+    AVF.mount(c, duePanel(), h("div", { class: "row between", style: "margin-bottom:12px" }, h("h2", { class: "ptitle", style: "margin:0" }, AVF.icon("users"), " Koçluk Üyeleri"), count),
       h("p", { class: "hint", style: "margin:-4px 0 12px", text: "Paketi, plan erişimi ya da koç ataması olan üyeler. Forumdaki etkinlik ve forum yasakları Forum Üyeleri bölümündedir." }), bar, list);
     if (!forumLevels) api("GET", "/forum/levels").then(function (l) { forumLevels = l; }, function () {});
     function load(v) {
@@ -792,11 +854,12 @@
       AVF.mount(body, AVF.skeleton(3));
       api("GET", "/analytics?days=" + vdays).then(function (d) {
         var sm = d.summary, tile = function (icon, label, val, sub) { return h("div", { class: "card ftile" }, h("span", { class: "tile" }, AVF.icon(icon)), h("div", null, h("small", { text: label }), h("b", { "data-notr": "", text: String(val) }), sub ? h("small", { "data-notr": "", text: sub }) : null)); };
-        if (!sm.views) return AVF.mount(body, AVF.state("chart", "Bu dönemde ölçüm yok", "Ziyaretçiler ölçüme izin verdikçe veriler burada görünür."));
+        if (!sm.views) return AVF.mount(body, AVF.state("chart", "Bu dönemde ölçüm yok", "Ziyaretçiler ölçüme izin verdikçe veriler burada görünür."), funnelView(d));
         var maxH = Math.max.apply(null, d.hours.map(function (x) { return x.views; }).concat([1])), H = {}; d.hours.forEach(function (x) { H[x.h] = x.views; });
         AVF.mount(body,
           h("div", { class: "fstat-g" }, tile("eye", "Görüntülenme", sm.views), tile("refresh", "Oturum", sm.sessions), tile("users", "Giriş yapmış üye", sm.members),
             tile("clock", "Toplam süre", dur(sm.total_ms)), tile("pulse", "Sayfa başına ort.", dur(sm.avg_ms)), tile("phone", "Mobil", Math.round(sm.mobile / Math.max(1, sm.views) * 100) + "%", (AVF.lang === "en" ? "desktop " : "masaüstü ") + sm.desktop + " · " + (AVF.lang === "en" ? "mobile " : "mobil ") + sm.mobile)),
+          funnelView(d),
           h("div", { class: "vgrid" },
             h("section", { class: "card vcard" }, h("h3", { text: "Ziyaret saatleri" }), h("div", { class: "vhours", role: "img", "aria-label": "Saatlere göre görüntülenme" }, Array.from({ length: 24 }, function (_, i) {
               var v = H[i] || 0; return h("div", { class: "vh", title: i + ":00 · " + v }, h("i", { style: "height:" + Math.round(v / maxH * 100) + "%" }), i % 3 === 0 ? h("small", { "data-notr": "", text: String(i) }) : h("small", { text: "" }));
@@ -821,9 +884,32 @@
     load();
   }
 
+  // Paket → satın alma hunisi (ölçüme izin veren oturumlar) + tüm siparişlerin sonucu (izinden bağımsız)
+  function pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
+  function funnelView(d) {
+    var f = d.funnel || {}, o = d.orders || {};
+    var steps = [["Ölçülen oturum", f.sessions], ["Paketler sayfasını gördü", f.packages], ["Paket seçti (sipariş penceresi)", f.selected], ["Sipariş oluşturdu", f.ordered], ["Ödemesi onaylandı", f.paid]];
+    var top = Math.max(1, f.sessions || 0);
+    return h("div", { class: "vgrid" },
+      h("section", { class: "card vcard", id: "avf-funnel" }, h("h3", { text: "Paketler → satın alma dönüşümü" }),
+        h("p", { class: "hint", text: "Ölçüme izin veren oturumlar. Her adım oturum başına bir kez sayılır; oran bir önceki adıma göredir." }),
+        h("div", { class: "fun" }, steps.map(function (st, i) {
+          var v = st[1] || 0, prev = i ? steps[i - 1][1] || 0 : null;
+          return h("div", { class: "fun-r" }, h("span", { class: "fun-l", text: st[0] }), h("b", { "data-notr": "", text: String(v) }),
+            h("span", { class: "fun-b" }, h("i", { style: "width:" + Math.max(v ? 2 : 0, Math.round(v / top * 100)) + "%" })),
+            h("small", { "data-notr": "", text: i ? "%" + pct(v, prev) : "" }));
+        })),
+        f.packages ? h("p", { class: "hint", "data-notr": "", text: AVF.t("Paketleri görenlerin satın alma oranı") + ": %" + pct(f.paid || 0, f.packages) }) : null),
+      h("section", { class: "card vcard", id: "avf-orders" }, h("h3", { text: "Sipariş sonuçları (tüm siparişler)" }),
+        h("p", { class: "hint", text: "Bu dönemde oluşturulan siparişler; ölçüm izninden bağımsızdır." }),
+        h("ul", { class: "vrefs" }, [["Oluşturulan", o.created], ["Ödenen", o.paid], ["Ödeme bekleyen", o.waiting], ["Ödenmeden kapanan", o.lost]].map(function (r, i) {
+          return h("li", null, h("span", { text: r[0] }), h("b", { "data-notr": "", text: String(r[1] || 0) + (i && o.created ? " · %" + pct(r[1] || 0, o.created) : "") }));
+        }))));
+  }
+
   // ---------- yönetici: DENETİM KAYDI (arama, filtre, her kaydın ayrıntısı) ----------
   var ACTION_TR = { member_block: "Üye engellendi", member_ban: "Süreli yasak", member_unblock: "Engel kaldırıldı", member_perma_ban: "Kalıcı yasak (üye silindi)", member_forum_set: "Forum seviyesi / rolü",
-    user_role_set: "Yetki değişikliği", member_access_set: "Plan bölümü erişimi", assignment_set: "Uzman ataması", assignment_remove: "Uzman ataması kaldırıldı", order_delivery_set: "Teslim durumu",
+    user_role_set: "Yetki değişikliği", member_access_set: "Plan bölümü erişimi", assignment_set: "Uzman ataması", assignment_remove: "Uzman ataması kaldırıldı", order_delivery_set: "Teslim durumu", journal_share_on: "Gelişim paylaşımı açıldı (üye)", journal_share_off: "Gelişim paylaşımı kapatıldı (üye)", journal_trend_view: "Üyenin gelişim grafiği görüntülendi",
     ticket_reply: "Destek yanıtı", ticket_close: "Destek talebi çözüldü", profile_update: "Kişisel bilgi güncellendi", profile_delete: "Kişisel bilgi silindi", password_reset: "Şifre sıfırlandı", account_locked: "Hesap kilitlendi",
     forum_topic_create: "Forum: konu açıldı", forum_post_edit_mod: "Forum: mesaj düzenlendi (moderatör)", forum_post_hide: "Forum: mesaj kaldırıldı", forum_post_restore: "Forum: mesaj geri getirildi",
     forum_topic_pin: "Forum: konu sabitlendi", forum_topic_unpin: "Forum: sabitleme kaldırıldı", forum_topic_lock: "Forum: konu kilitlendi", forum_topic_unlock: "Forum: kilit açıldı", forum_topic_move: "Forum: konu taşındı",

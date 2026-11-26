@@ -33,6 +33,7 @@ import { forumRouter } from "./routes/forum.js";
 import { boardRouter } from "./routes/board.js";
 import { startPlanMailJob } from "./utils/planNotify.js";
 import { startDataRetentionJob } from "./services/dataRetention.js";
+import { startDeliveryReminderJob } from "./services/deliveryReminder.js";
 import { normalizeOrigin } from "./utils/originCheck.js";
 import { clientIpMiddleware, originGuardMiddleware, cloudflareOnlyMiddleware, isCloudflareIp, viaCloudflare, edgePeerIp } from "./utils/clientIp.js";
 import { mountSite } from "./site.js";
@@ -321,7 +322,7 @@ process.on("uncaughtException", (err) => {
 let jobsStarted = false;
 function startBackgroundJobs() {   // 180 gün veri saklama — migration bittikten sonra, bir kez
   if (jobsStarted || process.env.RUN_BACKGROUND_JOBS === "false") return;
-  jobsStarted = true; startDataRetentionJob(); startPlanMailJob(); startDigestJob();
+  jobsStarted = true; startDataRetentionJob(); startPlanMailJob(); startDigestJob(); startDeliveryReminderJob();
   // ekip içerikleri (forum): eksikler eklenir, sürümü artanlar güncellenir; hata açılışı durdurmaz
   if (process.env.FORUM_SEED !== "false") setTimeout(() => { seedOfficialContent().catch((e) => console.error("[forum] ekip içerikleri eklenemedi:", e.message)); }, 1500);
 }
