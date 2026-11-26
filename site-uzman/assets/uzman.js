@@ -32,7 +32,9 @@
   function err(box, e) { AVF.mount(box, h("div", { class: "note err", role: "alert", text: AVF.errText(e) })); }
 
   function frame(content) {
-    var tabs = [["uyeler", "users", "Üyeler"]]; if (me.role === "admin") tabs.push(["siparisler", "tag", "Siparişler"], ["destek", "headset", "Destek Talepleri"], ["forum", "msg", "Forum"], ["denetim", "list", "Denetim Kaydı"]);
+    // v25: koçluk üyeleri ile forum üyeleri ayrı listelenir; forum yönetimi (şikâyet, yasak, kategori, kayıt) panelin içinde
+    var tabs = [["uyeler", "users", me.role === "admin" ? "Koçluk Üyeleri" : "Üyeler"]];
+    if (me.role === "admin") tabs.push(["forum-uyeler", "award", "Forum Üyeleri"], ["siparisler", "tag", "Siparişler"], ["destek", "headset", "Destek Talepleri"], ["forum", "msg", "Forum Yönetimi"], ["denetim", "list", "Denetim Kaydı"]);
     var menu = h("nav", { class: "card menu", "aria-label": "Uzman menüsü" }, tabs.map(function (t) {
       var b = h("a", { href: "#", onclick: function (e) { e.preventDefault(); tab = t[0]; sel = null; render(); } }, AVF.icon(t[1]), t[2]); if (t[0] === tab) b.setAttribute("aria-current", "page"); return b;
     }));
@@ -47,6 +49,7 @@
     if (tab === "siparisler") return ordersView(c);
     if (tab === "destek") return supportView(c);
     if (tab === "forum") return forumView(c);
+    if (tab === "forum-uyeler") return forumMembersView(c);
     if (tab === "denetim") return auditView(c);
     if (sel) return memberView(c, sel);
     return me.role === "admin" ? membersAdminView(c) : clientsView(c);
@@ -174,7 +177,7 @@
   function kv(icon, k, v) { return v === null || v === undefined || v === "" ? null : h("div", { class: "kv-i" }, AVF.icon(icon), h("span", { class: "k", text: k }), h("b", { "data-notr": "", text: String(v) })); }
   function memberView(c, m) {
     var head = h("div", { class: "row between", style: "margin-bottom:14px" }, h("div", null, h("h2", { class: "ptitle", style: "margin:0", text: m.full_name }), h("small", { style: "color:var(--muted)", text: m.user_code })),
-      h("button", { class: "btn ghost sm", type: "button", onclick: function () { sel = null; render(); } }, "← Üyelere dön"));
+      h("button", { class: "btn ghost sm", type: "button", onclick: function () { sel = null; render(); } }, AVF.icon("back", "bico"), "Üyelere dön"));
     var infoBox = h("div"), adminBox = h("div"), list = h("div", { class: "stack" }, AVF.skeleton(2)), box = h("div");
     AVF.mount(c, head, infoBox, adminBox, box, h("div", { class: "row between", style: "margin:18px 0 10px" }, h("h3", { text: "Planlar" }), newPlanBtn()), list);
     if (me.role === "admin") adminTools(adminBox, m);
@@ -323,21 +326,23 @@
     var list = h("div"), count = h("span", { class: "hint" });
     var bar = filterBar([
       { key: "q", type: "search", label: "Ara", icon: "users", placeholder: "Ad soyad, kullanıcı adı, e-posta, üye kodu" },
+      { key: "segment", type: "select", label: "Kapsam", icon: "notes", options: [["coaching", "Koçluk üyeleri"], ["", "Tüm hesaplar"]] },
       { key: "state", type: "select", label: "Durum", icon: "shield", options: [["", "Tümü"], ["active", "Aktif"], ["blocked", "Engelli"], ["banned", "Süreli yasaklı"], ["locked", "Kilitli"]] },
       { key: "verified", type: "select", label: "Doğrulama", icon: "mail", options: [["", "Tümü"], ["yes", "Doğrulanmış"], ["no", "Doğrulanmamış"]] },
       { key: "totp", type: "select", label: "Google Auth", icon: "key", options: [["", "Tümü"], ["on", "Açık"], ["off", "Kapalı"]] },
       { key: "role", type: "select", label: "Yetki", icon: "cog", options: [["", "Tümü"], ["user", "Üye"], ["coach", "Uzman"], ["admin", "Yönetici"]] },
       { key: "sort", type: "select", label: "Sırala", icon: "list", options: [["new", "En yeni kayıt"], ["old", "En eski kayıt"], ["name", "Ada göre"], ["reports", "En çok şikâyet"]] }], load);
-    AVF.mount(c, h("div", { class: "row between", style: "margin-bottom:12px" }, h("h2", { class: "ptitle", style: "margin:0" }, AVF.icon("users"), " Üyeler"), count), bar, list);
+    AVF.mount(c, h("div", { class: "row between", style: "margin-bottom:12px" }, h("h2", { class: "ptitle", style: "margin:0" }, AVF.icon("users"), " Koçluk Üyeleri"), count),
+      h("p", { class: "hint", style: "margin:-4px 0 12px", text: "Paketi, plan erişimi ya da koç ataması olan üyeler. Forumdaki etkinlik ve forum yasakları Forum Üyeleri bölümündedir." }), bar, list);
     if (!forumLevels) api("GET", "/forum/levels").then(function (l) { forumLevels = l; }, function () {});
     function load(v) {
       v = v || bar.values; AVF.mount(list, AVF.skeleton(3));
       var qs = Object.keys(v).filter(function (k) { return v[k]; }).map(function (k) { return k + "=" + encodeURIComponent(v[k]); }).join("&");
       api("GET", "/members" + (qs ? "?" + qs : "")).then(function (rows) {
         count.textContent = rows.length + " kayıt";
-        if (!rows.length) return AVF.mount(list, AVF.state("users", "Sonuç yok", "Filtrelere uyan üye bulunamadı."));
+        if (!rows.length) return AVF.mount(list, AVF.state("users", "Sonuç yok", v.segment === "coaching" ? "Koçluk üyesi bulunamadı. Ödemesi onaylanan ya da plan erişimi verilen üyeler burada görünür." : "Filtrelere uyan üye bulunamadı."));
         AVF.mount(list, h("div", { class: "card tbl-w" }, h("table", { class: "t stackm mtab" },
-          h("thead", null, h("tr", null, ["Ad Soyad · Kullanıcı adı", "E-posta", "Kayıt", "Doğrulama · Google Auth", "Forum", "Durum", ""].map(function (x) { return h("th", { text: x }); }))),
+          h("thead", null, h("tr", null, ["Ad Soyad · Kullanıcı adı", "E-posta", "Kayıt", "Doğrulama · Google Auth", "Koçluk", "Durum", ""].map(function (x) { return h("th", { text: x }); }))),
           h("tbody", null, rows.map(function (m) { return memberRow(m); })))));
       }, function (e) { err(list, e); });
     }
@@ -348,28 +353,23 @@
         h("td", { "data-l": "E-posta", class: "emc", title: m.email }, emailCell(m.email)),
         h("td", { "data-l": "Kayıt" }, h("span", { class: "nw", text: AVF.fmtDate(m.created_at) }), h("small", { class: "sub", text: new Date(m.created_at).toLocaleTimeString(AVF.lang === "en" ? "en-GB" : "tr-TR", { hour: "2-digit", minute: "2-digit" }) })),
         h("td", { "data-l": "Doğrulama · Google Auth" }, yesNo(m.verified, "Doğrulandı", "Doğrulanmadı"), h("br"), yesNo(m.totp_enabled, "Google Auth açık", "Google Auth kapalı")),
-        h("td", { "data-l": "Forum" }, h("span", { class: "lvl" }, AVF.icon("award"), h("span", { text: m.forumLevel.name })), m.forumLevel.manual ? h("small", { class: "sub", text: "elle verildi" }) : null,
-          m.forum_joined ? null : h("small", { class: "sub", title: "Forum üye listesinde görünmesi için foruma girip kuralları onaylaması gerekir.", text: !m.verified ? "Foruma girmedi · e-posta onaysız" : "Foruma henüz girmedi" }),
-          h("span", { class: "fstats" }, h("span", { title: "Şikâyet" }, AVF.icon("flag"), String(m.reports_received)), h("span", { title: "Beğeni" }, AVF.icon("like"), String(m.likes)), h("span", { title: "Beğenmeme" }, AVF.icon("dislike"), String(m.dislikes)))),
+        h("td", { "data-l": "Koçluk" }, m.coaching ? h("span", { class: "chip lime" }, AVF.icon("notes"), h("span", { text: "Koçluk üyesi" })) : h("span", { class: "sub", text: m.role === "user" ? "Paket yok" : "—" }),
+          m.forum_joined ? h("small", { class: "sub", text: "Forumda da üye · " + m.forumLevel.name }) : null),
         h("td", { "data-l": "Durum" }, h("span", { class: st[1] }, AVF.icon(st[2]), st[0]), m.state === "banned" && m.locked_until ? h("small", { class: "sub", text: "Bitiş: " + AVF.fmtDateTime(m.locked_until) }) : null,
-          m.state !== "active" ? h("button", { class: "btn ghost sm unban", type: "button", onclick: function (e) {
-            // tek tıkla engel / yasak kaldırma (onay penceresiyle)
-            var b = e.currentTarget;
-            AVF.confirmDialog({ icon: "unlock", title: (m.state === "banned" ? "Süreli yasak" : m.state === "blocked" ? "Engel" : "Kilit") + " kaldırılsın mı?", text: "@" + m.username + " hesabına hemen yeniden giriş yapabilir. İşlem denetim kaydına yazılır.", confirm: "Evet, kaldır", cancel: "Vazgeç" }).then(function (y) {
-              if (!y) return; AVF.busy(b, true, "Kaldırılıyor…");
-              api("POST", "/members/" + m.id + "/unblock", {}).then(function () { AVF.toast(AVF.t("Engel / yasak kaldırıldı.")); load(); }, function (er) { AVF.busy(b, false); AVF.toast(AVF.errText(er)); });
-            });
-          } }, AVF.icon("unlock", "bico"), m.state === "banned" ? "Yasağı kaldır" : m.state === "blocked" ? "Engeli kaldır" : "Kilidi aç") : null),
+          unbanBtn(m, load)),
         h("td", { class: "mact" }, m.role === "user" ? h("button", { class: "btn sm", type: "button", onclick: function (e) {
           var b = e.currentTarget; AVF.busy(b, true, "Açılıyor…");
           api("GET", "/clients?id=" + m.id).then(function (rows) { var r = rows.filter(function (x) { return x.id === m.id; })[0]; AVF.busy(b, false); if (r) { sel = r; render(); window.scrollTo(0, 0); } else AVF.toast("Üye bulunamadı."); }, function (er) { AVF.busy(b, false); AVF.toast(AVF.errText(er)); });
         } }, AVF.icon("notes", "bico"), "Planlar") : null, h("button", { class: "btn ghost sm", type: "button", "aria-expanded": "false", onclick: function (e) {
           var open = detail.hidden; detail.hidden = !open; e.currentTarget.setAttribute("aria-expanded", String(open));
-          if (open) manage(detail.firstChild, m);
+          if (open) manage(detail.firstChild, m, "coaching", load);
         } }, AVF.icon("cog", "bico"), "Yönet")));
       return [row, detail];
     }
-    function manage(cell, m) {
+    load();
+  }
+  /** Üye yönetimi — scope: "coaching" (yetki, hesap engeli/yasağı, silme) ya da "forum" (seviye, forum yasağı, forum kimliği, hesap engeli/yasağı). */
+  function manage(cell, m, scope, load) {
       var eb = h("div");
       function done(msg) { AVF.toast(msg); load(); }
       function fail(e) { err(eb, e); }
@@ -442,9 +442,18 @@
       }
       paintFid();
       var fidSec = msec("image", "Forum kimliği", "Avatar, imza ve bağlantılar herkese açıktır. Müstehcen, siyasi/ideolojik veya reklam içerenleri gerekçe yazarak kaldırın.", [fidBox]);
-      AVF.mount(cell, h("div", { class: "mman" }, eb, h("div", { class: "mgrid" }, roleSec, forumSec, fidSec, stateSec, permaSec)));
+      AVF.mount(cell, h("div", { class: "mman" }, eb, h("div", { class: "mgrid" }, scope === "forum" ? [forumSec, forumBanSec(m, load, eb), fidSec, stateSec] : [roleSec, stateSec, permaSec])));
     }
-    load();
+  /** Tek tıkla hesap engeli / süreli yasak / kilit kaldırma (onay penceresiyle) — koçluk ve forum listelerinde ortak. */
+  function unbanBtn(m, load) {
+    if (m.state === "active") return null;
+    return h("button", { class: "btn ghost sm unban", type: "button", onclick: function (e) {
+      var b = e.currentTarget;
+      AVF.confirmDialog({ icon: "unlock", title: (m.state === "banned" ? "Süreli yasak" : m.state === "blocked" ? "Engel" : "Kilit") + " kaldırılsın mı?", text: "@" + m.username + " hesabına hemen yeniden giriş yapabilir. İşlem denetim kaydına yazılır.", confirm: "Evet, kaldır", cancel: "Vazgeç" }).then(function (y) {
+        if (!y) return; AVF.busy(b, true, "Kaldırılıyor…");
+        api("POST", "/members/" + m.id + "/unblock", {}).then(function () { AVF.toast(AVF.t("Engel / yasak kaldırıldı.")); load(); }, function (er) { AVF.busy(b, false); AVF.toast(AVF.errText(er)); });
+      });
+    } }, AVF.icon("unlock", "bico"), m.state === "banned" ? "Yasağı kaldır" : m.state === "blocked" ? "Engeli kaldır" : "Kilidi aç");
   }
   function msec(icon, title, hint, kids) { return h("section", { class: "msec" }, h("h4", null, h("span", { class: "tile" }, AVF.icon(icon)), title), hint ? h("p", { class: "hint", text: hint }) : null, h("div", { class: "msec-b" }, kids)); }
 
@@ -493,54 +502,274 @@
     load();
   }
 
-  // ---------- yönetici: FORUM — özet ve moderasyon ekranlarına geçiş (moderasyonun kendisi forumun içinde: /forum/moderasyon) ----------
+  // ---------- yönetici: FORUM ÜYELERİ — her üyenin içerikleri, forum yasağı ve hesap engeli/yasağı aynı satırda ----------
+  function bapi(m, p, b) { return AVF.api(m, "/board" + p, b); }
+  var FBAN_H = [[1, "1 saat"], [6, "6 saat"], [24, "1 gün"], [72, "3 gün"], [168, "7 gün"], [720, "30 gün"], [2160, "90 gün"]];
+  function fbanChip(m) {
+    if (m.forum_ban === "permanent") return h("span", { class: "chip warn" }, AVF.icon("lock"), h("span", { text: "Kalıcı uzaklaştırıldı" }));
+    if (m.forum_ban === "temp") return [h("span", { class: "chip warn" }, AVF.icon("clock"), h("span", { text: "Süreli uzaklaştırıldı" })), h("small", { class: "sub", text: "Bitiş: " + AVF.fmtDateTime(m.forum_ban_until) })];
+    return h("span", { class: "chip" }, AVF.icon("check"), h("span", { text: "Yazabilir" }));
+  }
+  /** Forum yasağı (uzaklaştırma): süreli (1 saat – 90 gün) ya da kalıcı; giriş engeli değildir, üye forumu okuyabilir ama yazamaz. */
+  function forumBanSec(m, load, eb) {
+    var reason = AVF.input("text", { maxlength: "200", placeholder: "Gerekçe (üyeye bildirilir)", "aria-label": "Forum yasağı gerekçesi" });
+    var dur = h("select", { class: "inp", "aria-label": "Forum yasağı süresi" }, FBAN_H.map(function (x) { return h("option", { value: String(x[0]), text: x[1] }); }).concat([h("option", { value: "perm", text: "Kalıcı" })]));
+    var isAdm = m.role === "admin";
+    return msec("lock", "Forum yasağı (uzaklaştırma)", "Üye giriş yapabilir ve forumu okuyabilir; yasak süresince konu açamaz, yazamaz, tepki veremez. Süre dolunca kendiliğinden kalkar. Üyeye gerekçeyle bildirim gider.", isAdm ? [h("p", { class: "hint", text: "Yönetici hesaplarına uygulanamaz." })] : [
+      m.forum_ban ? h("p", { class: "note warn", text: (m.forum_ban === "permanent" ? "Kalıcı forum yasağı" : "Süreli forum yasağı · bitiş: " + AVF.fmtDateTime(m.forum_ban_until)) + (m.forum_ban_reason ? " · Gerekçe: " + m.forum_ban_reason : "") }) : null,
+      reason, h("div", { class: "row", style: "gap:8px;flex-wrap:wrap" }, dur,
+        h("button", { class: "btn ghost sm", type: "button", onclick: function () {
+          if (reason.value.trim().length < 3) return err(eb, { data: { error: "Gerekçe yazın." } });
+          var perm = dur.value === "perm";
+          AVF.confirmDialog({ icon: "lock", danger: true, title: "Forumdan uzaklaştırılsın mı?", text: "@" + m.username + " · " + (perm ? "Kalıcı" : dur.options[dur.selectedIndex].text), confirm: "Uzaklaştır", cancel: "Vazgeç" }).then(function (y) {
+            if (y) bapi("POST", "/mod/ban/" + m.username, perm ? { permanent: true, reason: reason.value.trim() } : { hours: Number(dur.value), reason: reason.value.trim() }).then(function () { AVF.toast(AVF.t("Forum yasağı uygulandı.")); load(); }, function (e) { err(eb, e); });
+          });
+        } }, AVF.icon("lock", "bico"), "Forumdan uzaklaştır"),
+        m.forum_ban ? h("button", { class: "btn sm", type: "button", onclick: function () {
+          bapi("DELETE", "/mod/ban/" + m.username).then(function () { AVF.toast(AVF.t("Forum yasağı kaldırıldı.")); load(); }, function (e) { err(eb, e); });
+        } }, AVF.icon("unlock", "bico"), "Forum yasağını kaldır") : null)]);
+  }
+  /** Bir üyenin forum içerikleri (kaldırılanlar dahil): konu ve mesajlar; gerekçeyle kaldır / geri getir. */
+  function forumContent(cell, m) {
+    var eb = h("div"), why = AVF.input("text", { maxlength: "200", placeholder: "Kaldırma gerekçesi (üyeye iletilir)", "aria-label": "Kaldırma gerekçesi" }), box = h("div", null, AVF.skeleton(2));
+    AVF.mount(cell, h("div", { class: "fcont" }, eb, box));
+    function act(kind, id, hide) {
+      if (hide && why.value.trim().length < 3) { why.focus(); return err(eb, { data: { error: "Kaldırma gerekçesi yazın." } }); }
+      AVF.mount(eb, null);
+      bapi("POST", (kind === "t" ? "/t/" : "/posts/") + id + "/mod", { action: hide ? "hide" : "restore", reason: hide ? why.value.trim() : "" }).then(function () { AVF.toast(AVF.t(hide ? "Kaldırıldı." : "Geri getirildi.")); paint(); }, function (e) { err(eb, e); });
+    }
+    function paint() {
+      bapi("GET", "/mod/u/" + encodeURIComponent(m.username) + "/content").then(function (r) {
+        var tl = r.topics.map(function (t) {
+          return h("li", { class: t.hidden ? "off" : "" }, h("span", { class: "tile" }, AVF.icon(t.category.icon || "msg")),
+            h("div", { class: "fc-t" }, h("a", { href: "/forum/konu/" + t.id, target: "_blank", rel: "noopener", "data-notr": "", text: t.title }),
+              h("small", { text: t.category.name + " · " + AVF.fmtDateTime(t.at) + " · " + t.replies + " yanıt · " + t.likes + " beğeni · " + t.views + " görüntülenme" }), t.hidden ? h("span", { class: "chip", text: "Kaldırıldı" }) : null),
+            h("button", { class: "btn ghost sm", type: "button", onclick: function () { act("t", t.id, !t.hidden); } }, AVF.icon(t.hidden ? "refresh" : "x", "bico"), t.hidden ? "Geri getir" : "Kaldır"));
+        });
+        var pl = r.posts.map(function (p) {
+          return h("li", { class: p.hidden || p.topicHidden ? "off" : "" }, h("span", { class: "tile" }, AVF.icon("chat")),
+            h("div", { class: "fc-t" }, h("p", { "data-notr": "", text: p.excerpt || "(görsel)" }), h("small", null, h("a", { href: "/forum/konu/" + p.topicId + "#m" + p.id, target: "_blank", rel: "noopener", "data-notr": "", text: p.title }), h("span", { text: " · " + AVF.fmtDateTime(p.at) + " · " + p.likes + " beğeni" })),
+              p.openReports ? h("span", { class: "chip warn", text: p.openReports + " açık şikâyet" }) : null, p.hidden ? h("span", { class: "chip", text: "Kaldırıldı" }) : p.topicHidden ? h("span", { class: "chip", text: "Konusu kaldırıldı" }) : null),
+            p.topicHidden ? null : h("button", { class: "btn ghost sm", type: "button", onclick: function () { act("p", p.id, !p.hidden); } }, AVF.icon(p.hidden ? "refresh" : "x", "bico"), p.hidden ? "Geri getir" : "Kaldır"));
+        });
+        AVF.mount(box, r.ban ? h("p", { class: "note warn", text: (r.ban.permanent ? "Kalıcı forum yasağı" : "Forum yasağı · bitiş: " + AVF.fmtDateTime(r.ban.until)) + (r.ban.reason ? " · " + r.ban.reason : "") }) : null,
+          tl.length || pl.length ? AVF.field("Kaldırma gerekçesi", why, { optional: true }) : null,
+          h("div", { class: "fc-g" },
+            h("section", null, h("h4", null, AVF.icon("file"), h("span", { text: "Konular" }), h("small", { "data-notr": "", text: String(r.topics.length) })), tl.length ? h("ul", { class: "fc-l" }, tl) : h("p", { class: "hint", text: "Konu yok." })),
+            h("section", null, h("h4", null, AVF.icon("chat"), h("span", { text: "Mesajlar" }), h("small", { "data-notr": "", text: String(r.posts.length) })), pl.length ? h("ul", { class: "fc-l" }, pl) : h("p", { class: "hint", text: "Mesaj yok." }))));
+      }, function (e) { err(box, e); });
+    }
+    paint();
+  }
+  function forumMembersView(c) {
+    var list = h("div"), count = h("span", { class: "hint" });
+    var bar = filterBar([
+      { key: "q", type: "search", label: "Ara", icon: "users", placeholder: "Ad soyad, kullanıcı adı, e-posta, üye kodu" },
+      { key: "forumBan", type: "select", label: "Forum durumu", icon: "lock", options: [["", "Tümü"], ["any", "Uzaklaştırılmış"], ["temp", "Süreli uzaklaştırma"], ["permanent", "Kalıcı uzaklaştırma"]] },
+      { key: "state", type: "select", label: "Hesap", icon: "shield", options: [["", "Tümü"], ["active", "Aktif"], ["blocked", "Engelli"], ["banned", "Süreli yasaklı"], ["locked", "Kilitli"]] },
+      { key: "sort", type: "select", label: "Sırala", icon: "list", options: [["seen", "Son görülen"], ["posts", "En çok içerik"], ["reports", "En çok şikâyet"], ["new", "En yeni kayıt"], ["name", "Ada göre"]] }], load);
+    AVF.mount(c, h("div", { class: "row between", style: "margin-bottom:12px" }, h("h2", { class: "ptitle", style: "margin:0" }, AVF.icon("award"), " Forum Üyeleri"), count),
+      h("p", { class: "hint", style: "margin:-4px 0 12px", text: "Forum kurallarını onaylayıp foruma giren üyeler. “İçerikler” ile üyenin tüm konu ve mesajlarını burada görüp kaldırabilirsiniz; forum yasağı ve hesap engeli “Yönet” altındadır." }), bar, list);
+    if (!forumLevels) api("GET", "/forum/levels").then(function (l) { forumLevels = l; }, function () {});
+    function load(v) {
+      v = v || bar.values; AVF.mount(list, AVF.skeleton(3));
+      var o = Object.assign({ segment: "forum" }, v);
+      var qs = Object.keys(o).filter(function (k) { return o[k]; }).map(function (k) { return k + "=" + encodeURIComponent(o[k]); }).join("&");
+      api("GET", "/members?" + qs).then(function (rows) {
+        count.textContent = rows.length + " kayıt";
+        if (!rows.length) return AVF.mount(list, AVF.state("award", "Sonuç yok", "Filtrelere uyan forum üyesi bulunamadı."));
+        AVF.mount(list, h("div", { class: "card tbl-w" }, h("table", { class: "t stackm mtab" },
+          h("thead", null, h("tr", null, ["Üye", "Seviye", "İçerik", "Etkileşim", "Forum durumu", "Hesap", ""].map(function (x) { return h("th", { text: x }); }))),
+          h("tbody", null, rows.map(row)))));
+      }, function (e) { err(list, e); });
+    }
+    function row(m) {
+      var st = STATE[m.state] || STATE.active, detail = h("tr", { class: "mdet", hidden: "" }, h("td", { colspan: "7" })), open = null, bC, bM;
+      function toggle(which, btn) {
+        var same = open === which && !detail.hidden;
+        [bC, bM].forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+        if (same) { detail.hidden = true; open = null; return; }
+        detail.hidden = false; open = which; btn.setAttribute("aria-expanded", "true");
+        if (which === "c") forumContent(detail.firstChild, m); else manage(detail.firstChild, m, "forum", load);
+      }
+      bC = h("button", { class: "btn sm", type: "button", "aria-expanded": "false", onclick: function (e) { toggle("c", e.currentTarget); } }, AVF.icon("file", "bico"), "İçerikler");
+      bM = h("button", { class: "btn ghost sm", type: "button", "aria-expanded": "false", onclick: function (e) { toggle("m", e.currentTarget); } }, AVF.icon("cog", "bico"), "Yönet");
+      return [h("tr", null,
+        h("td", { "data-l": "Üye" }, h("b", { "data-notr": "", text: m.full_name }), h("small", { class: "sub", "data-notr": "", text: "@" + m.username + " · " + m.user_code }), m.forum_role === "moderator" ? h("span", { class: "chip lime", text: "Moderatör" }) : m.role !== "user" ? h("span", { class: "chip lime", text: ROLES[m.role] }) : null),
+        h("td", { "data-l": "Seviye" }, h("span", { class: "lvl" }, AVF.icon("award"), h("span", { text: m.forumLevel.name })), m.forumLevel.manual ? h("small", { class: "sub", text: "elle verildi" }) : null,
+          h("small", { class: "sub", text: (m.forum_since ? "Katılım: " + AVF.fmtDate(m.forum_since) : "") + (m.forum_seen ? " · Son görülme: " + AVF.fmtDateTime(m.forum_seen) : "") })),
+        h("td", { "data-l": "İçerik" }, h("span", { class: "fstats" }, h("span", { title: "Konu" }, AVF.icon("file"), String(m.topics)), h("span", { title: "Mesaj" }, AVF.icon("chat"), String(m.posts)))),
+        h("td", { "data-l": "Etkileşim" }, h("span", { class: "fstats" }, h("span", { title: "Beğeni" }, AVF.icon("like"), String(m.likes)), h("span", { title: "Beğenmeme" }, AVF.icon("dislike"), String(m.dislikes)), h("span", { title: "Alınan şikâyet (haklı bulunan)" }, AVF.icon("flag"), m.reports_received + " (" + m.reports_upheld + ")"))),
+        h("td", { "data-l": "Forum durumu" }, fbanChip(m)),
+        h("td", { "data-l": "Hesap" }, h("span", { class: st[1] }, AVF.icon(st[2]), st[0]), m.state === "banned" && m.locked_until ? h("small", { class: "sub", text: "Bitiş: " + AVF.fmtDateTime(m.locked_until) }) : null, unbanBtn(m, load)),
+        h("td", { class: "mact" }, bC, bM)), detail];
+    }
+    load();
+  }
+
+  // ---------- yönetici: FORUM YÖNETİMİ — şikâyet kuyruğu, yasaklar, kategoriler ve ayarlar, moderasyon kaydı, ölçümler (hepsi bu sayfada) ----------
+  var FTABS = [["sikayet", "flag", "Şikâyet kuyruğu"], ["yasak", "lock", "Forum yasakları"], ["kategori", "cog", "Kategoriler ve ayarlar"], ["kayit", "list", "Moderasyon kaydı"], ["olcum", "chart", "Ölçümler"]], ftab = "sikayet", REASONS = null;
   function forumView(c) {
-    AVF.mount(c, h("h2", { class: "ptitle" }, AVF.icon("msg"), " Forum"), AVF.skeleton(1));
-    Promise.all([api("GET", "/forum/levels"), AVF.api("GET", "/board/home").catch(function (e) { return { err: e }; })]).then(function (x) {
-      var L = x[0], H = x[1], st = H && H.stats, me = H && H.me;
-      var open = function (path) { location.href = path; };
-      // ölçüm tablosu: son 7 gün / önceki 7 gün
-      var metricsBox = h("div", { class: "card", style: "padding:18px;margin-top:14px" }, h("h3", { style: "margin-bottom:6px" }, "Forum ölçümleri (son 7 gün)"), AVF.skeleton(1));
-      api("GET", "/forum/metrics").then(function (m) {
-        function delta(a, b) { if (b == null || a == null) return ""; var d = a - b; return d === 0 ? " (=)" : " (" + (d > 0 ? "+" : "") + d + ")"; }
-        function mt(icon, label, val, sub) { return h("div", { class: "card", style: "padding:12px;display:flex;gap:10px;align-items:flex-start" }, h("span", { class: "tile" }, AVF.icon(icon)), h("div", null, h("small", { style: "display:block;color:var(--muted);font-weight:600", text: label }), h("b", { style: "font-size:20px", text: val == null ? "—" : String(val) }), sub ? h("small", { style: "display:block;color:var(--muted)", text: sub }) : null)); }
-        var fr = m.firstReply.medianMinutes, frt = fr == null ? null : fr < 60 ? fr + " dk" : Math.round(fr / 6) / 10 + " sa", u = m.usage;
-        AVF.mount(metricsBox, h("h3", { style: "margin-bottom:10px" }, "Forum ölçümleri (son 7 gün)"),
-          h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px" },
-            mt("users", "Etkin üye", m.week.active, "önceki hafta " + m.prevWeek.active + delta(m.week.active, m.prevWeek.active)),
-            mt("refresh", "Geri dönen üye", m.returning, m.returningRate == null ? "önceki hafta etkin üye yok" : "önceki haftanın %" + m.returningRate + "'i"),
-            mt("file", "Yeni konu", m.week.topics, "önceki hafta " + m.prevWeek.topics + delta(m.week.topics, m.prevWeek.topics)),
-            mt("chat", "Yanıt", m.week.replies, m.repliesPerTopic == null ? "" : "konu başına " + String(m.repliesPerTopic).replace(".", ",")),
-            mt("clock", "İlk yanıt süresi (medyan)", frt, m.firstReply.answered + " / " + m.firstReply.total + " konu yanıt aldı"),
-            mt("plus", "Foruma katılan", m.week.joined, "önceki hafta " + m.prevWeek.joined),
-            mt("bell", "Cihaz bildirimi açık", u.push_users, u.members + " forum üyesinden"),
-            mt("mail", "Haftalık özet açık", u.digest_users, ""),
-            mt("shield", "KVKK açık rızası", u.consent_users, u.members + " forum üyesinden"),
-            mt("pulse", "Gelişim günlüğü (7 gün)", u.journal_users, "kayıt giren üye"),
-            mt("flame", "Meydan okuma (7 gün)", u.challenge_users, u.badges_week + " rozet kazanıldı"),
-            mt("flag", "Açık şikâyet / filtre", u.open_reports, u.filtered_week + " gönderi filtreye takıldı")),
-          m.top.length ? h("div", { style: "margin-top:14px" }, h("b", { text: "Haftanın öne çıkan konuları" }), h("ol", { style: "margin:8px 0 0;padding-left:20px" }, m.top.map(function (t) {
-            return h("li", { style: "margin:4px 0" }, h("a", { href: "/forum/konu/" + t.id, text: t.title }), h("small", { style: "color:var(--muted)", text: " · " + t.reply_count + " yanıt · " + t.like_count + " beğeni · " + t.view_count + " görüntülenme" }));
-          }))) : null);
-      }, function (e) { AVF.mount(metricsBox, h("p", { class: "note err", text: AVF.errText(e) })); });
-      var tile = function (icon, label, val) { return h("div", { class: "card", style: "padding:14px;display:flex;gap:12px;align-items:center" }, h("span", { class: "tile" }, AVF.icon(icon)), h("div", null, h("small", { style: "color:var(--muted)", text: label }), h("b", { style: "display:block;font-size:20px", text: String(val) }))); };
-      AVF.mount(c, h("h2", { class: "ptitle" }, AVF.icon("msg"), " Forum"),
-        H && H.err ? h("div", { class: "note warn" }, AVF.icon("alert", "bico"), h("span", { text: "Moderasyon araçlarını kullanmak için forumu bir kez açıp forum kurallarını onaylayın." }), " ", h("a", { href: "/forum", text: "Foruma git" })) : null,
-        st ? h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:14px" },
-          tile("flag", "Açık şikâyet", me.openReports), tile("file", "Konu", st.topics), tile("chat", "Mesaj", st.posts), tile("users", "Forum üyesi", st.members), tile("pulse", "Şu an çevrimiçi", st.online)) : null,
-        h("div", { class: "row", style: "flex-wrap:wrap;gap:8px" },
-          h("button", { class: "btn", type: "button", onclick: function () { open("/forum/moderasyon"); } }, AVF.icon("shield", "bico"), "Şikâyet kuyruğu"),
-          h("button", { class: "btn ghost", type: "button", onclick: function () { open("/forum/moderasyon?t=bans"); } }, AVF.icon("lock", "bico"), "Forum yasakları"),
-          h("button", { class: "btn ghost", type: "button", onclick: function () { open("/forum/moderasyon?t=cats"); } }, AVF.icon("cog", "bico"), "Kategoriler"),
-          h("button", { class: "btn ghost", type: "button", onclick: function () { open("/forum"); } }, AVF.icon("msg", "bico"), "Foruma git")),
-        metricsBox,
-        h("p", { class: "hint", text: "Konu sabitleme, kilitleme, taşıma, içerik kaldırma ve forumdan uzaklaştırma işlemleri forumun içinde, her konu ve mesajın moderasyon menüsünden yapılır. Üyelerin seviyesi ve moderatör ataması Üyeler › Yönet bölümündedir. Tüm işlemler denetim kaydına yazılır." }),
+    var body = h("div"), head = h("div");
+    AVF.mount(c, h("div", { class: "row between", style: "margin-bottom:12px;flex-wrap:wrap;gap:8px" }, h("h2", { class: "ptitle", style: "margin:0" }, AVF.icon("msg"), " Forum Yönetimi"),
+      h("a", { class: "btn ghost sm", href: "/forum", target: "_blank", rel: "noopener" }, AVF.icon("msg", "bico"), "Forumu aç")), head, body);
+    var tabsEl = h("div", { class: "ftabs", role: "tablist", "aria-label": "Forum yönetimi bölümleri" });
+    function paintTabs(st) {
+      AVF.mount(tabsEl, FTABS.map(function (t) {
+        var on = t[0] === ftab, n = t[0] === "sikayet" && st ? st.openReports : null;
+        return h("button", { type: "button", role: "tab", class: "ftab" + (on ? " on" : ""), "aria-selected": String(on), onclick: function () { ftab = t[0]; paintTabs(st); show(); } },
+          AVF.icon(t[1]), h("span", { text: t[2] }), n ? h("b", { class: "badge", "data-notr": "", text: String(n) }) : null);
+      }));
+    }
+    var stats = h("div");
+    AVF.mount(head, stats, tabsEl);
+    function refreshStats() {
+      bapi("GET", "/home").then(function (H) {
+        var st = H.stats, me2 = H.me, tile = function (icon, label, val) { return h("div", { class: "card ftile" }, h("span", { class: "tile" }, AVF.icon(icon)), h("div", null, h("small", { text: label }), h("b", { "data-notr": "", text: String(val) }))); };
+        AVF.mount(stats, h("div", { class: "fstat-g" }, tile("flag", "Açık şikâyet", me2.openReports), tile("file", "Konu", st.topics), tile("chat", "Mesaj", st.posts), tile("users", "Forum üyesi", st.members), tile("pulse", "Şu an çevrimiçi", st.online)));
+        paintTabs({ openReports: me2.openReports }); H.categories && (forumView.cats = H.categories);
+      }, function (e) { err(stats, e); paintTabs(null); });
+    }
+    paintTabs(null); refreshStats();
+    if (!REASONS) AVF.api("GET", "/board/rules").then(function (r) { REASONS = {}; (r.reasons || []).forEach(function (x) { REASONS[x[0]] = x[1]; }); }, function () {});
+    function show() {
+      AVF.mount(body, AVF.skeleton(2));
+      if (ftab === "sikayet") return reportsPane(body, refreshStats);
+      if (ftab === "yasak") return bansPane(body);
+      if (ftab === "kategori") return catsPane(body);
+      if (ftab === "kayit") return modLogPane(body);
+      return metricsPane(body);
+    }
+    show();
+  }
+  function reportsPane(box, after) {
+    var status = "open", list = h("div", { class: "stack" });
+    var seg = h("div", { class: "fseg", role: "group", "aria-label": "Şikâyet durumu" });
+    function paintSeg() { AVF.mount(seg, [["open", "Açık"], ["upheld", "Haklı bulunan"], ["dismissed", "Reddedilen"]].map(function (x) { return h("button", { type: "button", class: x[0] === status ? "on" : "", "aria-pressed": String(x[0] === status), onclick: function () { status = x[0]; paintSeg(); load(); } }, x[1]); })); }
+    paintSeg();
+    AVF.mount(box, seg, list);
+    function load() {
+      AVF.mount(list, AVF.skeleton(2));
+      bapi("GET", "/mod/reports?status=" + status).then(function (rows) {
+        if (!rows.length) return AVF.mount(list, AVF.state("flag", status === "open" ? "Açık şikâyet yok" : "Kayıt yok", status === "open" ? "Yeni şikâyetler burada görünür; üyeler bildirim alır." : ""));
+        AVF.mount(list, rows.map(function (r) {
+          var eb = h("div"), why = AVF.input("text", { maxlength: "200", placeholder: "Gerekçe (isteğe bağlı; içerik sahibine iletilir)", "aria-label": "Gerekçe" });
+          function decide(a) {
+            AVF.confirmDialog({ icon: a === "uphold" ? "trash" : "check", danger: a === "uphold", title: a === "uphold" ? "Şikâyet haklı bulunsun mu?" : "Şikâyet reddedilsin mi?", text: a === "uphold" ? "İçerik kaldırılır; içerik sahibine ve şikâyet edenlere bildirim gider." : "İçerik yayında kalır; şikâyet edenlere bildirim gider.", confirm: a === "uphold" ? "Haklı bul ve kaldır" : "Reddet", cancel: "Vazgeç" }).then(function (y) {
+              if (y) bapi("POST", "/mod/reports/" + r.postId, { action: a, reason: why.value.trim() }).then(function () { AVF.toast(AVF.t(a === "uphold" ? "İçerik kaldırıldı." : "Şikâyet reddedildi.")); load(); after && after(); }, function (e) { err(eb, e); });
+            });
+          }
+          return h("article", { class: "card frep" },
+            h("div", { class: "frep-h" }, h("span", { class: "tile" }, AVF.icon(r.first ? "file" : "chat")), h("div", { style: "flex:1;min-width:0" },
+              h("a", { href: "/forum/konu/" + r.topicId + "#m" + r.postId, target: "_blank", rel: "noopener", "data-notr": "", text: r.title }),
+              h("small", { text: (r.first ? "Konunun ilk mesajı" : "Yanıt") + " · @" + (r.author || "silinmiş üye") + " · " + AVF.fmtDateTime(r.postAt) })),
+              r.hidden ? h("span", { class: "chip", text: "Kaldırıldı" }) : null),
+            h("blockquote", { class: "frep-b", "data-notr": "", text: plain(r.body).slice(0, 600) }),
+            h("ul", { class: "frep-l" }, r.reports.map(function (x) {
+              return h("li", null, AVF.icon("flag"), h("b", { text: (REASONS && REASONS[x.reason]) || x.reason }), x.note ? h("span", { "data-notr": "", text: " — " + x.note }) : null,
+                h("small", { text: " · @" + (x.by || "—") + " · " + AVF.fmtDateTime(x.at) + (x.handledBy ? " · işlem: @" + x.handledBy : "") }));
+            })),
+            status === "open" ? [why, h("div", { class: "row", style: "gap:8px;flex-wrap:wrap;margin-top:8px" },
+              h("button", { class: "btn danger sm", type: "button", onclick: function () { decide("uphold"); } }, AVF.icon("trash", "bico"), "Haklı bul ve kaldır"),
+              h("button", { class: "btn ghost sm", type: "button", onclick: function () { decide("dismiss"); } }, AVF.icon("check", "bico"), "Reddet"),
+              r.author ? h("button", { class: "btn ghost sm", type: "button", onclick: function () { tab = "forum-uyeler"; sel = null; render(); setTimeout(function () { var q = document.querySelector('.fbar input[type="search"]'); if (q) { q.value = r.author; q.dispatchEvent(new Event("input")); } }, 50); } }, AVF.icon("user", "bico"), "Üyeyi aç") : null)] : null, eb);
+        }));
+      }, function (e) { err(list, e); });
+    }
+    load();
+  }
+  function plain(html) { var d = document.createElement("div"); d.innerHTML = String(html || "").replace(/<(script|style)[\s\S]*?<\/\1>/gi, ""); return (d.textContent || "").replace(/\s+/g, " ").trim(); }
+  function bansPane(box) {
+    var eb = h("div"), list = h("div");
+    var un = AVF.input("text", { maxlength: "20", placeholder: "kullanici_adi", "aria-label": "Kullanıcı adı", autocomplete: "off" }), reason = AVF.input("text", { maxlength: "200", placeholder: "Gerekçe (üyeye bildirilir)", "aria-label": "Gerekçe" });
+    var dur = h("select", { class: "inp", "aria-label": "Süre" }, FBAN_H.map(function (x) { return h("option", { value: String(x[0]), text: x[1] }); }).concat([h("option", { value: "perm", text: "Kalıcı" })]));
+    AVF.mount(box, msec("lock", "Yeni forum yasağı", "Üye giriş yapabilir ve forumu okuyabilir; süre boyunca yazamaz. Hesap engeli için Forum Üyeleri › Yönet bölümünü kullanın.", [
+      h("div", { class: "row", style: "gap:8px;flex-wrap:wrap" }, h("div", { style: "flex:1;min-width:160px" }, un), dur), reason,
+      h("button", { class: "btn sm", type: "button", onclick: function () {
+        var u = un.value.trim().replace(/^@/, "").toLowerCase(), perm = dur.value === "perm";
+        if (!/^[a-z0-9._]{3,20}$/.test(u)) return err(eb, { data: { error: "Geçerli bir kullanıcı adı yazın." } });
+        if (reason.value.trim().length < 3) return err(eb, { data: { error: "Gerekçe yazın." } });
+        bapi("POST", "/mod/ban/" + u, perm ? { permanent: true, reason: reason.value.trim() } : { hours: Number(dur.value), reason: reason.value.trim() }).then(function () { AVF.toast(AVF.t("Forum yasağı uygulandı.")); un.value = ""; reason.value = ""; AVF.mount(eb, null); load(); }, function (e) { err(eb, e); });
+      } }, AVF.icon("lock", "bico"), "Forumdan uzaklaştır"), eb]), h("h3", { style: "margin:18px 0 10px", text: "Yürürlükteki yasaklar" }), list);
+    function load() {
+      AVF.mount(list, AVF.skeleton(1));
+      bapi("GET", "/mod/bans").then(function (rows) {
+        if (!rows.length) return AVF.mount(list, AVF.state("lock", "Yürürlükte forum yasağı yok", ""));
+        AVF.mount(list, h("div", { class: "card tbl-w" }, h("table", { class: "t stackm" }, h("thead", null, h("tr", null, ["Üye", "Süre", "Gerekçe", ""].map(function (x) { return h("th", { text: x }); }))),
+          h("tbody", null, rows.map(function (b) {
+            return h("tr", null, h("td", { "data-l": "Üye" }, h("b", { "data-notr": "", text: "@" + b.username })), h("td", { "data-l": "Süre", text: b.permanent ? "Kalıcı" : "Bitiş: " + AVF.fmtDateTime(b.until) }),
+              h("td", { "data-l": "Gerekçe" }, h("span", { "data-notr": "", text: b.reason || "—" })),
+              h("td", { class: "mact" }, h("button", { class: "btn ghost sm", type: "button", onclick: function () {
+                AVF.confirmDialog({ icon: "unlock", title: "Forum yasağı kaldırılsın mı?", text: "@" + b.username + " yeniden yazabilir; üyeye bildirim gider.", confirm: "Kaldır", cancel: "Vazgeç" }).then(function (y) {
+                  if (y) bapi("DELETE", "/mod/ban/" + b.username).then(function () { AVF.toast(AVF.t("Forum yasağı kaldırıldı.")); load(); }, function (e) { err(list, e); });
+                });
+              } }, AVF.icon("unlock", "bico"), "Yasağı kaldır")));
+          })))));
+      }, function (e) { err(list, e); });
+    }
+    load();
+  }
+  function catsPane(box) {
+    Promise.all([bapi("GET", "/home"), forumLevels ? forumLevels : api("GET", "/forum/levels").then(function (l) { forumLevels = l; return l; })]).then(function (x) {
+      var cats = []; x[0].categories.forEach(function (c) { cats.push(c); (c.children || []).forEach(function (k) { cats.push(k); }); });
+      AVF.mount(box, h("p", { class: "hint", text: "Bu ayarlar forumun içindeki moderasyon sayfasıyla aynıdır; burada yapılan değişiklik anında foruma yansır ve denetim kaydına yazılır. Duyurular bölümünde yalnız yönetim ve moderatörler konu açar ve yazar." }),
+        h("div", { class: "stack" }, cats.map(function (c) {
+          var eb = h("div"), name = AVF.input("text", { maxlength: "60", value: c.name, "aria-label": "Kategori adı" }), desc = h("textarea", { class: "inp", maxlength: "240", rows: "2", "aria-label": "Açıklama" }), notice = h("textarea", { class: "inp", maxlength: "400", rows: "2", "aria-label": "Kategori duyurusu", placeholder: "Kategori sayfasının üstünde görünen not (isteğe bağlı)" });
+          desc.value = c.description || ""; notice.value = c.notice || "";
+          var lvl = h("select", { class: "inp", "aria-label": "Konu açmak için en düşük seviye", disabled: c.kind === "announce" }, x[1].map(function (l) { return h("option", { value: String(l.n), text: l.n + " · " + l.name, selected: c.minLevel === l.n }); }));
+          var lock = h("input", { type: "checkbox", checked: !!c.isLocked });
+          return AVF.accordion({ icon: c.icon || "msg", title: c.name + (c.parentId ? " (alt kategori)" : ""), sub: (c.kind === "announce" ? "Duyuru · yalnız yönetim yazar" : "En düşük seviye: " + ((x[1][c.minLevel - 1] || {}).name || c.minLevel)) + (c.isLocked ? " · Yeni konulara kapalı" : "") + " · " + (c.topics || 0) + " konu", content: [
+            AVF.field("Ad", name), AVF.field("Açıklama", desc, { optional: true }), AVF.field("Kategori notu", notice, { optional: true }),
+            c.kind === "announce" ? h("p", { class: "hint", text: "Duyurular: üyeler konu açamaz, yanıt yazamaz; yalnız okur." }) : AVF.field("Konu açmak için en düşük seviye", lvl),
+            h("label", { class: "check" }, lock, "Yeni konu ve mesajlara kapat (moderatörler yazabilir)"), eb,
+            h("button", { class: "btn sm", type: "button", onclick: function (e) {
+              var b = e.currentTarget; AVF.busy(b, true, "Kaydediliyor…");
+              bapi("PUT", "/mod/categories/" + c.id, { name: name.value.trim(), description: desc.value, notice: notice.value, minLevel: Number(lvl.value), isLocked: lock.checked }).then(function () { AVF.busy(b, false); AVF.toast(AVF.t("Kategori kaydedildi.")); AVF.mount(eb, null); }, function (er) { AVF.busy(b, false); err(eb, er); });
+            } }, AVF.icon("save", "bico"), "Kaydet")] });
+        })),
         h("div", { class: "card", style: "padding:18px;margin-top:14px" }, h("h3", { style: "margin-bottom:6px" }, "Seviye kuralları"),
-          h("p", { class: "hint", text: "Kullanıcılar arası mesajlaşma Pump Avcısı seviyesinde açılır. Moderatör ve Admin yalnız atamayla verilir." }),
-          h("ol", { class: "lvl-list" }, L.map(function (l) { return h("li", null, h("span", { class: "tile" }, AVF.icon("award")), h("b", { text: l.name }), h("small", { text: l.min + "+ puan" })); }),
+          h("p", { class: "hint", text: "Kullanıcılar arası mesajlaşma Pump Avcısı seviyesinde açılır. Moderatör ve Admin yalnız atamayla verilir. Üyenin seviyesi ve moderatörlüğü Forum Üyeleri › Yönet bölümündedir." }),
+          h("ol", { class: "lvl-list" }, x[1].map(function (l) { return h("li", null, h("span", { class: "tile" }, AVF.icon("award")), h("b", { text: l.name }), h("small", { text: l.min + "+ puan" })); }),
             h("li", null, h("span", { class: "tile" }, AVF.icon("shield")), h("b", { text: "Moderatör" }), h("small", { text: "atama ile" })),
             h("li", null, h("span", { class: "tile" }, AVF.icon("key")), h("b", { text: "AlpveFit" }), h("small", { text: "yönetici · atama ile" })))));
-    }, function (e) { err(c, e); });
+    }, function (e) { err(box, e); });
+  }
+  var MODLOG = { forum_topic_pin: "Konu sabitlendi", forum_topic_unpin: "Sabitleme kaldırıldı", forum_topic_move: "Konu taşındı", forum_topic_kind: "Konu türü değişti", forum_topic_hide: "Konu kaldırıldı", forum_topic_restore: "Konu geri getirildi",
+    forum_post_hide: "Mesaj kaldırıldı", forum_post_restore: "Mesaj geri getirildi", forum_post_edit_mod: "Mesaj düzenlendi", forum_report_uphold: "Şikâyet haklı bulundu", forum_report_dismiss: "Şikâyet reddedildi",
+    forum_ban: "Forumdan uzaklaştırma", forum_unban: "Uzaklaştırma kaldırıldı", forum_category_update: "Kategori güncellendi", forum_blocked_filter: "Filtre: gönderi engellendi", dm_blocked_filter: "Filtre: mesaj engellendi", member_forum_set: "Seviye / moderatörlük" };
+  function modLogPane(box) {
+    bapi("GET", "/mod/log").then(function (rows) {
+      if (!rows.length) return AVF.mount(box, AVF.state("list", "Kayıt yok", ""));
+      AVF.mount(box, h("ul", { class: "card fc-l mlog" }, rows.map(function (r) {
+        return h("li", null, h("span", { class: "tile" }, AVF.icon(/ban/.test(r.action) ? "lock" : /report/.test(r.action) ? "flag" : /filter/.test(r.action) ? "shield" : "bolt")),
+          h("div", { class: "fc-t" }, h("b", { text: MODLOG[r.action] || r.action }), h("small", { text: AVF.fmtDateTime(r.at) + " · " + (r.actor ? "@" + r.actor : "Sistem") }), r.reason ? h("small", { "data-notr": "", text: r.reason }) : null),
+          r.topic ? h("a", { class: "btn ghost sm", href: "/forum/konu/" + r.topic, target: "_blank", rel: "noopener" }, AVF.icon("arrow", "bico"), "Konu") : null);
+      })));
+    }, function (e) { err(box, e); });
+  }
+  function metricsPane(box) {
+    api("GET", "/forum/metrics").then(function (m) {
+      function delta(a, b) { if (b == null || a == null) return ""; var d = a - b; return d === 0 ? " (=)" : " (" + (d > 0 ? "+" : "") + d + ")"; }
+      function mt(icon, label, val, sub) { return h("div", { class: "card", style: "padding:12px;display:flex;gap:10px;align-items:flex-start" }, h("span", { class: "tile" }, AVF.icon(icon)), h("div", null, h("small", { style: "display:block;color:var(--muted);font-weight:600", text: label }), h("b", { style: "font-size:20px", text: val == null ? "—" : String(val) }), sub ? h("small", { style: "display:block;color:var(--muted)", text: sub }) : null)); }
+      var fr = m.firstReply.medianMinutes, frt = fr == null ? null : fr < 60 ? fr + " dk" : Math.round(fr / 6) / 10 + " sa", u = m.usage;
+      AVF.mount(box, h("h3", { style: "margin-bottom:10px" }, "Forum ölçümleri (son 7 gün)"),
+        h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px" },
+          mt("users", "Etkin üye", m.week.active, "önceki hafta " + m.prevWeek.active + delta(m.week.active, m.prevWeek.active)),
+          mt("refresh", "Geri dönen üye", m.returning, m.returningRate == null ? "önceki hafta etkin üye yok" : "önceki haftanın %" + m.returningRate + "'i"),
+          mt("file", "Yeni konu", m.week.topics, "önceki hafta " + m.prevWeek.topics + delta(m.week.topics, m.prevWeek.topics)),
+          mt("chat", "Yanıt", m.week.replies, m.repliesPerTopic == null ? "" : "konu başına " + String(m.repliesPerTopic).replace(".", ",")),
+          mt("clock", "İlk yanıt süresi (medyan)", frt, m.firstReply.answered + " / " + m.firstReply.total + " konu yanıt aldı"),
+          mt("plus", "Foruma katılan", m.week.joined, "önceki hafta " + m.prevWeek.joined),
+          mt("bell", "Cihaz bildirimi açık", u.push_users, u.members + " forum üyesinden"),
+          mt("mail", "Haftalık özet açık", u.digest_users, ""),
+          mt("shield", "KVKK açık rızası", u.consent_users, u.members + " forum üyesinden"),
+          mt("pulse", "Gelişim günlüğü (7 gün)", u.journal_users, "kayıt giren üye"),
+          mt("flame", "Meydan okuma (7 gün)", u.challenge_users, u.badges_week + " rozet kazanıldı"),
+          mt("flag", "Açık şikâyet / filtre", u.open_reports, u.filtered_week + " gönderi filtreye takıldı")),
+        m.top.length ? h("div", { class: "card", style: "padding:16px;margin-top:14px" }, h("b", { text: "Haftanın öne çıkan konuları" }), h("ol", { style: "margin:8px 0 0;padding-left:20px" }, m.top.map(function (t) {
+          return h("li", { style: "margin:4px 0" }, h("a", { href: "/forum/konu/" + t.id, target: "_blank", rel: "noopener", "data-notr": "", text: t.title }), h("small", { style: "color:var(--muted)" }, " · ", h("span", { text: t.reply_count + " yanıt · " + t.like_count + " beğeni · " + t.view_count + " görüntülenme" })));
+        }))) : null);
+    }, function (e) { err(box, e); });
   }
 
   // ---------- yönetici: DENETİM KAYDI (arama, filtre, her kaydın ayrıntısı) ----------

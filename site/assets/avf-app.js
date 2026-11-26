@@ -517,6 +517,30 @@
         h("span", { class: "t", style: "flex:1;min-width:0" }, h("b", { style: "display:block;font-size:16px", text: m.label }), h("small", { style: "color:var(--muted)", text: !k ? "Hesabınız için henüz etkin değil" : k.count ? k.count + " yayınlanmış plan" + (k.lastPublishedAt ? " · son: " + AVF.fmtDate(k.lastPublishedAt) : "") : "Henüz yayınlanmış plan yok" })), AVF.icon(k ? "chev" : "lock", k ? "chev" : "pm-lock")],
         { class: "card ovk" + (k ? "" : " off"), style: "display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none" });
     })));
+    allPlansColumn(el, o);
+  }
+  /** v25: tüm güncel planlar tek sütunda — beslenme, antrenman, supplement, farmakoloji ve notlar alt alta; üstte bölümlere atlama. */
+  function allPlansColumn(el, o) {
+    var live = Object.keys(AVF.KIND).filter(function (key) { return o.kinds.some(function (x) { return x.kind === key && x.count; }); });
+    if (!live.length || !AVF.planDataView) return;
+    var body = h("div", { class: "stack ovc-b" }, AVF.skeleton(2));
+    var jump = h("nav", { class: "ovc-j", "aria-label": "Planlarda bölüme atla" }, live.map(function (key) {
+      return h("a", { href: "#plan-" + AVF.KIND[key].slug, class: "ktab", onclick: function (e) { var t = document.getElementById("plan-" + AVF.KIND[key].slug); if (t) { e.preventDefault(); t.scrollIntoView({ behavior: "smooth", block: "start" }); } } }, AVF.icon(AVF.KIND[key].icon), h("span", { text: AVF.KIND[key].label }));
+    }));
+    el.appendChild(h("section", { class: "ovc" }, h("div", { class: "ovc-h" }, h("h3", { text: "Güncel planlarım" }), h("small", { class: "hint", text: "Tüm bölümlerin en güncel planı tek sayfada, alt alta." })), jump, body));
+    Promise.all([Promise.all(live.map(function (k) { return fetchPlans(k).catch(function () { return []; }); })), AVF.planCatalog ? AVF.planCatalog(false).catch(function () { return null; }) : null]).then(function (r) {
+      if (!body.isConnected) return;
+      var rows = {}; live.forEach(function (k, i) { rows[k] = r[0][i] || []; });
+      var ctx = { supp: rows.supplement && rows.supplement[0] && rows.supplement[0].data };
+      AVF.mount(body, live.map(function (key) {
+        var m = AVF.KIND[key], p = rows[key][0];
+        if (!p) return null;
+        return h("section", { class: "card ovc-s", id: "plan-" + m.slug },
+          h("div", { class: "ovc-sh" }, h("span", { class: "tile" }, AVF.icon(m.icon)), h("div", { style: "flex:1;min-width:0" }, h("b", { text: m.label }), h("small", { "data-notr": "", text: p.title + " · " + AVF.fmtDate(p.updated_at || p.published_at) })),
+            link("/panel/" + m.slug, rows[key].length > 1 ? "Tümü (" + rows[key].length + ")" : "Bölüme git", { class: "btn ghost sm" })),
+          p.data ? AVF.planDataView(key, p.data, ctx) : null, p.body ? h("div", { class: "plan-body", text: p.body }) : null);
+      }));
+    });
   }
 
   // Plan önbelleği: bölümler arası geçiş anında açılır (önbellekten çizilir, arka planda tazelenir).

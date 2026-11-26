@@ -1,6 +1,6 @@
 // Plan yapılandırılmış verisi (plans.data, JSONB) — türe göre doğrulama ve temizleme.
 // Kural: yalnız katalogdaki (utils/planCatalog.js) kalemler, sınırlı sayılar ve kısa düz metin notlar kabul edilir; bilinmeyen alanlar atılır.
-import { FOOD_BY_KEY, MEALS_MAX, GROUP_BY_KEY, DAYS_MAX, EXERCISES_PER_DAY_MAX, SUPP_GROUPS, SUPP_UNITS, SUPP_STATE, SUPP_WHEN, ITEMS_MAX,
+import { FOOD_BY_KEY, MEALS_MAX, NUTRITION_DAYS_MAX, GROUP_BY_KEY, DAYS_MAX, EXERCISES_PER_DAY_MAX, SUPP_GROUPS, SUPP_UNITS, SUPP_STATE, SUPP_WHEN, ITEMS_MAX,
   PHARMA_GROUPS, PHARMA_FREQ, DOSE_UNITS, NOTE_FIELDS, NOTE_MAX } from "./planCatalog.js";
 
 const text = (v, max = NOTE_MAX) => (typeof v === "string" ? v.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim().slice(0, max) : "");
@@ -10,11 +10,20 @@ const arr = (v) => (Array.isArray(v) ? v : []);
 class PlanDataError extends Error {}
 const fail = (m) => { throw new PlanDataError(m); };
 
+// v25: beslenme günlere bölünebilir: { days: [{ title, meals, note }], note }. Tek günlük (eski) biçim { meals, note } aynen geçerlidir.
 function nutrition(d) {
-  const meals = arr(d.meals);
+  if (Array.isArray(d.days)) {
+    const days = d.days;
+    if (!days.length) fail("En az bir gün olmalıdır.");
+    if (days.length > NUTRITION_DAYS_MAX) fail(`En fazla ${NUTRITION_DAYS_MAX} beslenme günü eklenebilir.`);
+    return { days: days.map((dy, i) => ({ title: text(dy && dy.title, 60) || `${i + 1}. Gün`, meals: mealsOf(dy && dy.meals), note: text(dy && dy.note) })), note: text(d.note) };
+  }
+  return { meals: mealsOf(d.meals), note: text(d.note) };
+}
+function mealsOf(raw) {
+  const meals = arr(raw);
   if (meals.length > MEALS_MAX) fail(`En fazla ${MEALS_MAX} öğün eklenebilir.`);
-  return {
-    meals: meals.map((m, i) => {
+  return meals.map((m, i) => {
       const items = arr(m && m.items);
       if (items.length > 30) fail("Bir öğüne en fazla 30 besin eklenebilir.");
       return {
@@ -26,9 +35,7 @@ function nutrition(d) {
         }),
         note: text(m && m.note),
       };
-    }),
-    note: text(d.note),
-  };
+  });
 }
 
 function training(d) {
@@ -132,7 +139,7 @@ export function validatePlanData(kind, raw) {
 export function planDataHasContent(kind, d) {
   if (!d || typeof d !== "object") return false;
   if (d.note) return true;
-  if (kind === "nutrition") return (d.meals || []).some((m) => (m.items || []).length || m.note);
+  if (kind === "nutrition") return (d.days ? d.days.flatMap((dy) => dy.note ? [{ note: dy.note }].concat(dy.meals || []) : dy.meals || []) : d.meals || []).some((m) => (m.items || []).length || m.note);
   if (kind === "training") return (d.days || []).some((dy) => (dy.exercises || []).length || dy.note);
   if (kind === "supplement" || kind === "pharmacology") return (d.items || []).length > 0;
   if (kind === "notes") return Object.keys(d.values || {}).length > 0 || Object.keys(d.notes || {}).length > 0;

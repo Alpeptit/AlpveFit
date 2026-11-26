@@ -358,7 +358,9 @@ const MEMBER_ROW = `u.id, u.full_name, u.username, u.email, u.role, u.user_code,
   u.locked_at, u.locked_until, u.locked_reason, u.plan_kinds,
   coalesce(f.level_override, NULL) AS level_override, coalesce(f.forum_role, 'member') AS forum_role, coalesce(f.topics, 0) AS topics, coalesce(f.posts, 0) AS posts,
   coalesce(f.likes, 0) AS likes, coalesce(f.dislikes, 0) AS dislikes, coalesce(f.reports_received, 0) AS reports_received, coalesce(f.reports_upheld, 0) AS reports_upheld,
-  f.rules_accepted_at IS NOT NULL AS forum_joined`;   // forum üye listesinde yalnız foruma girip kuralları onaylayanlar görünür
+  f.rules_accepted_at IS NOT NULL AS forum_joined, f.rules_accepted_at AS forum_since, f.last_seen_at AS forum_seen,
+  CASE WHEN f.ban_permanent THEN 'permanent' WHEN f.banned_until > now() THEN 'temp' END AS forum_ban, CASE WHEN f.banned_until > now() THEN f.banned_until END AS forum_ban_until, f.ban_reason AS forum_ban_reason,
+  (EXISTS (SELECT 1 FROM member_access a WHERE a.member_id = u.id) OR EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.status = 'paid') OR EXISTS (SELECT 1 FROM coach_clients cc WHERE cc.member_id = u.id)) AS coaching`;   // forum üye listesinde yalnız foruma girip kuralları onaylayanlar görünür
 function memberOut(r) {
   const now = Date.now(), active = r.locked_at && (!r.locked_until || new Date(r.locked_until).getTime() > now);
   const admin = String(r.locked_reason || "").startsWith("admin_");
@@ -369,14 +371,20 @@ function memberOut(r) {
 adminRouter.get("/members", requireAdmin, async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 80).replace(/[%_\\]/g, "");
   const st = String(req.query.state || ""), verified = String(req.query.verified || ""), totp = String(req.query.totp || ""), role = String(req.query.role || "");
-  const sort = { new: "u.created_at DESC", old: "u.created_at ASC", name: "u.full_name ASC", reports: "coalesce(f.reports_received,0) DESC, u.created_at DESC" }[req.query.sort] || "u.created_at DESC";
+  // v25: kapsam — koçluk üyeleri (paket / plan erişimi / koç ataması olanlar) ya da forum üyeleri (kuralları onaylayıp foruma girenler)
+  const seg = ["coaching", "forum"].includes(req.query.segment) ? req.query.segment : "", fban = ["temp", "permanent", "any"].includes(req.query.forumBan) ? req.query.forumBan : "";
+  const sort = { new: "u.created_at DESC", old: "u.created_at ASC", name: "u.full_name ASC", reports: "coalesce(f.reports_received,0) DESC, u.created_at DESC",
+    posts: "coalesce(f.posts,0) + coalesce(f.topics,0) DESC, u.created_at DESC", seen: "f.last_seen_at DESC NULLS LAST" }[req.query.sort] || "u.created_at DESC";
   const { rows } = await pool.query(
     `SELECT ${MEMBER_ROW} FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id
       WHERE ($1 = '' OR u.full_name ILIKE '%' || $1 || '%' OR u.username ILIKE '%' || $1 || '%' OR u.email ILIKE '%' || $1 || '%' OR u.user_code ILIKE '%' || $1 || '%')
         AND ($2 = '' OR ($2 = 'yes') = (u.email_verified_at IS NOT NULL))
         AND ($3 = '' OR ($3 = 'on') = u.totp_enabled)
         AND ($4 = '' OR u.role = $4)
-      ORDER BY ${sort} LIMIT 300`, [q, ["yes", "no"].includes(verified) ? verified : "", ["on", "off"].includes(totp) ? totp : "", ["user", "coach", "admin"].includes(role) ? role : ""]);
+        AND ($5 = '' OR ($5 = 'forum' AND f.rules_accepted_at IS NOT NULL)
+             OR ($5 = 'coaching' AND u.role = 'user' AND (EXISTS (SELECT 1 FROM member_access a WHERE a.member_id = u.id) OR EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.status = 'paid') OR EXISTS (SELECT 1 FROM coach_clients cc WHERE cc.member_id = u.id))))
+        AND ($6 = '' OR ($6 = 'permanent' AND f.ban_permanent) OR ($6 = 'temp' AND NOT coalesce(f.ban_permanent, false) AND f.banned_until > now()) OR ($6 = 'any' AND (f.ban_permanent OR f.banned_until > now())))
+      ORDER BY ${sort} LIMIT 300`, [q, ["yes", "no"].includes(verified) ? verified : "", ["on", "off"].includes(totp) ? totp : "", ["user", "coach", "admin"].includes(role) ? role : "", seg, fban]);
   let out = rows.map(memberOut);
   if (["active", "blocked", "banned", "locked"].includes(st)) out = out.filter((m) => m.state === st);
   res.json(out);

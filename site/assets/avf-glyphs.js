@@ -41,6 +41,22 @@
     lyo: ["M8 3h8v3H8z", "M9 6h6v13a2 2 0 01-2 2h-2a2 2 0 01-2-2z", "f:M9 17h6v2a2 2 0 01-2 2h-2a2 2 0 01-2-2z"],
     blister: ["M3.5 6.5h17v11h-17z", "M8 12a2 2 0 100-.01M16 12a2 2 0 100-.01M12 12a2 2 0 100-.01"],
     pill2: ["M9.5 20.5a6 6 0 01-6-6l7-7a6 6 0 018.5 8.5l-7 7a6 6 0 01-2.5-2.5z", "M7 10l7 7"],
+    // v25: fıstık / badem ezmesi ve sebzeler (lif kaynağı)
+    jar: ["M7 3.5h10v3.5H7z", "M6.5 7h11v12a2 2 0 01-2 2h-7a2 2 0 01-2-2z", "f:M6.5 11h11v5h-11z"],
+    herb: ["M12 21V8", "M12 13c-3 0-5-2-5-5 3 0 5 2 5 5zM12 10c3 0 5-2 5-5-3 0-5 2-5 5zM12 17.5c3 0 5-2 5-5-3 0-5 2-5 5z"],
+    broccoli: ["M7.2 12.5a3.2 3.2 0 011.6-6 3.6 3.6 0 016.4 0 3.2 3.2 0 011.6 6z", "M10 12.5l.6 8h2.8l.6-8M12 12.5v3"],
+    cabbage: ["M12 3.5a8.5 8.5 0 100 17 8.5 8.5 0 000-17z", "M12 20.5c-2.6-2-3.8-5-3.8-8.5S9.4 6 12 3.5M12 20.5c2.6-2 3.8-5 3.8-8.5"],
+    brussels: ["M8 15a4 4 0 100-8 4 4 0 000 8zM16 19.5a4 4 0 100-8 4 4 0 000 8z", "M8 7c-1.2 2.4-1.2 5.6 0 8M16 11.5c-1.2 2.4-1.2 5.6 0 8"],
+    mushroom: ["M3.5 11.5a8.5 7 0 0117 0z", "M9.5 11.5v7a1.5 1.5 0 001.5 1.5h2a1.5 1.5 0 001.5-1.5v-7", "M8 8v.01M12 6.5v.01M16 8v.01"],
+    cucumber: ["M5 16.5L16.5 5a3 3 0 014.2 4.2L9.2 20.7A3 3 0 015 16.5z", "M10.5 12.5v.01M13.5 9.5v.01M8.5 16v.01M16.5 7.5v.01"],
+    zucchini: ["M4.5 19.5c-1.4-1.4-.4-3.8 1.8-6l7-7c2.5-2.5 5-3.4 6.4-2s.5 3.9-2 6.4l-7 7c-2.2 2.2-4.8 3-6.2 1.6z", "M19.8 4.2L21.5 2.5", "M8 15l3-3M11 16l2.5-2.5"],
+    beans: ["M4 5c2 8 7 13 15 15l1.2-2C13.4 16.2 9.2 11 7.2 4z", "M8.5 9.5v.01M11 13v.01M14.2 16v.01"],
+    lettuce: ["M12 21c-5 0-8-3.5-8-8 0-3 2-5 4-6 1-2.5 2.5-4 4-4s3 1.5 4 4c2 1 4 3 4 6 0 4.5-3 8-8 8z", "M12 21V9M12 14l-3-3M12 17l3-3"],
+    artichoke: ["M12 3c3.5 2.5 6 6 6 9.5A6 6 0 0112 18a6 6 0 01-6-5.5C6 9 8.5 5.5 12 3z", "M12 18v3M8.5 9.5L12 12l3.5-2.5M7 13.5l5 3 5-3"],
+    asparagus: ["M8 21V8.5M12 21V5.5M16 21V8.5", "M8 8.5L6.8 6.3 8 4.2l1.2 2.1zM12 5.5l-1.2-2 1.2-1.7 1.2 1.7zM16 8.5l-1.2-2.2L16 4.2l1.2 2.1z"],
+    pepper: ["M8 7.5c-3 0-4.5 3-4 7s3 6.5 6 6.5c1 0 1.5-.4 2-1 .5.6 1 1 2 1 3 0 5.5-2.5 6-6.5s-1-7-4-7c-1.5 0-2.5.9-4 .9S9.5 7.5 8 7.5z", "M12 8.4V5.5c0-1.2.9-2.3 2.2-2.5"],
+    celery: ["M7 21l1-13.5M12 21V6.5M17 21l-1-13.5", "M8 7.5C6 6.6 5 4.6 6 3.4c2 0 3 2 2 4.1zM12 6.5c-1-1.5-1-3.6 0-4.2 1 .6 1 2.7 0 4.2zM16 7.5c2-.9 3-2.9 2-4.1-2 0-3 2-2 4.1z"],
+    leek: ["M10 21V11h4v10zM10 21h4", "M10 11L6 3M12 11V3M14 11l4-8", "f:M10 16h4v5h-4z"],
   };
   // tür/anahtar → [çizim, ton]
   var FOOD = {
@@ -49,8 +65,13 @@
     greek_yogurt: ["yogurt", "s"], lor: ["lor", "s"], sweet_potato: ["sweet_potato", "o"], potato: ["potato", "y"], oats: ["oats", "y"], rice_basmati: ["rice", "s", "BAS"], rice_jasmine: ["rice", "s", "YAS"], rice_baldo: ["rice", "s", "BAL"],
     rye_bread: ["bread", "o", "ÇAV"], ww_bread: ["bread", "o", "TAM"], banana: ["banana", "y"], pineapple: ["pineapple", "y"], apple_green: ["apple", "g"], apple_red: ["apple", "r"], blueberry: ["berries", "b"],
     raspberry: ["raspberry", "r"], blackberry: ["berries", "p"], honey: ["honey", "y"], olive_oil: ["oil", "g"], coconut_oil: ["coconut", "s"], avocado: ["avocado", "g"],
+    peanut_butter: ["jar", "o", "FIS"], almond_butter: ["jar", "y", "BAD"],
+    watercress: ["herb", "g", "TER"], arugula: ["herb", "g", "ROK"], parsley: ["herb", "g", "MAY"], dill: ["herb", "g", "DER"],
+    artichoke: ["artichoke", "g"], asparagus: ["asparagus", "g"], broccoli: ["broccoli", "g"], cauliflower: ["broccoli", "s"], zucchini: ["zucchini", "g"],
+    spinach: ["leaf", "g", "ISP"], lettuce: ["lettuce", "g"], cucumber: ["cucumber", "g"], green_beans: ["beans", "g"], brussels: ["brussels", "g"], cabbage: ["cabbage", "g"],
+    mushroom: ["mushroom", "s"], green_pepper: ["pepper", "g"], celery: ["celery", "g"], leek: ["leek", "g"],
   };
-  var CODE_EN = { TON: "TUN", MEZ: "WHT", YAS: "JAS", "ÇAV": "RYE", TAM: "WW" };   // kısa rozet kodları (İngilizce arayüz)
+  var CODE_EN = { TON: "TUN", MEZ: "WHT", YAS: "JAS", "ÇAV": "RYE", TAM: "WW", FIS: "PNT", BAD: "ALM", TER: "CRS", ROK: "ARU", MAY: "PAR", DER: "DIL", ISP: "SPN" };   // kısa rozet kodları (İngilizce arayüz)
   var SHAPE_TONE = { tub: "s", capsule: "b", softgel: "y", tablet: "s", bottle: "b", leaf: "g", element: "p", vial: "o", lyo: "b", blister: "s" };
   function svg(parts) {
     var el = document.createElementNS(NS, "svg");

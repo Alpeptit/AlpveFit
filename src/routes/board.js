@@ -53,11 +53,12 @@ async function gate(req, res, next) {
        FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.id = $1`, [req.user.sub]);
   const me = rows[0];
   if (!me || !me.email_verified_at) return res.status(403).json({ error: "Foruma katılmak için e-posta adresinizi doğrulayın.", code: "verify" });
-  if (!me.rules_accepted_at) return res.status(403).json({ error: "Foruma girmek için forum kurallarını ve 18 yaş beyanını onaylayın.", code: "rules", rules: RULES, icons: RULE_ICONS });
+  // Yönetici (site sahibi) moderasyon araçlarını yönetim panelinden de kullanır; kural onayı yalnız üyeler ve moderatörler için zorunludur.
+  if (!me.rules_accepted_at && me.role !== "admin") return res.status(403).json({ error: "Foruma girmek için forum kurallarını ve 18 yaş beyanını onaylayın.", code: "rules", rules: RULES, icons: RULE_ICONS });
   const banned = me.ban_permanent || (me.banned_until && new Date(me.banned_until) > new Date());
   const lv = forumLevel(me, me.role);
   req.fm = { id: me.id, username: me.username, role: me.role, level: lv, mod: me.role === "admin" || me.forum_role === "moderator", admin: me.role === "admin", hideOnline: !!me.hide_online,
-    banned, banUntil: me.ban_permanent ? null : me.banned_until, banReason: me.ban_reason || "", since: me.rules_accepted_at, notify: notifyIn(me.notify),
+    banned, banUntil: me.ban_permanent ? null : me.banned_until, banReason: me.ban_reason || "", since: me.rules_accepted_at || new Date(), notify: notifyIn(me.notify),
     consent: !!me.health_consent_at || me.role === "admin" || me.forum_role === "moderator" || !!me.is_official, official: !!me.is_official };
   if (!me.last_seen_at || Date.now() - new Date(me.last_seen_at).getTime() > 120000)
     pool.query(`UPDATE forum_profiles SET last_seen_at = now() WHERE user_id = $1`, [me.id]).catch(() => {});
@@ -159,6 +160,8 @@ async function isCrown(uid) {
 // Kural (bugün ve gelecekte): ekip konuları yoruma kapalıdır, yalnız ekip ekleme yapabilir; üye konuları her zaman yoruma açıktır.
 function canPostIn(req, t, c) {
   if (t && t.crown) return req.fm.admin || req.fm.official ? { ok: true } : { ok: false, why: "Bu ekip konusu yorumlara kapalıdır." };
+  // Duyurular: yalnız yönetici ve moderatörler konu açar ve yazar; üyeler yalnız okur (yorum, yanıt, başlık yok).
+  if (c && c.kind === "announce") return req.fm.mod || req.fm.admin ? { ok: true } : { ok: false, why: "Duyurular yalnız okunur; bu bölümde yalnız yönetim ve moderatörler yazabilir." };
   if (req.fm.mod) return { ok: true };
   if (c.is_locked) return { ok: false, why: "Bu kategori yeni mesajlara kapalı." };
   return { ok: true };
@@ -1028,6 +1031,25 @@ boardRouter.get("/board/mod/log", member, async (req, res) => {
        FROM audit_log a LEFT JOIN users u ON u.id = a.actor_id WHERE a.action ~ $1 ORDER BY a.created_at DESC LIMIT 150`, [MOD_ACTIONS]);
   res.json(rows.map((r) => ({ action: r.action, targetType: r.target_type, targetId: r.target_id, at: r.created_at, actor: r.actor,
     reason: r.details && (r.details.reason || null), topic: r.details && r.details.topic ? String(r.details.topic) : null, where: r.details && r.details.where || null })));
+});
+// Moderasyon: bir üyenin forumdaki tüm içeriği (kaldırılanlar dahil, son 60 konu + 60 mesaj) — yönetim panelindeki forum üye listesi için.
+boardRouter.get("/board/mod/u/:username/content", member, async (req, res) => {
+  if (!modOnly(req, res)) return;
+  res.setHeader("Cache-Control", "no-store");
+  const un = String(req.params.username || "").toLowerCase();
+  if (!/^[a-z0-9._]{3,20}$/.test(un)) return res.status(404).json({ error: "Üye bulunamadı." });
+  const u = (await pool.query(`SELECT u.id, f.banned_until, f.ban_permanent, f.ban_reason FROM users u LEFT JOIN forum_profiles f ON f.user_id = u.id WHERE u.username = $1`, [un])).rows[0];
+  if (!u) return res.status(404).json({ error: "Üye bulunamadı." });
+  const topics = await pool.query(`SELECT t.id, t.title, t.reply_count, t.view_count, t.created_at, t.hidden_at, c.name AS cat_name, c.icon, fp.id AS first_id, fp.like_count
+      FROM forum_topics t JOIN forum_categories c ON c.id = t.category_id JOIN forum_posts fp ON fp.topic_id = t.id AND fp.is_first
+     WHERE t.author_id = $1 ORDER BY t.created_at DESC LIMIT 60`, [u.id]);
+  const posts = await pool.query(`SELECT p.id, p.topic_id, left(${plainSql("p.body")}, 240) AS excerpt, p.created_at, p.hidden_at, p.like_count, t.title, t.hidden_at AS topic_hidden,
+       (SELECT count(*)::int FROM forum_reports r WHERE r.post_id = p.id AND r.status = 'open') AS open_reports
+      FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id WHERE p.author_id = $1 AND NOT p.is_first ORDER BY p.created_at DESC LIMIT 60`, [u.id]);
+  const banned = !!(u.ban_permanent || (u.banned_until && new Date(u.banned_until) > new Date()));
+  res.json({ ban: banned ? { permanent: !!u.ban_permanent, until: u.ban_permanent ? null : u.banned_until, reason: u.ban_reason || "" } : null,
+    topics: topics.rows.map((t) => ({ id: t.id, firstPostId: t.first_id, title: t.title, replies: t.reply_count, views: t.view_count, likes: t.like_count, at: t.created_at, hidden: !!t.hidden_at, category: { name: t.cat_name, icon: t.icon } })),
+    posts: posts.rows.map((p) => ({ id: p.id, topicId: p.topic_id, title: p.title, excerpt: p.excerpt, at: p.created_at, likes: p.like_count, hidden: !!p.hidden_at, topicHidden: !!p.topic_hidden, openReports: p.open_reports })) });
 });
 boardRouter.get("/board/mod/bans", member, async (req, res) => {
   if (!modOnly(req, res)) return;

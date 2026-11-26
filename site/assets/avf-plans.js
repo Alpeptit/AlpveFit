@@ -15,10 +15,36 @@
   var LB = 453.59237;
   function EN() { return AVF.lang === "en"; }
   function T(x) { return AVF.t ? AVF.t(x) : x; }
-  var Z = { g: 0, kcal: 0, p: 0, c: 0, f: 0 };
+  var Z = { g: 0, kcal: 0, p: 0, c: 0, f: 0, fib: 0 };
   function foodOf(k) { return (CAT.foods || []).filter(function (f) { return f.key === k; })[0]; }
-  function macro(f, qty) { var g = f.unit === "adet" ? qty * f.pieceG : qty, r = g / 100; return { g: g, kcal: f.kcal * r, p: f.protein * r, c: f.carb * r, f: f.fat * r }; }
-  function sum(list) { return list.reduce(function (a, m) { return { g: a.g + m.g, kcal: a.kcal + m.kcal, p: a.p + m.p, c: a.c + m.c, f: a.f + m.f }; }, Z); }
+  // v25: sebzeler yalnız lif sayılır (makro 0); fib = lif (g)
+  function macro(f, qty) { var g = f.unit === "adet" ? qty * f.pieceG : qty, r = g / 100; return { g: g, kcal: f.kcal * r, p: f.protein * r, c: f.carb * r, f: f.fat * r, fib: (f.fiber || 0) * r }; }
+  function sum(list) { return list.reduce(function (a, m) { return { g: a.g + m.g, kcal: a.kcal + m.kcal, p: a.p + m.p, c: a.c + m.c, f: a.f + m.f, fib: a.fib + (m.fib || 0) }; }, Z); }
+  /** v25: HER ÜYEYE GİDEN, DEĞİŞTİRİLEMEZ NOT (katalogdan; planla saklanmaz) */
+  AVF.fixedNote = function () { return CAT && CAT.fixedNote ? h("div", { class: "pl-fixed", role: "note" }, h("span", { class: "tile" }, AVF.icon("scale")), h("div", null, h("b", { text: "Önemli not" }), h("p", { text: CAT.fixedNote }))) : null; };
+  // v25: bugünün gün adı (beslenme / antrenman günlerinde bugünkü sekme açık gelir)
+  var WD = [["pazar", "sunday"], ["pazartesi", "monday"], ["sali", "tuesday"], ["carsamba", "wednesday"], ["persembe", "thursday"], ["cuma", "friday"], ["cumartesi", "saturday"]];
+  function foldTr(x) { return String(x || "").toLocaleLowerCase("tr").replace(/[çğıöşü]/g, function (c) { return { "ç": "c", "ğ": "g", "ı": "i", "ö": "o", "ş": "s", "ü": "u" }[c]; }); }
+  function todayIndex(titles) {
+    var w = WD[new Date().getDay()];
+    for (var i = 0; i < titles.length; i++) { var f = " " + foldTr(titles[i]).replace(/[^a-z0-9]+/g, " ") + " "; if (f.indexOf(" " + w[0] + " ") >= 0 || f.indexOf(" " + w[1] + " ") >= 0) return i; }
+    return -1;
+  }
+  /** Gün sekmeleri (üye görünümü): bugünün günü seçili gelir; yazdırmada tüm günler alt alta. */
+  function dayTabs(titles, renderDay, print) {
+    if (print || titles.length < 2) return titles.map(function (t, i) { return [titles.length > 1 ? h("h3", { class: "pl-dayh", "data-notr": "", text: t }) : null, renderDay(i)]; });
+    var today = todayIndex(titles), cur = Math.max(0, today), body = h("div");
+    var bar = h("div", { class: "pl-days", role: "tablist", "aria-label": "Günler" });
+    function paint() {
+      AVF.mount(bar, titles.map(function (t, i) {
+        return h("button", { type: "button", role: "tab", class: "pl-day" + (i === cur ? " on" : ""), "aria-selected": String(i === cur), onclick: function () { cur = i; paint(); } },
+          h("span", { "data-notr": "", text: t }), i === today ? h("small", { text: "Bugün" }) : null);
+      }));
+      AVF.mount(body, renderDay(cur));
+    }
+    paint();
+    return [bar, body];
+  }
   function mealName(i, n) { return i === 0 ? CAT.firstMeal : i === n - 1 && n > 1 ? CAT.lastMeal : (EN() ? "Meal " + (i + 1) : (i + 1) + ". Öğün"); }
   function groupOf(k) { return (CAT.groups || []).filter(function (g) { return g.key === k; })[0]; }
   function suppGroup(k) { return (CAT.supps || []).filter(function (g) { return g.key === k; })[0]; }
@@ -82,24 +108,33 @@
     return V ? h("div", { class: "pl-view" }, V(d, ctx || {}), noteBox(d.note)) : null;
   };
   function nutritionView(d, ctx) {
-    var n = d.meals.length, all = [];
-    var meals = d.meals.map(function (m, i) {
+    var days = d.days || [{ title: "", meals: d.meals || [], note: "" }];
+    return [AVF.fixedNote(), dayTabs(days.map(function (x, i) { return x.title || (i + 1) + ". Gün"; }), function (i) { return nutritionDay(days[i], ctx); }, ctx.print)];
+  }
+  function nutritionDay(dy, ctx) {
+    var n = dy.meals.length, all = [];
+    var meals = dy.meals.map(function (m, i) {
       var rows = m.items.map(function (it) { var f = foodOf(it.food); if (!f) return null; var mc = macro(f, it.qty); all.push(mc); return { f: f, it: it, mc: mc }; }).filter(Boolean);
       var t = sum(rows.map(function (r) { return r.mc; }));
-      return h("section", { class: "pl-card" }, h("div", { class: "pl-h" }, h("span", { class: "tile" }, AVF.icon(i === 0 ? "sun" : i === n - 1 && n > 1 ? "moon" : "utensils")), h("div", null, h("b", { text: mealName(i, n) }), h("small", { class: "pl-kc", "data-notr": "", text: nf(t.kcal, 0) + " kcal" }))),
+      return h("section", { class: "pl-card" }, h("div", { class: "pl-h" }, h("span", { class: "tile" }, AVF.icon(i === 0 ? "sun" : i === n - 1 && n > 1 ? "moon" : "utensils")), h("div", null, h("b", { text: mealName(i, n) }), h("small", { class: "pl-kc", "data-notr": "", text: nf(t.kcal, 0) + " kcal" + (t.fib ? " · " + nf(t.fib) + (EN() ? " g fibre" : " g lif") : "") }))),
         h("ul", { class: "pl-list" }, rows.map(function (r) {
           return h("li", null, h("span", { class: "pl-n" }, AVF.glyph("food", r.f.key), h("span", { text: r.f.name })),
-            h("b", { class: "pl-q", "data-notr": "", text: qtyText(r.f, r.it.qty) }), h("small", { class: "pl-m", "data-notr": "", text: mtxt(r.mc) }), r.it.note ? h("small", { class: "pl-in", "data-notr": "", text: r.it.note }) : null);
+            h("b", { class: "pl-q", "data-notr": "", text: qtyText(r.f, r.it.qty) }), h("small", { class: "pl-m", "data-notr": "", text: r.f.fiberOnly ? fibTxt(r.mc) : mtxt(r.mc) }), r.it.note ? h("small", { class: "pl-in", "data-notr": "", text: r.it.note }) : null);
         })), macroBar(t), noteBox(m.note));
     });
     var food = sum(all), st = suppTotal(ctx.supp), hasSupp = st.kcal > 0;
     return [h("div", { class: "pl-total" }, h("b", { class: "pl-tt", text: "Günlük toplam" }), macroBar(food, true),
+      food.fib ? h("div", { class: "pl-fib" }, AVF.icon("leaf"), h("small", { text: "Sebzelerden lif (makroya eklenmez)" }), h("b", { "data-notr": "", text: nf(food.fib) + " g" })) : null,
       hasSupp ? h("div", { class: "pl-sup" }, h("small", { text: "Supplementler (tipik değer)" }), macroBar(st)) : null,
       hasSupp ? h("div", { class: "pl-sup all" }, h("small", { text: "Supplementler dahil genel toplam" }), macroBar(sum([food, st]), true)) : null,
-      h("small", { class: "hint", text: "Tüm besinler çiğ (pişirilmeden önceki) ağırlıktır. Besin değerleri: USDA FoodData Central." })), meals];
+      h("small", { class: "hint", text: "Tüm besinler çiğ (pişirilmeden önceki) ağırlıktır. Besin değerleri: USDA FoodData Central." })), meals, noteBox(dy.note)];
   }
-  function trainingView(d) {
-    return d.days.map(function (dy) {
+  function fibTxt(mc) { return (EN() ? "Fibre " : "Lif ") + nf(mc.fib) + " g" + (EN() ? " · no macros counted" : " · makroya eklenmez"); }
+  function trainingView(d, ctx) {
+    return dayTabs(d.days.map(function (x) { return x.title; }), function (i) { return trainingDay(d.days[i]); }, ctx && ctx.print);
+  }
+  function trainingDay(dy) {
+    return (function () {
       var sets = 0, reps = 0, perG = {}, cardio = 0;
       dy.exercises.forEach(function (e) { if (e.group === "cardio") { cardio += e.minutes || 0; return; } sets += e.sets; reps += e.sets * repsAvg(e.reps); perG[e.group] = (perG[e.group] || 0) + e.sets; });
       return h("section", { class: "pl-card" },
@@ -115,7 +150,7 @@
           Object.keys(perG).map(function (k) { var g = groupOf(k); return stat(g ? g.icon : "dumb", g ? short(g.name) : k, perG[k] + (EN() ? " sets" : " set")); }),
           cardio ? stat("pulse", "Kardiyo", cardio + (EN() ? " min" : " dk")) : null),
         noteBox(dy.note));
-    });
+    })();
   }
   function suppView(d) {
     var t = suppTotal(d);
@@ -144,11 +179,11 @@
       })));
   }
   function notesView(d) {
-    return h("div", { class: "pl-grid" }, Object.keys(CAT.notes).map(function (k) {
+    return [AVF.fixedNote(), h("div", { class: "pl-grid" }, Object.keys(CAT.notes).map(function (k) {
       var f = CAT.notes[k], v = d.values && d.values[k], t = d.notes && d.notes[k];
       if (!v && !t) return null;
       return h("section", { class: "pl-card" }, h("div", { class: "pl-h" }, h("span", { class: "tile" }, AVF.icon(f.icon)), h("div", null, h("small", { text: f.label }), h("b", { class: "pl-big", text: v || "—" }))), noteBox(t));
-    }));
+    }))];
   }
 
   // ================================================================== PDF / YAZDIR
@@ -166,7 +201,7 @@
       h("h1", { class: "pr-title", "data-notr": "", text: p.title || "" }),
       o.member ? h("p", { class: "pr-member" }, h("span", { text: T("Üye") + ": " }), h("b", { "data-notr": "", text: o.member })) : null,
       meta.length ? h("p", { class: "pr-meta", "data-notr": "", text: meta.join("  ·  ") }) : null,
-      p.data ? AVF.planDataView(o.kind, p.data, o.ctx) : null,
+      p.data ? AVF.planDataView(o.kind, p.data, Object.assign({}, o.ctx || {}, { print: true })) : null,
       p.body ? h("div", { class: "plan-body", "data-notr": "", text: p.body }) : null,
       h("footer", { class: "pr-foot" }, h("span", { text: T("Bu plan size özel hazırlanmıştır; başkalarıyla paylaşmayın.") }), h("span", { "data-notr": "", text: "alpvefit.com · " + AVF.fmtDateTime(new Date()) })));
     document.body.appendChild(box);
@@ -235,26 +270,102 @@
 
   AVF.planEditor = function (kind, data, onChange) {
     var E = { nutrition: nutritionEd, training: trainingEd, supplement: suppEd, pharmacology: pharmaEd, notes: notesEd }[kind];
-    var wrap = h("div", { class: "pl-ed" });
     if (!E) return null;
-    var api = E(wrap, data ? JSON.parse(JSON.stringify(data)) : null, onChange || function () {});
-    wrap.get = api.get; return wrap;
+    var wrap = h("div", { class: "pl-ed" }), host = h("div"), cb = onChange || function () {}, api;
+    function build(dt) { api = E(host, dt ? JSON.parse(JSON.stringify(dt)) : null, cb); }
+    build(data);
+    var P = AVF.planParse;
+    // v25: yazıyla giriş — serbest metin çözümlenir, önizlenir, onayla plana aktarılır (farmakoloji bilerek hariç: elle girilir)
+    if (P && P.kinds.indexOf(kind) >= 0) wrap.appendChild(textPanel(kind, function () { return api.get(); }, function (dt) { build(dt); cb(); }));
+    wrap.appendChild(host);
+    wrap.get = function () { return api.get(); };
+    return wrap;
   };
+  var TXT_HELP = {
+    nutrition: ["Kahvaltı", "4 yumurta beyazı", "2 bütün yumurta (L)", "80 g yulaf", "", "Öğle", "200 g tavuk göğsü", "150 g pirinç", "100 g brokoli", "", "Not: Su tüketimi en az 3 litre"],
+    training: ["Pazartesi — Göğüs + Arka kol", "Bench Press 4x10", "Incline Dumbbell Press 3 x 8-12", "Triceps Pushdown 4 set 12 tekrar", "Koşu bandı 20 dk", "", "Çarşamba — Sırt", "Lat Pulldown 4x12", "Barbell Row 3x10"],
+    supplement: ["Whey protein 30 g antrenman sonrası", "Kreatin 5 g günde 1", "Omega 3 1000 mg sabah ve akşam", "Magnezyum 400 mg yatmadan önce", "D3 vitamini 2000 IU sabah aç karnına"]
+  };
+  function textPanel(kind, getCur, apply) {
+    var open = false, res = null, P = AVF.planParse;
+    var box = h("section", { class: "pl-txt" }), body = h("div", { class: "pl-txt-b" });
+    var ta2 = h("textarea", { class: "inp", rows: "9", maxlength: "8000", spellcheck: "false", "aria-label": "Plan metni", placeholder: TXT_HELP[kind].join("\n") });
+    var out = h("div", { class: "pl-txt-o", "aria-live": "polite" });
+    var go = h("button", { type: "button", class: "btn sm", onclick: run }, AVF.icon("spark"), h("span", { text: "Çözümle" }));
+    var imp = h("button", { type: "button", class: "btn ghost sm", disabled: "", onclick: doApply }, AVF.icon("check"), h("span", { text: "Plana aktar" }));
+    ta2.addEventListener("input", function () { res = null; imp.disabled = true; AVF.mount(out); });
+    function run() {
+      var t = ta2.value.trim();
+      if (!t) { AVF.mount(out, h("p", { class: "hint", text: "Önce plan metnini yazın veya yapıştırın." })); return; }
+      res = P[kind](t, CAT);
+      var errs = res.errors || [], warns = res.warnings || [];
+      AVF.mount(out,
+        h("div", { class: "pl-txt-s " + (errs.length ? "bad" : "ok") }, AVF.icon(errs.length ? "x" : "check"),
+          h("b", { "data-notr": "", text: errs.length ? (EN() ? errs.length + " line(s) need fixing" : errs.length + " satır düzeltilmeli") : (EN() ? res.count + " item(s) recognised" : res.count + " kalem tanındı") })),
+        errs.length ? h("ul", { class: "pl-txt-l bad" }, errs.map(function (e) { return h("li", null, h("b", { "data-notr": "", text: (EN() ? "Line " : "Satır ") + e.line }), h("code", { "data-notr": "", text: e.text }), h("span", { text: e.msg })); })) : null,
+        warns.length ? h("ul", { class: "pl-txt-l warn" }, warns.map(function (e) { return h("li", null, h("b", { "data-notr": "", text: (EN() ? "Line " : "Satır ") + e.line }), h("code", { "data-notr": "", text: e.text }), h("span", { text: e.msg })); })) : null,
+        !errs.length && res.count ? h("div", { class: "pl-txt-p" }, h("small", { class: "hint", text: "Önizleme — üyenin göreceği hâli:" }), AVF.planDataView(kind, res.data, { print: false })) : null);
+      imp.disabled = !!errs.length || !res.count;
+    }
+    function hasData(dt) {
+      if (!dt) return false;
+      if (kind === "nutrition") return (dt.days ? dt.days : [dt]).some(function (x) { return (x.meals || []).some(function (m) { return m.items.length; }); });
+      if (kind === "training") return (dt.days || []).some(function (x) { return x.exercises.length; });
+      return (dt.items || []).length > 0;
+    }
+    function doApply() {
+      if (!res || (res.errors || []).length) return;
+      if (hasData(getCur()) && !window.confirm(T("Editördeki mevcut içerik metinden çözümlenen planla değiştirilsin mi?"))) return;
+      apply(res.data); res = null; imp.disabled = true; ta2.value = ""; AVF.mount(out); toggle(false);
+      AVF.toast(T("Plan metinden aktarıldı. Kaydetmeden önce kontrol edebilirsiniz."));
+    }
+    var head = h("button", { type: "button", class: "pl-txt-h", "aria-expanded": "false", onclick: function () { toggle(!open); } },
+      h("span", { class: "tile" }, AVF.icon("pen")), h("span", { class: "pl-txt-t" }, h("b", { text: "Yazıyla gir" }), h("small", { text: kind === "supplement" ? "Supplementleri tek tek seçmek yerine yazın; sistem kalemlere ayırır." : "Planı tek tek seçmek yerine yazın veya yapıştırın; sistem kalemlere ayırır." })), AVF.icon("chev", "pl-txt-c"));
+    function toggle(v) { open = v; head.setAttribute("aria-expanded", String(v)); body.hidden = !v; if (v) setTimeout(function () { ta2.focus(); }, 30); }
+    AVF.mount(body, ta2, h("small", { class: "hint", text: kind === "nutrition" ? "Her satıra bir besin: miktar + ad (ör. “200 g tavuk göğsü”, “3 yumurta beyazı”). Öğün başlığı (Kahvaltı, Ara öğün, Öğle…) ve gün başlığı (Pazartesi, 2. Gün…) yazabilirsiniz. “Not:” ile başlayan satır nota eklenir." : kind === "training" ? "Gün başlığı (ör. “Pazartesi — Göğüs”), ardından her satıra bir hareket: ad + set×tekrar (4x10, 3 x 8-12, 4 set 12 tekrar). Kardiyo için “20 dk”." : "Her satıra bir supplement: ad + miktar + zaman (sabah, antrenman sonrası, yatmadan önce, aç karnına, günde 2…)." }),
+      h("div", { class: "row" }, go, imp), out);
+    toggle(false);
+    AVF.mount(box, head, body);
+    return box;
+  }
 
-  // ---- beslenme
+  // ---- beslenme (v25: günlere bölünebilir — her gün kendi öğünleri; tek gün = eski biçim)
   function nutritionEd(root, d, changed) {
     d = d || { meals: [{ items: [], note: "" }, { items: [], note: "" }], note: "" };
-    var total = h("div", { class: "pl-total" }), list = h("div", { class: "stack" }), gnote = ta(d.note, "Genel not (isteğe bağlı)"), pk = {};
+    var days = d.days ? d.days : [{ title: "", meals: d.meals || [{ items: [], note: "" }, { items: [], note: "" }], note: "" }];
+    var cur = 0, DMAX = CAT.nutritionDaysMax || 7;
+    var total = h("div", { class: "pl-total" }), list = h("div", { class: "stack" }), dayBar = h("div", { class: "pl-dayed" }), gnote = ta(d.note, "Genel not (isteğe bağlı)"), pk = {};
     gnote.addEventListener("input", function () { d.note = gnote.value; changed(); });
     var groups = CAT.foodGroups.map(function (gr) { return { key: gr[0], name: gr[1], icon: gr[2], items: CAT.foods.filter(function (f) { return f.group === gr[0]; }).map(function (f) {
-      return { value: f.key, label: f.name, sub: f.unit === "adet" ? (EN() ? "by count" : "adet") : nf(f.kcal, 0) + " kcal/100 g", glyph: function () { return AVF.glyph("food", f.key); } }; }) }; });
+      return { value: f.key, label: f.name, sub: f.fiberOnly ? (EN() ? "fibre " : "lif ") + nf(f.fiber) + " g/100 g" : f.unit === "adet" ? (EN() ? "by count" : "adet") : nf(f.kcal, 0) + " kcal/100 g", glyph: function () { return AVF.glyph("food", f.key); } }; }) }; });
+    function dm() { return days[cur]; }
+    function dayName(i) { return days[i].title || (i + 1) + ". Gün"; }
     function paintTotal() {
-      var all = []; d.meals.forEach(function (m) { m.items.forEach(function (it) { var f = foodOf(it.food); if (f && it.qty) all.push(macro(f, Number(it.qty) || 0)); }); });
-      AVF.mount(total, h("b", { class: "pl-tt", text: "Günlük toplam" }), macroBar(sum(all), true), h("small", { class: "hint", text: "Tüm besinler çiğ ağırlıktır. Yumurta adet, diğerleri gram olarak girilir; üyeye gram ve lbs olarak gösterilir." }));
+      var all = []; dm().meals.forEach(function (m) { m.items.forEach(function (it) { var f = foodOf(it.food); if (f && it.qty) all.push(macro(f, Number(it.qty) || 0)); }); });
+      var t = sum(all);
+      AVF.mount(total, h("b", { class: "pl-tt", "data-notr": "", text: (days.length > 1 ? dayName(cur) + " — " : "") + T("Günlük toplam") }), macroBar(t, true),
+        t.fib ? h("div", { class: "pl-fib" }, AVF.icon("leaf"), h("small", { text: "Sebzelerden lif (makroya eklenmez)" }), h("b", { "data-notr": "", text: nf(t.fib) + " g" })) : null,
+        h("small", { class: "hint", text: "Tüm besinler çiğ ağırlıktır. Yumurta adet, diğerleri gram olarak girilir; üyeye gram ve lbs olarak gösterilir." }));
     }
+    function paintDays() {
+      var title = AVF.input("text", { maxlength: "60", value: dm().title, placeholder: days.length > 1 ? (cur + 1) + ". Gün" : (EN() ? "e.g. Monday (optional)" : "ör. Pazartesi (isteğe bağlı)"), "aria-label": "Gün adı" });
+      title.addEventListener("input", function () { dm().title = title.value; changed(); var b = dayBar.querySelector(".pl-day.on span"); if (b) b.textContent = dayName(cur); });
+      AVF.mount(dayBar,
+        h("div", { class: "pl-days", role: "tablist", "aria-label": "Beslenme günleri" }, days.map(function (x, i) {
+          return h("button", { type: "button", role: "tab", class: "pl-day" + (i === cur ? " on" : ""), "aria-selected": String(i === cur), onclick: function () { cur = i; pk = {}; paintAll(); } }, h("span", { "data-notr": "", text: dayName(i) }));
+        })),
+        h("div", { class: "pl-dayrow" }, AVF.field("Gün adı", title, { optional: true, icon: "calendar" }),
+          h("div", { class: "row" },
+            days.length < DMAX ? addBtn("Gün ekle", function () { days.push({ title: "", meals: [{ items: [], note: "" }, { items: [], note: "" }], note: "" }); cur = days.length - 1; pk = {}; paintAll(); changed(); }) : null,
+            days.length < DMAX ? h("button", { type: "button", class: "btn ghost sm", onclick: function () { var c = JSON.parse(JSON.stringify(dm())); c.title = ""; days.splice(cur + 1, 0, c); cur++; pk = {}; paintAll(); changed(); } }, AVF.icon("copy"), h("span", { text: "Günü kopyala" })) : null,
+            days.length > 1 ? h("button", { type: "button", class: "btn ghost sm", onclick: function () { if (!window.confirm(T("Bu gün ve içindeki öğünler kaldırılsın mı?"))) return; days.splice(cur, 1); cur = Math.max(0, cur - 1); pk = {}; paintAll(); changed(); } }, AVF.icon("trash"), h("span", { text: "Günü kaldır" })) : null)),
+        h("small", { class: "hint", "data-notr": "", text: EN() ? days.length + " / " + DMAX + " days · a single day applies to every day; add days for a plan that changes day to day. Members see today's day first." : days.length + " / " + DMAX + " gün · Tek gün her gün için geçerlidir; günden güne değişen plan için gün ekleyin. Üye bugünün gününü ilk görür." }));
+    }
+    function paintAll(focusMeal) { paintDays(); paint(focusMeal); }
     function paint(focusMeal) {
+      var dd = dm();
       keepScroll(list, function () {
-        AVF.mount(list, d.meals.map(function (m, i) {
+        AVF.mount(list, dd.meals.map(function (m, i) {
           var mm = h("div"), card;
           function paintMeal() { AVF.mount(mm, macroBar(sum(m.items.map(function (it) { var f = foodOf(it.food); return f && it.qty ? macro(f, Number(it.qty) || 0) : Z; })))); }
           pk[i] = pk[i] || {};
@@ -263,11 +374,12 @@
           } });
           var mn = ta(m.note, "Öğün notu (isteğe bağlı)"); mn.addEventListener("input", function () { m.note = mn.value; changed(); });
           card = h("section", { class: "pl-card", "data-meal": String(i) },
-            h("div", { class: "pl-h" }, h("span", { class: "tile" }, AVF.icon(i === 0 ? "sun" : i === d.meals.length - 1 && d.meals.length > 1 ? "moon" : "utensils")), h("div", null, h("b", { text: mealName(i, d.meals.length) }), h("small", { text: i === 0 || (i === d.meals.length - 1 && d.meals.length > 1) ? "Sabit ad" : "Ara öğün" })),
-              d.meals.length > 1 ? xBtn(function () { if (m.items.length && !window.confirm(T("Bu öğün ve içindeki besinler kaldırılsın mı?"))) return; d.meals.splice(i, 1); pk = {}; paint(); changed(); }, "Öğünü kaldır") : null),
+            h("div", { class: "pl-h" }, h("span", { class: "tile" }, AVF.icon(i === 0 ? "sun" : i === dd.meals.length - 1 && dd.meals.length > 1 ? "moon" : "utensils")), h("div", null, h("b", { text: mealName(i, dd.meals.length) }), h("small", { text: i === 0 || (i === dd.meals.length - 1 && dd.meals.length > 1) ? "Sabit ad" : "Ara öğün" })),
+              dd.meals.length > 1 ? xBtn(function () { if (m.items.length && !window.confirm(T("Bu öğün ve içindeki besinler kaldırılsın mı?"))) return; dd.meals.splice(i, 1); pk = {}; paint(); changed(); }, "Öğünü kaldır") : null),
             h("div", { class: "pl-rows" }, m.items.map(function (it, j) {
-              var f = foodOf(it.food), q = numIn(it.qty, f.unit === "adet" ? "adet" : "g", "96px", f.unit === "adet" ? 0 : 1), out = h("small", { class: "pl-m", "data-notr": "" }), nt = AVF.input("text", { maxlength: "200", placeholder: "Not", value: it.note || "", "aria-label": "Not" });
-              function upd() { var v = Number(q.value) || 0, mc = macro(f, v); out.textContent = (f.unit === "adet" ? "≈ " + nf(mc.g, 0) + " g · " : nf(v / LB, 2) + " lbs · ") + mtxt(mc); }
+              var f = foodOf(it.food); if (!f) return null;
+              var q = numIn(it.qty, f.unit === "adet" ? "adet" : "g", "96px", f.unit === "adet" ? 0 : 1), out = h("small", { class: "pl-m", "data-notr": "" }), nt = AVF.input("text", { maxlength: "200", placeholder: "Not", value: it.note || "", "aria-label": "Not" });
+              function upd() { var v = Number(q.value) || 0, mc = macro(f, v); out.textContent = (f.unit === "adet" ? "≈ " + nf(mc.g, 0) + " g · " : nf(v / LB, 2) + " lbs · ") + (f.fiberOnly ? fibTxt(mc) : mtxt(mc)); }
               q.addEventListener("input", function () { it.qty = q.value === "" ? "" : Number(q.value); upd(); paintMeal(); paintTotal(); changed(); });
               nt.addEventListener("input", function () { it.note = nt.value; changed(); });
               upd();
@@ -276,18 +388,23 @@
             })), add, mm, mn);
           paintMeal();
           return card;
-        }), h("div", { class: "row" }, d.meals.length < CAT.mealsMax ? addBtn("Öğün ekle", function () {
-            var at = Math.max(1, d.meals.length - 1); d.meals.splice(at, 0, { items: [], note: "" }); if (d.meals.length === 1) d.meals.push({ items: [], note: "" });
+        }), h("div", { class: "row" }, dd.meals.length < CAT.mealsMax ? addBtn("Öğün ekle", function () {
+            var at = Math.max(1, dd.meals.length - 1); dd.meals.splice(at, 0, { items: [], note: "" }); if (dd.meals.length === 1) dd.meals.push({ items: [], note: "" });
             pk = {}; paint(at); changed();
           }) : null,
-          h("small", { class: "hint", "data-notr": "", text: EN() ? d.meals.length + " / " + CAT.mealsMax + " meals · the first meal is always “" + T(CAT.firstMeal) + "”, the last “" + T(CAT.lastMeal) + "”." : d.meals.length + " / " + CAT.mealsMax + " öğün · İlk öğün “" + CAT.firstMeal + "”, son öğün “" + CAT.lastMeal + "” adını taşır." })));
+          h("small", { class: "hint", "data-notr": "", text: EN() ? dd.meals.length + " / " + CAT.mealsMax + " meals · the first meal is always “" + T(CAT.firstMeal) + "”, the last “" + T(CAT.lastMeal) + "”." : dd.meals.length + " / " + CAT.mealsMax + " öğün · İlk öğün “" + CAT.firstMeal + "”, son öğün “" + CAT.lastMeal + "” adını taşır." })),
+          (function () { var dn = ta(dd.note, days.length > 1 ? "Gün notu (isteğe bağlı)" : "Ek not (isteğe bağlı)"); dn.addEventListener("input", function () { dd.note = dn.value; changed(); }); return days.length > 1 || dd.note ? dn : null; })());
       });
       paintTotal();
       if (focusMeal !== undefined) reveal(list.querySelector('[data-meal="' + focusMeal + '"]'));
     }
-    paint();
-    AVF.mount(root, total, list, AVF.field("Genel not", gnote, { optional: true, icon: "notes" }));
-    return { get: function () { return { meals: d.meals.map(function (m) { return { items: m.items.filter(function (it) { return it.qty !== "" && it.qty !== null && Number(it.qty) > 0; }), note: m.note }; }), note: d.note }; } };
+    paintAll();
+    AVF.mount(root, dayBar, total, list, AVF.field("Genel not", gnote, { optional: true, icon: "notes" }), AVF.fixedNote());
+    function clean(meals) { return meals.map(function (m) { return { items: m.items.filter(function (it) { return it.qty !== "" && it.qty !== null && Number(it.qty) > 0; }), note: m.note }; }); }
+    return { get: function () {
+      if (days.length === 1 && !days[0].title && !days[0].note) return { meals: clean(days[0].meals), note: d.note };
+      return { days: days.map(function (x) { return { title: x.title, meals: clean(x.meals), note: x.note }; }), note: d.note };
+    } };
   }
 
   // ---- antrenman (ağırlık / kg girilmez: set ve tekrar)

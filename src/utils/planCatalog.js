@@ -7,7 +7,8 @@
 // Yalnız yumurtalar ADET ile, diğer tüm besinler GRAM ile planlanır (üyeye gram ve lbs olarak gösterilir).
 // Yumurta boyları Türk Gıda Kodeksi / AB sınıflarına göredir (M: 53–63 g, L: 63–73 g kabuklu); yenilebilir kısım ≈ %88 kabul edilmiştir.
 //   M bütün ≈ 51 g (beyaz ≈ 34 g) · L bütün ≈ 60 g (beyaz ≈ 40 g).
-export const FOOD_GROUPS = [["protein", "Protein kaynakları", "egg"], ["carb", "Karbonhidrat kaynakları", "utensils"], ["fruit", "Meyveler ve bal", "apple"], ["fat", "Yağ kaynakları", "drop"]];
+// v25: "Sebzeler (lif kaynağı)" grubu — sebzeler makro toplamlarına (kcal / protein / karbonhidrat / yağ) EKLENMEZ, yalnız lif olarak sayılır.
+export const FOOD_GROUPS = [["protein", "Protein kaynakları", "egg"], ["carb", "Karbonhidrat kaynakları", "utensils"], ["fruit", "Meyveler ve bal", "apple"], ["fat", "Yağ kaynakları", "drop"], ["veg", "Sebzeler (lif kaynağı)", "leaf"]];
 export const FOODS = [
   // key, ad, grup, birim ("g" | "adet"), adet başına gram, 100 g için [kcal, protein, karbonhidrat, yağ], kaynak notu
   ["egg_white_m", "Yumurta Beyazı (M)", "protein", "adet", 34, [52, 10.9, 0.73, 0.17], "USDA SR Legacy: Egg, white, raw, fresh (FDC 172183)"],
@@ -42,9 +43,36 @@ export const FOODS = [
   ["olive_oil", "Zeytinyağı (Soğuk Sıkım)", "fat", "g", 0, [884, 0, 0, 100], "USDA SR Legacy: Oil, olive, salad or cooking"],
   ["coconut_oil", "Hindistancevizi Yağı (Soğuk Sıkım)", "fat", "g", 0, [892, 0, 0, 99.06], "USDA SR Legacy: Oil, coconut"],
   ["avocado", "Avokado", "fat", "g", 0, [160, 2.0, 8.53, 14.66], "USDA SR Legacy: Avocados, raw, all commercial varieties"],
-].map(([key, name, group, unit, pieceG, m, src]) => ({ key, name, group, unit, pieceG, kcal: m[0], protein: m[1], carb: m[2], fat: m[3], source: src }));
+  // v25: yağ kaynağı ezmeler (100 g için [kcal, protein, karbonhidrat, yağ, lif])
+  ["peanut_butter", "Fıstık Ezmesi (Şekersiz)", "fat", "g", 0, [588, 25.09, 19.56, 50.39, 6.0], "USDA SR Legacy: Peanut butter, smooth style, without salt (FDC 172470)"],
+  ["almond_butter", "Badem Ezmesi (Şekersiz)", "fat", "g", 0, [614, 20.96, 18.82, 55.5, 10.3], "USDA SR Legacy: Nuts, almond butter, plain, without salt added (FDC 168588)"],
+  // v25: SEBZELER — yalnız lif (makro 0 kabul edilir; bkz. FOOD_GROUPS notu). Lif değerleri 100 g çiğ için.
+  ["watercress", "Tere", "veg", "g", 0, [0, 0, 0, 0, 0.5], "USDA SR Legacy: Watercress, raw (lif)"],
+  ["arugula", "Roka", "veg", "g", 0, [0, 0, 0, 0, 1.6], "USDA SR Legacy: Arugula, raw (lif)"],
+  ["parsley", "Maydanoz", "veg", "g", 0, [0, 0, 0, 0, 3.3], "USDA SR Legacy: Parsley, fresh (lif)"],
+  ["dill", "Dereotu", "veg", "g", 0, [0, 0, 0, 0, 2.1], "USDA SR Legacy: Dill weed, fresh (lif)"],
+  ["artichoke", "Enginar", "veg", "g", 0, [0, 0, 0, 0, 5.4], "USDA SR Legacy: Artichokes, (globe or french), raw (lif)"],
+  ["asparagus", "Kuşkonmaz", "veg", "g", 0, [0, 0, 0, 0, 2.1], "USDA SR Legacy: Asparagus, raw (lif)"],
+  ["broccoli", "Brokoli", "veg", "g", 0, [0, 0, 0, 0, 2.6], "USDA SR Legacy: Broccoli, raw (lif)"],
+  ["cauliflower", "Karnıbahar", "veg", "g", 0, [0, 0, 0, 0, 2.0], "USDA SR Legacy: Cauliflower, raw (lif)"],
+  ["zucchini", "Kabak (Sakız Kabağı)", "veg", "g", 0, [0, 0, 0, 0, 1.0], "USDA SR Legacy: Squash, summer, zucchini, includes skin, raw (lif)"],
+  ["spinach", "Ispanak", "veg", "g", 0, [0, 0, 0, 0, 2.2], "USDA SR Legacy: Spinach, raw (lif)"],
+  ["lettuce", "Marul", "veg", "g", 0, [0, 0, 0, 0, 2.1], "USDA SR Legacy: Lettuce, cos or romaine, raw (lif)"],
+  ["cucumber", "Salatalık", "veg", "g", 0, [0, 0, 0, 0, 0.5], "USDA SR Legacy: Cucumber, with peel, raw (lif)"],
+  ["green_beans", "Taze Fasulye", "veg", "g", 0, [0, 0, 0, 0, 2.7], "USDA SR Legacy: Beans, snap, green, raw (lif)"],
+  ["brussels", "Brüksel Lahanası", "veg", "g", 0, [0, 0, 0, 0, 3.8], "USDA SR Legacy: Brussels sprouts, raw (lif)"],
+  ["cabbage", "Lahana", "veg", "g", 0, [0, 0, 0, 0, 2.5], "USDA SR Legacy: Cabbage, raw (lif)"],
+  ["mushroom", "Mantar (Kültür)", "veg", "g", 0, [0, 0, 0, 0, 1.0], "USDA SR Legacy: Mushrooms, white, raw (lif)"],
+  ["green_pepper", "Yeşil Biber", "veg", "g", 0, [0, 0, 0, 0, 1.7], "USDA SR Legacy: Peppers, sweet, green, raw (lif)"],
+  ["celery", "Kereviz Sapı", "veg", "g", 0, [0, 0, 0, 0, 1.6], "USDA SR Legacy: Celery, raw (lif)"],
+  ["leek", "Pırasa", "veg", "g", 0, [0, 0, 0, 0, 1.8], "USDA SR Legacy: Leeks, (bulb and lower leaf-portion), raw (lif)"],
+].map(([key, name, group, unit, pieceG, m, src]) => ({ key, name, group, unit, pieceG, kcal: m[0], protein: m[1], carb: m[2], fat: m[3], fiber: m[4] || 0, fiberOnly: group === "veg", source: src }));
 export const FOOD_BY_KEY = Object.fromEntries(FOODS.map((f) => [f.key, f]));
 export const MEALS_MAX = 8, FIRST_MEAL = "Sabah Kahvaltısı", LAST_MEAL = "Son Öğün";
+// v25: beslenme programı günlere göre değişebilir (ör. Pazartesi, Salı… ya da Antrenman günü / Dinlenme günü); en fazla 7 gün.
+export const NUTRITION_DAYS_MAX = 7;
+// v25: HER ÜYEYE GİDEN, DEĞİŞTİRİLEMEZ NOT (beslenme ve değerli notlar bölümünde her zaman gösterilir; planla saklanmaz, düzenlenemez)
+export const FIXED_NOTE = "Tüm gıdalar çiğ olarak tartılmıştır. Pişirme sırasında hiç yağ kullanmadan tüketmenizi tavsiye ediyoruz; dilerseniz pişirmede 1 çay kaşığı hindistan cevizi yağı kullanabilirsiniz.";
 
 // ------------------------------------------------------------------ ANTRENMAN
 export const MUSCLE_GROUPS = [
@@ -159,7 +187,7 @@ export const NOTE_FIELDS = {
 
 export const NOTE_MAX = 500;
 export function catalog() {
-  return { foods: FOODS, foodGroups: FOOD_GROUPS, mealsMax: MEALS_MAX, firstMeal: FIRST_MEAL, lastMeal: LAST_MEAL, groups: MUSCLE_GROUPS, daysMax: DAYS_MAX, exercisesMax: EXERCISES_PER_DAY_MAX,
+  return { foods: FOODS, foodGroups: FOOD_GROUPS, mealsMax: MEALS_MAX, firstMeal: FIRST_MEAL, lastMeal: LAST_MEAL, nutritionDaysMax: NUTRITION_DAYS_MAX, fixedNote: FIXED_NOTE, groups: MUSCLE_GROUPS, daysMax: DAYS_MAX, exercisesMax: EXERCISES_PER_DAY_MAX,
     supps: SUPP_GROUPS, suppUnits: SUPP_UNITS, suppState: SUPP_STATE, suppWhen: SUPP_WHEN, itemsMax: ITEMS_MAX,
     suppGlyph: SUPP_GLYPH, suppMacros: SUPP_MACROS, pharmaInfo: PHARMA_INFO,
     pharma: PHARMA_GROUPS, pharmaFreq: PHARMA_FREQ, freqPerWeek: FREQ_PER_WEEK, doseUnits: DOSE_UNITS, notes: NOTE_FIELDS, noteMax: NOTE_MAX };

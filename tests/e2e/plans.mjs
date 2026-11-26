@@ -8,7 +8,7 @@ sql(`UPDATE users SET role='admin' WHERE id='${A.id}'`); await enableTotp(A);
 for (const k of ["nutrition", "training", "supplement", "pharmacology", "notes"]) sql(`INSERT INTO member_access (member_id, kind) VALUES ('${M.id}', '${k}') ON CONFLICT DO NOTHING`);
 
 let r = await M.c.call("GET", "/plan-catalog");
-chk("üye kataloğu görür", r.status === 200 && r.body.foods.length === 32 && r.body.firstMeal === "Sabah Kahvaltısı" && r.body.lastMeal === "Son Öğün", r.status);
+chk("üye kataloğu görür", r.status === 200 && r.body.foods.length === 53 && r.body.foods.filter((f) => f.fiberOnly).length === 19 && /çiğ olarak tartılmıştır/.test(r.body.fixedNote) && r.body.nutritionDaysMax === 7 && r.body.firstMeal === "Sabah Kahvaltısı" && r.body.lastMeal === "Son Öğün", r.status);
 const C = r.body;
 chk("yalnız yumurtalar adet", C.foods.filter((f) => f.unit === "adet").every((f) => /Yumurta/.test(f.name)) && C.foods.filter((f) => f.unit === "adet").length === 4, null);
 chk("8 kas grubu (kardiyo dahil)", C.groups.map((g) => g.key).join() === "chest,shoulder,back,legs,abs,biceps,triceps,cardio", C.groups.map((g) => g.key));
@@ -25,6 +25,14 @@ r = await post("nutrition", { meals: [{ items: [{ food: "egg_whole_l", qty: 3, n
 const nid = r.body && r.body.id; chk("beslenme planı kaydedilir", r.status === 201, r.body);
 const nd = JSON.parse(sql(`SELECT data::text FROM plans WHERE id='${nid}'`));
 chk("bilinmeyen alanlar atılır, not metin olarak saklanır", !("evil" in nd) && nd.meals[0].note === "<b>x</b>" && nd.meals[0].items[0].qty === 3, nd);
+
+// v25: günlere bölünmüş beslenme + sebze (yalnız lif)
+r = await post("nutrition", { days: [] }); chk("gün listesi boş olamaz", r.status === 400, r.body);
+r = await post("nutrition", { days: Array.from({ length: 8 }, () => ({ meals: [] })) }); chk("en fazla 7 beslenme günü", r.status === 400, r.body);
+r = await post("nutrition", { days: [{ title: "Pazartesi", meals: [{ items: [{ food: "chicken_breast", qty: 200 }, { food: "broccoli", qty: 150 }, { food: "peanut_butter", qty: 30 }] }], note: "Antrenman günü" }, { title: "", meals: [{ items: [{ food: "oats", qty: 80 }] }] }], note: "Genel" });
+chk("günlü beslenme planı kaydedilir", r.status === 201, r.body);
+const dd = JSON.parse(sql(`SELECT data::text FROM plans WHERE id='${r.body.id}'`));
+chk("gün adları saklanır, boş ad '2. Gün' olur, sebze ve fıstık ezmesi geçerli", dd.days.length === 2 && dd.days[0].title === "Pazartesi" && dd.days[1].title === "2. Gün" && dd.days[0].meals[0].items.length === 3 && dd.days[0].note === "Antrenman günü", dd);
 
 // ---- antrenman ----
 r = await post("training", { days: [{ title: "Push", groups: ["chest"], exercises: [{ group: "chest", name: "Uçan Halı", sets: 3, reps: "10" }] }] }); chk("listede olmayan hareket (özel değilse) reddedilir", r.status === 400, r.body);
@@ -62,7 +70,7 @@ r = await A.c.call("PATCH", "/admin/plans/" + nid, { data: { meals: [{ items: [{
 r = await A.c.call("PATCH", "/admin/plans/" + nid, { data: { meals: [{ items: [{ food: "banana", qty: 0 }] }] } }); chk("güncellemede de doğrulanır", r.status === 400, r.body);
 r = await A.c.call("PATCH", "/admin/plans/" + nid, { data: "x" }); chk("geçersiz veri tipi reddedilir", r.status === 400, r.body);
 r = await A.c.call("GET", `/admin/clients/${M.id}/plans`); chk("panel listesinde veri döner", r.body.some((p) => p.id === nid && p.data && p.data.meals[0].items[0].food === "banana"), null);
-r = await M.c.call("GET", "/plans?kind=nutrition"); chk("kaydedilen plan ayrı yayınlama olmadan üyede görünür", r.body.length === 1 && r.body[0].data.meals[0].items[0].qty === 120, r.body);
+r = await M.c.call("GET", "/plans?kind=nutrition"); { const np = r.body.find((p) => p.id === nid); chk("kaydedilen plan ayrı yayınlama olmadan üyede görünür (günlü plan da listede)", r.body.length === 2 && np && np.data.meals[0].items[0].qty === 120 && r.body.some((p) => p.data.days && p.data.days.length === 2), r.body.map((p) => p.id)); }
 // Bildirim birleştirilir: bir okunmamış "planlarınız güncellendi" bildirimi, bir e-posta (gecikmeli).
 r = await M.c.call("GET", "/notifications");
 const pn = r.body.filter((n) => n.type === "plan_updated");
