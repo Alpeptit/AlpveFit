@@ -1,0 +1,52 @@
+name: Erişilebilirlik denetimi
+
+# Canlı sitenin ayakta olduğunu 15 dakikada bir denetler: (1) /api/health yanıt veriyor ve veritabanı güncellemeleri tamam,
+# (2) veritabanından okuyan herkese açık bir uç yanıt veriyor. Her adres 3 kez denenir (aralarında 45 sn); üçü de başarısızsa
+# iş BAŞARISIZ olur ve GitHub e-postayla bildirir. Cloudflare bot doğrulaması (403 + cf-mitigated) arıza sayılmaz, uyarı yazılır.
+# Hiçbir gizli değer kullanılmaz; yalnız herkese açık adreslere GET isteği gönderilir.
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"   # UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Canlı site
+        env:
+          SITE: https://alpvefit.com
+        run: |
+          fail=0
+          probe() {   # $1 adres, $2 tür (health | data)
+            local url="$SITE$1" kind="$2" code body hdr
+            for i in 1 2 3; do
+              hdr=$(mktemp); body=$(mktemp)
+              code=$(curl -sS -m 20 -A "erisilebilirlik-denetimi" -D "$hdr" -o "$body" -w "%{http_code}" "$url" 2>/dev/null) || true; code=${code:-000}
+              if [ "$code" = "403" ] && grep -qi "^cf-mitigated: *challenge" "$hdr"; then
+                echo "::warning title=$1::Cloudflare doğrulaması istendi (arıza değil); denetim atlandı"; return 0
+              fi
+              if [ "$code" = "200" ]; then
+                if [ "$kind" = "health" ]; then
+                  if grep -q '"ok":true' "$body" && ! grep -q '"db"' "$body"; then echo "✓ $1 ($code)"; return 0; fi
+                  echo "deneme $i: $1 — sağlık yanıtı beklenmedik: $(head -c 200 "$body")"
+                else echo "✓ $1 ($code)"; return 0; fi
+              else
+                echo "deneme $i: $1 — HTTP $code"
+              fi
+              [ $i -lt 3 ] && sleep 45
+            done
+            echo "::error title=$1::Site yanıt vermiyor ya da hatalı yanıt veriyor (3 denemede de başarısız, son HTTP $code)"
+            fail=1
+          }
+          probe /api/health health
+          probe /api/blog data
+          exit $fail

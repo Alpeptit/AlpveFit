@@ -1,8 +1,12 @@
 name: Güvenlik taraması (OWASP ZAP)
 
-# Elle (Actions → Run workflow) ya da "security-scan" dalına gönderimle çalışır. Raporlar "security-reports" dalına yazılır.
+# Her pazartesi 04:17 (TSİ) kendiliğinden, ayrıca elle (Actions → Run workflow) ya da "security-scan" dalına gönderimle çalışır.
+# Raporlar "security-reports" dalına yazılır. Yüksek önemli bulgu ya da yüksek / kritik bağımlılık açığı varsa iş BAŞARISIZ olur
+# (GitHub e-postayla bildirir).
 # Geçici veritabanı ve rastgele anahtarlarla çalışır; canlı siteye yalnız pasif (saldırısız) tarama yapılır.
 on:
+  schedule:
+    - cron: "17 1 * * 1"   # UTC; pazartesi 04:17 TSİ
   workflow_dispatch:
   push:
     branches: [security-scan]
@@ -34,3 +38,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash tools/security/publish.sh
+      - name: Sonucu değerlendir
+        if: always()
+        run: |
+          f=zap-out/OZET.md
+          [ -f "$f" ] || { echo "::error title=Güvenlik taraması::Özet raporu oluşmadı (tarama tamamlanamadı)"; exit 1; }
+          if grep -Eq "Yüksek: [1-9]" "$f"; then echo "::error title=Güvenlik taraması::Yüksek önemli bulgu var — security-reports dalındaki OZET.md"; exit 1; fi
+          if grep -Eq "(high|critical): [1-9]" "$f"; then echo "::error title=Bağımlılık denetimi::Yüksek / kritik bağımlılık açığı var — security-reports dalındaki OZET.md"; exit 1; fi
+          echo "Yüksek önemli bulgu yok."
