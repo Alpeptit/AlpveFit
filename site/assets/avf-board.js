@@ -87,7 +87,8 @@
 
   // ------------------------------------------------------------------ biçim dili → DOM (güvenli)
   // Herkes: **kalın** *italik* ~~çizili~~ `kod` ==vurgu== @anma bağlantı, ## başlık, ### alt başlık, - liste, 1. liste, > alıntı,
-  //         [kutu=bilgi|ipucu|uyari|mizah|bilim|tehlike]…[/kutu], [tablo]a | b[/tablo], [kaynak=PMID] (PubMed), [ikon=ad], [gif=N] (mesajın N. görseli).
+  //         [kutu=bilgi|ipucu|uyari|mizah|bilim|tehlike]…[/kutu], [tablo]a | b[/tablo], [kaynak=PMID] (PubMed), [ikon=ad], [gif=N] (mesajın N. görseli),
+  //         [oncesonra=N] (önce / sonra birleşik görseli, tam genişlik).
   // Yalnız ekip (ctx.rich): [arac=makro|tdee|…] gömülü hesaplayıcı, [gorsel=ad|açıklama] hazır infografik.
   // Hiçbir zaman HTML yorumlanmaz: her parça metin düğümü ya da bilinen bir öğe olarak kurulur.
   var URL_RE = /(https?:\/\/[^\s<>"')\]]+|www\.[^\s<>"')\]]+)/;
@@ -121,7 +122,7 @@
     return out;
   }
   function inl(text, el) { inline(text, []).forEach(function (n) { el.appendChild(n); }); return el; }
-  var BLOCK_START = /^\s*([-*•]|\d{1,2}[.)])\s+|^>\s?|^#{2,3}\s+|^\[(kutu=[a-z]+|tablo|arac=[a-z0-9-]+|gorsel=[^\]]+|gif=\d{1,2})\]\s*$/;
+  var BLOCK_START = /^\s*([-*•]|\d{1,2}[.)])\s+|^>\s?|^#{2,3}\s+|^\[(kutu=[a-z]+|tablo|arac=[a-z0-9-]+|gorsel=[^\]]+|gif=\d{1,2}|oncesonra=\d{1,2})\]\s*$/;
   function block(text, el, ctx) {
     ctx = ctx || {};
     var lines = text.split("\n"), i = 0;
@@ -149,6 +150,11 @@
           tbl.appendChild(tb2); el.appendChild(h("div", { class: "fo-tblw" }, tbl));
         }
         continue;
+      }
+      if ((mm = /^\[oncesonra=(\d{1,2})\]$/.exec(t))) {   // v25: önce / sonra birleşik görseli — tam genişlik
+        var bid = ctx.images && ctx.images[Number(mm[1]) - 1];
+        if (bid) { if (ctx.used) ctx.used[bid] = true; el.appendChild(h("figure", { class: "fo-fig ba" }, h("img", { src: imgSrc(bid), alt: "Önce / sonra", loading: "lazy", "data-img": bid }))); }
+        i++; continue;
       }
       if ((mm = /^\[gif=(\d{1,2})\]$/.exec(t))) {
         var gid = ctx.images && ctx.images[Number(mm[1]) - 1];
@@ -409,6 +415,8 @@
     el.textarea = ta;
     el.insert = function (t) { var s = ta.value; ta.value = (s && !/\n$/.test(s) ? s + "\n" : s) + t; ta.focus(); try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (x) { /* yok */ } ta.dispatchEvent(new Event("input", { bubbles: true })); };
     el.getImages = function () { return images.slice(); };
+    el.addFiles = addFiles;
+    el.imageCount = function () { return images.length; };
     if (o.autofocus) setTimeout(function () { ta.focus(); }, 60);
     return el;
   }
@@ -875,6 +883,74 @@
     "[kutu=tehlike]", "**Bu içerik bilgi amaçlıdır; kullanımı teşvik etmez ve tıbbi tavsiye değildir.** Reçeteli ilaçlar ve hormonlar yalnız hekim kontrolünde kullanılır; reçetesiz kullanım ciddi sağlık riskleri taşır ve sporda dopingtir. Satış, kaynak, doz ve kür paylaşımı bu forumda yasaktır.", "[/kutu]"
   ].join("\n");
 
+  // v25: konu şablonları — herkes için hazır iskeletler; ekip (yönetici / moderatör) için ek şablonlar. Yalnız iskelet: metni yazan kişi doldurur.
+  var TEMPLATES = [
+    { key: "soru", icon: "help", label: "Soru sor", cat: "soru-cevap", text: ["## [ikon=target] Hedefim", "Kısaca hedefin (ör. yağ yakımı, kas kazanımı, güç)…", "", "## [ikon=list] Şu anki durumum", "- Antrenman sıklığı: ", "- Beslenme düzeni: ", "- Uyku: ", "", "## [ikon=help] Sorum", "Sormak istediğini net bir cümleyle yaz…", "", "## [ikon=check] Denediklerim", "- "] },
+    { key: "oncesonra", icon: "image", label: "Önce / Sonra", cat: "gelisim-gunlukleri", ba: true },
+    { key: "gunluk", icon: "pulse", label: "Haftalık güncelleme", cat: "gelisim-gunlukleri", text: ["## [ikon=calendar] Hafta ", "", "[tablo]", "Ölçü | Geçen hafta | Bu hafta", "Kilo (kg) |  | ", "Bel (cm) |  | ", "Antrenman günü |  | ", "[/tablo]", "", "## [ikon=check] İyi gidenler", "- ", "", "## [ikon=alert] Zorlandıklarım", "- ", "", "## [ikon=target] Gelecek hafta hedefim", "- "] },
+    { key: "program", icon: "dumb", label: "Antrenman programı", cat: "antrenman", text: ["## [ikon=target] Programın amacı", "Kısaca amaç ve seviye (başlangıç / orta / ileri)…", "", "[tablo]", "Gün | Hareketler | Set × Tekrar", "1. Gün |  | ", "2. Gün |  | ", "3. Gün |  | ", "[/tablo]", "", "## [ikon=clock] Dinlenme ve ilerleme", "- Setler arası dinlenme: ", "- Yük artırma: ", "", "## [ikon=help] Görüşlerinizi bekliyorum", ""] },
+    { key: "tarif", icon: "utensils", label: "Tarif", cat: "beslenme", text: ["## [ikon=utensils] Tarifin adı", "", "## [ikon=list] Malzemeler (çiğ ağırlık)", "- ", "- ", "", "## [ikon=pen] Hazırlanışı", "1. ", "2. ", "", "## [ikon=chart] Besin değerleri (1 porsiyon)", "[tablo]", "Kalori | Protein | Karbonhidrat | Yağ", " kcal |  g |  g |  g", "[/tablo]"] },
+    { key: "deneyim", icon: "pill", label: "Supplement deneyimi", cat: "supplement", text: ["## [ikon=pill] Ürün türü", "Hangi tür supplement (ör. whey protein, kreatin, magnezyum)…", "", "## [ikon=clock] Ne kadar süredir kullanıyorum", "", "## [ikon=layers] Artılar ve eksiler", "[tablo]", "Artılar (+) | Eksiler (−)", " | ", "[/tablo]", "", "[kutu=uyari]", "Satış, kaynak ve marka/satıcı önerisi paylaşımı yasaktır. Paylaşımlar kişisel deneyimdir, tıbbi tavsiye değildir.", "[/kutu]"] }
+  ];
+  var STAFF_TEMPLATES = [
+    { key: "duyuru", icon: "bell", label: "Duyuru", cat: "duyurular", mod: true, text: ["[kutu=ozet]", "Tek cümlelik özet…", "[/kutu]", "", "## [ikon=info] Ne değişiyor?", "", "## [ikon=calendar] Ne zaman?", "", "## [ikon=check] Sizden beklenen", "- "] },
+    { key: "rehber", icon: "book", label: "Rehber / makale", text: ["[kutu=ozet]", "- Ana fikir 1", "- Ana fikir 2", "[/kutu]", "", "## [ikon=book] Giriş", "", "## [ikon=layers] Ana bölüm", "", "[kutu=bilim]", "Araştırmalar ne diyor? [kaynak=PMID|Yazar Yıl]", "[/kutu]", "", "## [ikon=check] Uygulamada", "- "] },
+    { key: "farmakoloji", icon: "table", label: "Farmakoloji", admin: true, pharma: true }
+  ];
+  /** Önce / Sonra: iki fotoğraf yan yana tek görselde birleştirilir; üzerine forum filigranı ve tarih yazılır (tarayıcıda, sunucuya yalnız birleşik görsel gider; EXIF/konum bilgisi taşımaz). */
+  function beforeAfter(onDone) {
+    var EN = AVF.lang === "en", files = [null, null];
+    function slot(i) {
+      var inp = h("input", { type: "file", accept: "image/png,image/jpeg", hidden: "", tabindex: "-1" }), img = h("div", { class: "ba-pv" }, AVF.icon("image"), h("span", { text: i ? "Sonra" : "Önce" }));
+      inp.addEventListener("change", function () {
+        var f = inp.files && inp.files[0]; if (!f) return;
+        if (["image/png", "image/jpeg"].indexOf(f.type) < 0 || f.size > 12 * 1024 * 1024) { AVF.toast(AVF.t("Yalnız 12 MB'a kadar PNG veya JPG seçilebilir.")); return; }
+        files[i] = f; var u = URL.createObjectURL(f); AVF.mount(img, h("img", { src: u, alt: "" }), h("span", { text: i ? "Sonra" : "Önce" }));
+      });
+      return h("button", { type: "button", class: "ba-slot", "aria-label": i ? "Sonra fotoğrafı seç" : "Önce fotoğrafı seç", onclick: function () { inp.click(); } }, img, inp);
+    }
+    var d1 = AVF.input("text", { maxlength: "24", placeholder: EN ? "e.g. Jan 2026" : "ör. Ocak 2026", "aria-label": "Önce tarihi" }), d2 = AVF.input("text", { maxlength: "24", placeholder: EN ? "e.g. Apr 2026" : "ör. Nisan 2026", "aria-label": "Sonra tarihi" });
+    var per = AVF.input("text", { maxlength: "30", placeholder: EN ? "e.g. 12 weeks" : "ör. 12 hafta", "aria-label": "Süre" });
+    dialog({ icon: "image", title: "Önce / Sonra görseli", text: "İki fotoğraf seçin; yan yana tek görselde birleştirilir ve forum filigranı eklenir. Konum ve cihaz bilgisi görselde yer almaz.",
+      body: h("div", { class: "ba-frm" }, h("div", { class: "ba-slots" }, slot(0), slot(1)), h("div", { class: "ba-meta" }, d1, d2), per), confirm: "Oluştur",
+      onConfirm: function () {
+        if (!files[0] || !files[1]) { AVF.toast(AVF.t("İki fotoğrafı da seçin.")); return false; }
+        return Promise.all(files.map(loadImg)).then(function (imgs) {
+          return composeBA(imgs, { before: (EN ? "BEFORE" : "ÖNCE"), after: (EN ? "AFTER" : "SONRA"), d1: d1.value.trim(), d2: d2.value.trim(), period: per.value.trim(), user: AVF.session.user ? "@" + AVF.session.user.username : "" });
+        }).then(function (blob) { onDone(blob, per.value.trim()); });
+      } });
+  }
+  function loadImg(f) {
+    return new Promise(function (res, rej) { var u = URL.createObjectURL(f), im = new Image(); im.onload = function () { res(im); }; im.onerror = function () { rej({ data: { error: "Fotoğraf açılamadı." } }); }; im.src = u; });
+  }
+  function composeBA(imgs, o) {
+    var W = 760, H = 1013, G = 16, P = 24, FOOT = 96, cw = P * 2 + W * 2 + G, ch = P + H + FOOT;
+    var c = document.createElement("canvas"); c.width = cw; c.height = ch; var x = c.getContext("2d");
+    x.fillStyle = "#0B0B0D"; x.fillRect(0, 0, cw, ch);
+    function rr(px, py, w, hh, r) { x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + hh, r); x.arcTo(px + w, py + hh, px, py + hh, r); x.arcTo(px, py + hh, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); }
+    imgs.forEach(function (im, i) {
+      var px = P + i * (W + G), py = P, s = Math.max(W / im.naturalWidth, H / im.naturalHeight), dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+      x.save(); rr(px, py, W, H, 18); x.clip(); x.drawImage(im, px + (W - dw) / 2, py + (H - dh) / 2, dw, dh);
+      // filigran: çapraz, yarı saydam yazı + köşe damgası
+      x.save(); x.translate(px + W / 2, py + H / 2); x.rotate(-Math.PI / 6); x.font = "800 64px Inter, system-ui, sans-serif"; x.textAlign = "center"; x.fillStyle = "rgba(255,255,255,0.16)";
+      for (var k = -2; k <= 2; k++) x.fillText("AlpveFit Forum", 0, k * 210); x.restore();
+      var lbl = i ? o.after : o.before, sub = i ? o.d2 : o.d1;
+      x.font = "800 30px Inter, system-ui, sans-serif"; var lw = x.measureText(lbl).width + 40;
+      x.fillStyle = i ? "#FFFFFF" : "rgba(11,11,13,0.82)"; rr(px + 20, py + 20, lw, 52, 26); x.fill();
+      x.fillStyle = i ? "#0B0B0D" : "#FFFFFF"; x.textAlign = "left"; x.textBaseline = "middle"; x.fillText(lbl, px + 40, py + 47);
+      if (sub) { x.font = "700 24px Inter, system-ui, sans-serif"; var sw = x.measureText(sub).width + 32; x.fillStyle = "rgba(11,11,13,0.72)"; rr(px + 20, py + 82, sw, 40, 20); x.fill(); x.fillStyle = "#FFFFFF"; x.fillText(sub, px + 36, py + 103); }
+      x.restore();
+    });
+    // alt bant: logo + forum adı + kullanıcı + süre
+    var fy = P + H + FOOT / 2;
+    x.fillStyle = "#FFFFFF"; rr(P, fy - 22, 44, 44, 11); x.fill();
+    x.fillStyle = "#0B0B0D"; x.font = "900 30px Inter, system-ui, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("A", P + 22, fy + 1);
+    x.textAlign = "left"; x.fillStyle = "#FFFFFF"; x.font = "800 30px Inter, system-ui, sans-serif"; x.fillText("AlpveFit Forum", P + 60, fy);
+    x.font = "600 24px Inter, system-ui, sans-serif"; x.fillStyle = "rgba(255,255,255,0.7)"; x.textAlign = "right";
+    x.fillText([o.period, o.user].filter(Boolean).join("  ·  "), cw - P, fy);
+    return new Promise(function (res, rej) { c.toBlob(function (b) { if (b) res(b); else rej({ data: { error: "Görsel oluşturulamadı." } }); }, "image/jpeg", 0.88); });
+  }
+
   function newTopic() {
     title("Yeni konu");
     var Q = qs(), allowed = allCats().filter(function (c) { return S.me.mod || (c.kind !== "announce" && !c.isLocked && (S.me.level.n >= (c.minLevel || 1))); });
@@ -923,14 +999,29 @@
           AVF.toast("Konun yayında! Şimdi yanıtları bekle. 🚀"); go("/forum/konu/" + x.id);
         });
       } });
-    // yönetici: ekip konuları her zaman sabit ve yoruma kapalı açılır. Farmakoloji için boş şablon.
+    // yönetici: ekip konuları her zaman sabit ve yoruma kapalı açılır.
     var adminBox = !S.me.admin ? null : h("div", { class: "fo-adm" },
-      h("p", { class: "hint" }, AVF.icon("lock", "bico"), h("span", { text: "Ekip konuları sabitlenir; yorum, beğenmeme ve şikâyet kapalıdır." })),
-      h("button", { type: "button", class: "btn ghost sm", onclick: function () { insertTemplate(); } }, AVF.icon("table", "bico"), "Farmakoloji şablonu ekle"));
-    function insertTemplate() {
+      h("p", { class: "hint" }, AVF.icon("lock", "bico"), h("span", { text: "Ekip konuları sabitlenir; yorum, beğenmeme ve şikâyet kapalıdır." })));
+    function insertTemplate(text) {
       var ta = comp.querySelector("textarea"); if (!ta) return;
-      ta.value = (ta.value.trim() ? ta.value.trim() + "\n\n" : "") + PHARMA_TEMPLATE; ta.dispatchEvent(new Event("input", { bubbles: true })); ta.focus();
+      ta.value = (ta.value.trim() ? ta.value.trim() + "\n\n" : "") + text; ta.dispatchEvent(new Event("input", { bubbles: true })); ta.focus();
     }
+    function useTemplate(t) {
+      if (t.cat && !catSel.get() && allowed.some(function (c) { return c.slug === t.cat; })) { catSel.set(t.cat); paintCatInfo(); }
+      if (t.pharma) return insertTemplate(PHARMA_TEMPLATE);
+      if (!t.ba) return insertTemplate(t.text.join("\n"));
+      if (comp.imageCount() >= 4) return AVF.toast(AVF.t("Bir mesaja en fazla 4 görsel eklenebilir."));
+      beforeAfter(function (blob, period) {
+        var n = comp.imageCount() + 1;
+        comp.addFiles([new File([blob], "once-sonra.jpg", { type: "image/jpeg" })]);
+        insertTemplate(["## [ikon=image] Önce / Sonra" + (period ? " — " + period : ""), "", "[oncesonra=" + n + "]", "", "## [ikon=pulse] Süreç", "Neler değişti, nasıl hissediyorsun…", "", "## [ikon=utensils] Beslenme", "- ", "", "## [ikon=dumb] Antrenman", "- ", "", "## [ikon=spark] Öğrendiklerim", "- "].join("\n"));
+      });
+    }
+    var tpls = TEMPLATES.concat(STAFF_TEMPLATES.filter(function (t) { return t.admin ? S.me.admin : S.me.mod; }));
+    var tplBox = h("div", { class: "fld fo-tpl" }, h("span", { class: "fo-lab" }, h("span", { class: "fo-labi" }, AVF.icon("layers")), h("span", { text: "Şablonlar" }), h("small", { class: "fo-cnt", text: "isteğe bağlı" })),
+      h("div", { class: "fo-tplr", role: "group", "aria-label": "Konu şablonları" }, tpls.map(function (t) {
+        return h("button", { type: "button", class: "fo-tplb" + (t.mod || t.admin ? " staff" : ""), onclick: function () { useTemplate(t); } }, AVF.icon(t.icon), h("span", { text: t.label }));
+      })), h("p", { class: "hint", text: "Şablon yalnız başlıkları ekler; içeriği sen yazarsın. “Önce / Sonra” iki fotoğrafı forum filigranıyla tek görselde birleştirir." }));
     var main = shell({ h1: "Yeni konu aç", sub: "Sorunu sor, deneyimini paylaş — topluluk burada.", crumbs: [["Yeni konu"]], noNew: true, icon: "pen", color: "lime" }, []);
     if (S.me.banned) return AVF.mount(main, AVF.state("lock", "Şu an konu açamazsın", "Forumdan uzaklaştırıldın; süre dolunca yeniden yazabilirsin."));
     function lab(icon, text, extra) { return h("span", { class: "fo-lab" }, h("span", { class: "fo-labi" }, AVF.icon(icon)), h("span", { text: text }), extra || null); }
@@ -938,7 +1029,7 @@
       h("div", { class: "fld" }, lab("layers", "Kategori"), catSel, catInfo,
         h("p", { class: "fo-warn" }, AVF.icon("alert"), h("span", null, h("b", { text: "Doğru kategoriyi seç: " }), h("span", { text: "kategorisiyle ilgisi olmayan konular taşınır; tekrarında hesabına ihtar verilir." })))),
       h("label", { class: "fld" }, lab("file", "Başlık", tc), tIn),
-      adminBox,
+      adminBox, tplBox,
       h("div", { class: "fld" }, lab("pen", "Mesaj"), comp),
       h("div", { class: "fld" }, lab("hash", "Etiketler", tagN), h("p", { class: "hint", text: "Konunu bulunur kılmak için en fazla 5 etiket seç (isteğe bağlı)." }), tagQ, tagBox),
       h("p", { class: "hint fo-ntr" }, AVF.icon("shield"), h("span", { text: "Satış, kaynak / tedarik ve iletişim bilgisi paylaşımı yasaktır. Paylaşımlar tıbbi tavsiye değildir." }), h("button", { class: "fo-lnk", type: "button", onclick: showRules }, "Kurallar"))));

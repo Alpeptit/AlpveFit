@@ -33,8 +33,9 @@ function run(sql, params = []) {
   const text = String(sql).trim().replace(/;\s*$/, "").replace(/\$(\d+)(?!\d)/g, (_, n) => lit(params[Number(n) - 1]));
   const isSel = /^(select|with)\b/i.test(text), hasRet = /\breturning\b/i.test(text);
   const q = isSel ? `SELECT coalesce(json_agg(q), '[]'::json) FROM (${text}) q` : hasRet ? `WITH q AS (${text}) SELECT coalesce(json_agg(q), '[]'::json) FROM q` : text;
-  const r = spawnSync(PSQL, [...ARGS, "-c", q], { encoding: "utf8" });
-  if (r.status !== 0) { const e = new Error((r.stderr || "psql hata").trim() + "\nSQL: " + text.slice(0, 400)); throw e; }
+  // SQL standart girdiden verilir: komut satırı argümanı 128 KB ile sınırlı (büyük görsel / bytea ekleri)
+  const r = spawnSync(PSQL, [...ARGS, "-f", "-"], { encoding: "utf8", input: q + ";\n", maxBuffer: 256 * 1024 * 1024 });
+  if (r.status !== 0 || /^(ERROR|HATA):/m.test(r.stderr || "")) { const e = new Error((r.stderr || "psql hata").trim() + "\nSQL: " + text.slice(0, 400)); throw e; }
   const rows = isSel || hasRet ? JSON.parse(r.stdout.trim() || "[]") : [];
   return { rows, rowCount: rows.length };
 }
