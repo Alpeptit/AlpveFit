@@ -238,6 +238,7 @@ app.use("/api/admin", adminRouter);   // uzman/yönetici paneli (hideAdminApi yu
 app.use("/api", progressRouter);      // /api/progress — ağırlık takibi
 app.use("/api", friendsRouter);       // /api/friends*, /api/messages* — arkadaşlar ve özel mesajlar
 app.use("/api", plansRouter);         // /api/plans/* — üyenin kendi yayınlanmış planları
+app.use("/api/analytics/event", rateLimit({ windowMs: 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { error: "Çok fazla istek gönderildi." } }));   // v27: huni adımı
 app.use("/api/analytics/hit", rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false, message: { error: "Çok fazla istek gönderildi." } }));
 app.use("/api", analyticsRouter);     // /api/analytics/hit — birinci taraf sayfa süresi ölçümü (yalnız izinle)
 app.use("/api", assistantRouter);     // /api/assistant* — koçluk asistanı (yalnız koçluk üyeleri, açık rızayla)

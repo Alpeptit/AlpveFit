@@ -741,7 +741,8 @@
     }
     load();
   }
-  function plain(html) { var d = document.createElement("div"); d.innerHTML = String(html || "").replace(/<(script|style)[\s\S]*?<\/\1>/gi, ""); return (d.textContent || "").replace(/\s+/g, " ").trim(); }
+  // Metin özeti: içerik ETKİSİZ bir belgede ayrıştırılır (DOMParser) — görsel yüklenmez, olay işleyicisi çalışmaz; canlı sayfaya hiç HTML yazılmaz.
+  function plain(html) { var d; try { d = new DOMParser().parseFromString(String(html || ""), "text/html"); } catch (e) { return String(html || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(); } [].forEach.call(d.querySelectorAll("script,style"), function (x) { x.remove(); }); return ((d.body && d.body.textContent) || "").replace(/\s+/g, " ").trim(); }
   function bansPane(box) {
     var eb = h("div"), list = h("div");
     var un = AVF.input("text", { maxlength: "20", placeholder: "kullanici_adi", "aria-label": "Kullanıcı adı", autocomplete: "off" }), reason = AVF.input("text", { maxlength: "200", placeholder: "Gerekçe (üyeye bildirilir)", "aria-label": "Gerekçe" });
