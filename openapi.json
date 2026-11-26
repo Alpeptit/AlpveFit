@@ -1,0 +1,4321 @@
+{
+ "openapi": "3.0.3",
+ "info": {
+  "title": "API (güvenlik taraması)",
+  "version": "1"
+ },
+ "servers": [
+  {
+   "url": "http://localhost:3000"
+  }
+ ],
+ "paths": {
+  "/api/account/request-password-change": {
+   "post": {
+    "operationId": "post_api_account_request_password_change",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "oldPassword": {
+          "type": "string",
+          "example": "test"
+         },
+         "newPassword": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/account/resend-code": {
+   "post": {
+    "operationId": "post_api_account_resend_code",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "purpose": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/account/request-name-change": {
+   "post": {
+    "operationId": "post_api_account_request_name_change",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "newName": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/account/confirm-name-change": {
+   "post": {
+    "operationId": "post_api_account_confirm_name_change",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "code": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/account/request-email-change": {
+   "post": {
+    "operationId": "post_api_account_request_email_change",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "newEmail": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/account/confirm-email-change-old": {
+   "post": {
+    "operationId": "post_api_account_confirm_email_change_old",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "code": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/account/confirm-email-change": {
+   "post": {
+    "operationId": "post_api_account_confirm_email_change",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "code": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/account/login-history": {
+   "get": {
+    "operationId": "get_api_account_login_history",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/account/password-reset/request": {
+   "post": {
+    "operationId": "post_api_account_password_reset_request",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/plan-catalog": {
+   "get": {
+    "operationId": "get_api_admin_plan_catalog",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/me": {
+   "get": {
+    "operationId": "get_api_admin_me",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/clients": {
+   "get": {
+    "operationId": "get_api_admin_clients",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/clients/{id}/journal": {
+   "get": {
+    "operationId": "get_api_admin_clients_id_journal",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/due-plans": {
+   "get": {
+    "operationId": "get_api_admin_due_plans",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/clients/{id}/plans": {
+   "get": {
+    "operationId": "get_api_admin_clients_id_plans",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/clients/{id}/progress": {
+   "get": {
+    "operationId": "get_api_admin_clients_id_progress",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/plans": {
+   "post": {
+    "operationId": "post_api_admin_plans",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "data": {
+          "type": "string",
+          "example": "test"
+         },
+         "memberId": {
+          "type": "string",
+          "example": "test"
+         },
+         "kind": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/plans/{id}": {
+   "patch": {
+    "operationId": "patch_api_admin_plans_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "data": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "delete_api_admin_plans_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/plans/{id}/publish": {
+   "post": {
+    "operationId": "post_api_admin_plans_id_publish",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/plans/{id}/unpublish": {
+   "post": {
+    "operationId": "post_api_admin_plans_id_unpublish",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/plans/{id}/archive": {
+   "post": {
+    "operationId": "post_api_admin_plans_id_archive",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/users": {
+   "get": {
+    "operationId": "get_api_admin_users",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/users/{id}/role": {
+   "put": {
+    "operationId": "put_api_admin_users_id_role",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "planKinds": {
+          "type": "string",
+          "example": "test"
+         },
+         "role": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/members/{id}/access": {
+   "put": {
+    "operationId": "put_api_admin_members_id_access",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "kinds": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/assignments": {
+   "put": {
+    "operationId": "put_api_admin_assignments",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "delivery": {
+          "type": "string",
+          "example": "test"
+         },
+         "coachId": {
+          "type": "string",
+          "example": "test"
+         },
+         "memberId": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "delete_api_admin_assignments",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/audit": {
+   "get": {
+    "operationId": "get_api_admin_audit",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/forum/metrics": {
+   "get": {
+    "operationId": "get_api_admin_forum_metrics",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/analytics": {
+   "get": {
+    "operationId": "get_api_admin_analytics",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/audit/actions": {
+   "get": {
+    "operationId": "get_api_admin_audit_actions",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/members": {
+   "get": {
+    "operationId": "get_api_admin_members",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/members/{id}/block": {
+   "post": {
+    "operationId": "post_api_admin_members_id_block",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/members/{id}/ban": {
+   "post": {
+    "operationId": "post_api_admin_members_id_ban",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "hours": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/members/{id}/unblock": {
+   "post": {
+    "operationId": "post_api_admin_members_id_unblock",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/members/{id}": {
+   "delete": {
+    "operationId": "delete_api_admin_members_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/members/{id}/forum": {
+   "put": {
+    "operationId": "put_api_admin_members_id_forum",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "operationId": "get_api_admin_members_id_forum",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/forum/levels": {
+   "get": {
+    "operationId": "get_api_admin_forum_levels",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/dm-reports": {
+   "get": {
+    "operationId": "get_api_admin_dm_reports",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/dm-reports/{id}/context": {
+   "get": {
+    "operationId": "get_api_admin_dm_reports_id_context",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/dm-media/{id}": {
+   "get": {
+    "operationId": "get_api_admin_dm_media_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/dm-reports/{id}": {
+   "post": {
+    "operationId": "post_api_admin_dm_reports_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/members/{id}/forum/{item}": {
+   "delete": {
+    "operationId": "delete_api_admin_members_id_forum_item_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     },
+     {
+      "name": "item",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/clients/{id}/profile": {
+   "get": {
+    "operationId": "get_api_admin_clients_id_profile",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/clients/{id}/files": {
+   "get": {
+    "operationId": "get_api_admin_clients_id_files",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/attachments/{id}": {
+   "get": {
+    "operationId": "get_api_admin_attachments_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/orders": {
+   "get": {
+    "operationId": "get_api_admin_orders",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/orders/{id}/delivery": {
+   "patch": {
+    "operationId": "patch_api_admin_orders_id_delivery",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "status": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/orders/{id}/approve": {
+   "post": {
+    "operationId": "post_api_admin_orders_id_approve",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "reason": {
+          "type": "string",
+          "example": "test"
+         },
+         "paymentRef": {
+          "type": "string",
+          "example": "test"
+         },
+         "kinds": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/support/summary": {
+   "get": {
+    "operationId": "get_api_admin_support_summary",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/tickets": {
+   "get": {
+    "operationId": "get_api_admin_tickets",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/tickets/{id}": {
+   "get": {
+    "operationId": "get_api_admin_tickets_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/admin/tickets/{id}/reply": {
+   "post": {
+    "operationId": "post_api_admin_tickets_id_reply",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "message": {
+          "type": "string",
+          "example": "test"
+         },
+         "attachments": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/admin/tickets/{id}/close": {
+   "patch": {
+    "operationId": "patch_api_admin_tickets_id_close",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "confirmed": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/analytics/hit": {
+   "post": {
+    "operationId": "post_api_analytics_hit",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/analytics/event": {
+   "post": {
+    "operationId": "post_api_analytics_event",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/assistant": {
+   "get": {
+    "operationId": "get_api_assistant",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/assistant/consent": {
+   "post": {
+    "operationId": "post_api_assistant_consent",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/assistant/messages": {
+   "delete": {
+    "operationId": "delete_api_assistant_messages",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   },
+   "post": {
+    "operationId": "post_api_assistant_messages",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/register": {
+   "post": {
+    "operationId": "post_api_auth_register",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "fullName": {
+          "type": "string",
+          "example": "test"
+         },
+         "username": {
+          "type": "string",
+          "example": "test"
+         },
+         "email": {
+          "type": "string",
+          "example": "test"
+         },
+         "password": {
+          "type": "string",
+          "example": "test"
+         },
+         "recaptchaToken": {
+          "type": "string",
+          "example": "test"
+         },
+         "kvkkAccepted": {
+          "type": "string",
+          "example": "test"
+         },
+         "aboutAccepted": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/register/verify": {
+   "post": {
+    "operationId": "post_api_auth_register_verify",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "userId": {
+          "type": "string",
+          "example": "test"
+         },
+         "code": {
+          "type": "string",
+          "example": "test"
+         },
+         "recaptchaToken": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/login": {
+   "post": {
+    "operationId": "post_api_auth_login",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "identifier": {
+          "type": "string",
+          "example": "test"
+         },
+         "password": {
+          "type": "string",
+          "example": "test"
+         },
+         "recaptchaToken": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/register/resend": {
+   "post": {
+    "operationId": "post_api_auth_register_resend",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "userId": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/login/verify-totp": {
+   "post": {
+    "operationId": "post_api_auth_login_verify_totp",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "userId": {
+          "type": "string",
+          "example": "test"
+         },
+         "token": {
+          "type": "string",
+          "example": "test"
+         },
+         "recoveryCode": {
+          "type": "string",
+          "example": "test"
+         },
+         "loginTicket": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/forgot-password": {
+   "post": {
+    "operationId": "post_api_auth_forgot_password",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "identifier": {
+          "type": "string",
+          "example": "test"
+         },
+         "recaptchaToken": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/reset-password/resend": {
+   "post": {
+    "operationId": "post_api_auth_reset_password_resend",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "resetId": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/reset-password/verify": {
+   "post": {
+    "operationId": "post_api_auth_reset_password_verify",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "resetId": {
+          "type": "string",
+          "example": "test"
+         },
+         "code": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/reset-password/link": {
+   "post": {
+    "operationId": "post_api_auth_reset_password_link",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "token": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/reset-password": {
+   "post": {
+    "operationId": "post_api_auth_reset_password",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "ticket": {
+          "type": "string",
+          "example": "test"
+         },
+         "newPassword": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/me": {
+   "get": {
+    "operationId": "get_api_auth_me",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/blog": {
+   "get": {
+    "operationId": "get_api_blog",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/blog/{slug}": {
+   "get": {
+    "operationId": "get_api_blog_slug_",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/public/home": {
+   "get": {
+    "operationId": "get_api_board_public_home",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/public/topics": {
+   "get": {
+    "operationId": "get_api_board_public_topics",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/public/t/{id}": {
+   "get": {
+    "operationId": "get_api_board_public_t_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/public/img/{id}": {
+   "get": {
+    "operationId": "get_api_board_public_img_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/rules": {
+   "get": {
+    "operationId": "get_api_board_rules",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/home": {
+   "get": {
+    "operationId": "get_api_board_home",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/topics": {
+   "get": {
+    "operationId": "get_api_board_topics",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   },
+   "post": {
+    "operationId": "post_api_board_topics",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/t/{id}": {
+   "get": {
+    "operationId": "get_api_board_t_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/t/{id}/since": {
+   "get": {
+    "operationId": "get_api_board_t_id_since",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/t/{id}/posts": {
+   "post": {
+    "operationId": "post_api_board_t_id_posts",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/posts/{id}": {
+   "patch": {
+    "operationId": "patch_api_board_posts_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "delete_api_board_posts_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/posts/{id}/history": {
+   "get": {
+    "operationId": "get_api_board_posts_id_history",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/posts/{id}/react": {
+   "post": {
+    "operationId": "post_api_board_posts_id_react",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/posts/{id}/bookmark": {
+   "post": {
+    "operationId": "post_api_board_posts_id_bookmark",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/me/bookmarks": {
+   "get": {
+    "operationId": "get_api_board_me_bookmarks",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/me/likes": {
+   "get": {
+    "operationId": "get_api_board_me_likes",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/members": {
+   "get": {
+    "operationId": "get_api_board_members",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/t/{id}/watch": {
+   "post": {
+    "operationId": "post_api_board_t_id_watch",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/t/{id}/read-all": {
+   "post": {
+    "operationId": "post_api_board_t_id_read_all",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/read-all": {
+   "post": {
+    "operationId": "post_api_board_read_all",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "category": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/t/{id}/accept": {
+   "post": {
+    "operationId": "post_api_board_t_id_accept",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/t/{id}/vote": {
+   "post": {
+    "operationId": "post_api_board_t_id_vote",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/posts/{id}/report": {
+   "post": {
+    "operationId": "post_api_board_posts_id_report",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/search": {
+   "get": {
+    "operationId": "get_api_board_search",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/mention": {
+   "get": {
+    "operationId": "get_api_board_mention",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/challenge": {
+   "get": {
+    "operationId": "get_api_board_challenge",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/challenge/checkin": {
+   "post": {
+    "operationId": "post_api_board_challenge_checkin",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/u/{username}": {
+   "get": {
+    "operationId": "get_api_board_u_username_",
+    "parameters": [
+     {
+      "name": "username",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/images": {
+   "post": {
+    "operationId": "post_api_board_images",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/images/giphy": {
+   "post": {
+    "operationId": "post_api_board_images_giphy",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/images/{id}": {
+   "delete": {
+    "operationId": "delete_api_board_images_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/img/{id}": {
+   "get": {
+    "operationId": "get_api_board_img_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/t/{id}/mod": {
+   "post": {
+    "operationId": "post_api_board_t_id_mod",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/posts/{id}/mod": {
+   "post": {
+    "operationId": "post_api_board_posts_id_mod",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/mod/reports": {
+   "get": {
+    "operationId": "get_api_board_mod_reports",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/mod/reports/{postId}": {
+   "post": {
+    "operationId": "post_api_board_mod_reports_postId_",
+    "parameters": [
+     {
+      "name": "postId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/board/mod/ban/{username}": {
+   "post": {
+    "operationId": "post_api_board_mod_ban_username_",
+    "parameters": [
+     {
+      "name": "username",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "delete_api_board_mod_ban_username_",
+    "parameters": [
+     {
+      "name": "username",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/mod/log": {
+   "get": {
+    "operationId": "get_api_board_mod_log",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/mod/u/{username}/content": {
+   "get": {
+    "operationId": "get_api_board_mod_u_username_content",
+    "parameters": [
+     {
+      "name": "username",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/mod/bans": {
+   "get": {
+    "operationId": "get_api_board_mod_bans",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/board/mod/categories/{id}": {
+   "put": {
+    "operationId": "put_api_board_mod_categories_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/forum/me": {
+   "get": {
+    "operationId": "get_api_forum_me",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   },
+   "put": {
+    "operationId": "put_api_forum_me",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/forum/rules": {
+   "get": {
+    "operationId": "get_api_forum_rules",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/forum/me/username": {
+   "put": {
+    "operationId": "put_api_forum_me_username",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "username": {
+          "type": "string",
+          "example": "test"
+         },
+         "password": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/forum/me/media/{media}": {
+   "post": {
+    "operationId": "post_api_forum_me_media_media_",
+    "parameters": [
+     {
+      "name": "media",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "delete_api_forum_me_media_media_",
+    "parameters": [
+     {
+      "name": "media",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/giphy/status": {
+   "get": {
+    "operationId": "get_api_giphy_status",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/giphy/search": {
+   "get": {
+    "operationId": "get_api_giphy_search",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/forum/me/media/sig/giphy": {
+   "post": {
+    "operationId": "post_api_forum_me_media_sig_giphy",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/forum/media/{id}": {
+   "get": {
+    "operationId": "get_api_forum_media_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/live": {
+   "get": {
+    "operationId": "get_api_live",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/friends/summary": {
+   "get": {
+    "operationId": "get_api_friends_summary",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/friends": {
+   "get": {
+    "operationId": "get_api_friends",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/friends/search": {
+   "get": {
+    "operationId": "get_api_friends_search",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/friends/request": {
+   "post": {
+    "operationId": "post_api_friends_request",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/friends/{id}/accept": {
+   "post": {
+    "operationId": "post_api_friends_id_accept",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/friends/{id}": {
+   "delete": {
+    "operationId": "delete_api_friends_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/friends/{id}/block": {
+   "post": {
+    "operationId": "post_api_friends_id_block",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/messages/{id}": {
+   "get": {
+    "operationId": "get_api_messages_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   },
+   "post": {
+    "operationId": "post_api_messages_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/messages/{id}/typing": {
+   "post": {
+    "operationId": "post_api_messages_id_typing",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/messages/{id}/image": {
+   "post": {
+    "operationId": "post_api_messages_id_image",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/dm-media/{id}": {
+   "get": {
+    "operationId": "get_api_dm_media_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/messages/m/{mid}": {
+   "delete": {
+    "operationId": "delete_api_messages_m_mid_",
+    "parameters": [
+     {
+      "name": "mid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/messages/m/{mid}/report": {
+   "post": {
+    "operationId": "post_api_messages_m_mid_report",
+    "parameters": [
+     {
+      "name": "mid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/journal": {
+   "get": {
+    "operationId": "get_api_journal",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/journal/entries": {
+   "put": {
+    "operationId": "put_api_journal_entries",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/journal/entries/{id}": {
+   "delete": {
+    "operationId": "delete_api_journal_entries_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/journal/share": {
+   "put": {
+    "operationId": "put_api_journal_share",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/journal/photos": {
+   "post": {
+    "operationId": "post_api_journal_photos",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/journal/photos/{id}": {
+   "patch": {
+    "operationId": "patch_api_journal_photos_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "delete_api_journal_photos_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   },
+   "get": {
+    "operationId": "get_api_journal_photos_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/journal/u/{username}": {
+   "get": {
+    "operationId": "get_api_journal_u_username_",
+    "parameters": [
+     {
+      "name": "username",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/notifications": {
+   "get": {
+    "operationId": "get_api_notifications",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   },
+   "delete": {
+    "operationId": "delete_api_notifications",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/notifications/read-all": {
+   "post": {
+    "operationId": "post_api_notifications_read_all",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/notifications/{id}/read": {
+   "post": {
+    "operationId": "post_api_notifications_id_read",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/notifications/{id}": {
+   "delete": {
+    "operationId": "delete_api_notifications_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/packages": {
+   "get": {
+    "operationId": "get_api_packages",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/orders": {
+   "post": {
+    "operationId": "post_api_orders",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "packageKey": {
+          "type": "string",
+          "example": "test"
+         },
+         "weeks": {
+          "type": "string",
+          "example": "test"
+         },
+         "consent": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "operationId": "get_api_orders",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/orders/{id}": {
+   "get": {
+    "operationId": "get_api_orders_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/orders/{id}/pay/mock": {
+   "post": {
+    "operationId": "post_api_orders_id_pay_mock",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "outcome": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/orders/{id}/cancel": {
+   "post": {
+    "operationId": "post_api_orders_id_cancel",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/plan-catalog": {
+   "get": {
+    "operationId": "get_api_plan_catalog",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/plans/overview": {
+   "get": {
+    "operationId": "get_api_plans_overview",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/plans": {
+   "get": {
+    "operationId": "get_api_plans",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/plans/{id}": {
+   "get": {
+    "operationId": "get_api_plans_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/profile": {
+   "get": {
+    "operationId": "get_api_profile",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   },
+   "put": {
+    "operationId": "put_api_profile",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "delete_api_profile",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/progress": {
+   "get": {
+    "operationId": "get_api_progress",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   },
+   "post": {
+    "operationId": "post_api_progress",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/progress/{id}": {
+   "delete": {
+    "operationId": "delete_api_progress_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/push/key": {
+   "get": {
+    "operationId": "get_api_push_key",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/push/subscribe": {
+   "post": {
+    "operationId": "post_api_push_subscribe",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/push/unsubscribe": {
+   "post": {
+    "operationId": "post_api_push_unsubscribe",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/push/status": {
+   "get": {
+    "operationId": "get_api_push_status",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/push/test": {
+   "post": {
+    "operationId": "post_api_push_test",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/push/latest": {
+   "get": {
+    "operationId": "get_api_push_latest",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/tickets/subjects": {
+   "get": {
+    "operationId": "get_api_tickets_subjects",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/tickets": {
+   "get": {
+    "operationId": "get_api_tickets",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   },
+   "post": {
+    "operationId": "post_api_tickets",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "planKind": {
+          "type": "string",
+          "example": "test"
+         },
+         "attachments": {
+          "type": "string",
+          "example": "test"
+         },
+         "title": {
+          "type": "string",
+          "example": "test"
+         },
+         "subject": {
+          "type": "string",
+          "example": "test"
+         },
+         "message": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/tickets/{id}": {
+   "get": {
+    "operationId": "get_api_tickets_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/tickets/{id}/messages": {
+   "post": {
+    "operationId": "post_api_tickets_id_messages",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "message": {
+          "type": "string",
+          "example": "test"
+         },
+         "attachments": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/tickets/{id}/resolve": {
+   "post": {
+    "operationId": "post_api_tickets_id_resolve",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/2fa/request-toggle": {
+   "post": {
+    "operationId": "post_api_2fa_request_toggle",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "method": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/2fa/confirm-toggle": {
+   "post": {
+    "operationId": "post_api_2fa_confirm_toggle",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "code": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/2fa/activate": {
+   "post": {
+    "operationId": "post_api_2fa_activate",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "token": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/2fa/verify-totp": {
+   "post": {
+    "operationId": "post_api_2fa_verify_totp",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "token": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/2fa/recovery/request": {
+   "post": {
+    "operationId": "post_api_2fa_recovery_request",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/2fa/recovery/confirm": {
+   "post": {
+    "operationId": "post_api_2fa_recovery_confirm",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "code": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/2fa/renew/request": {
+   "post": {
+    "operationId": "post_api_2fa_renew_request",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/2fa/renew/confirm": {
+   "post": {
+    "operationId": "post_api_2fa_renew_confirm",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "adminFactor": {
+          "type": "string",
+          "example": "test"
+         },
+         "code": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/2fa/renew/activate": {
+   "post": {
+    "operationId": "post_api_2fa_renew_activate",
+    "parameters": [],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "token": {
+          "type": "string",
+          "example": "test"
+         },
+         "renewTicket": {
+          "type": "string",
+          "example": "test"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/uploads/{scope}": {
+   "post": {
+    "operationId": "post_api_uploads_scope_",
+    "parameters": [
+     {
+      "name": "scope",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {}
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "operationId": "get_api_uploads_scope_",
+    "parameters": [
+     {
+      "name": "scope",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "test"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  },
+  "/api/attachments/{id}": {
+   "get": {
+    "operationId": "get_api_attachments_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   },
+   "delete": {
+    "operationId": "delete_api_attachments_id_",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "example": "00000000-0000-4000-8000-000000000001"
+      }
+     }
+    ],
+    "responses": {
+     "default": {
+      "description": "yanıt"
+     }
+    }
+   }
+  }
+ }
+}

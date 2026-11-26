@@ -1,0 +1,27 @@
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'self'; script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://www.gstatic.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://i.giphy.com; connect-src 'self' https://www.google.com/recaptcha/; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+Access-Control-Allow-Origin: http://localhost:3000
+Vary: Origin, Accept-Encoding
+Access-Control-Allow-Credentials: true
+Cache-Control: no-cache
+Accept-Ranges: bytes
+Last-Modified: Thu, 26 Nov 2026 15:04:26 GMT
+ETag: W/"a72-1a21862f016"
+Content-Type: text/html; charset=UTF-8
+Content-Length: 2674
+Date: Thu, 26 Nov 2026 15:05:13 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
